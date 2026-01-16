@@ -32,8 +32,8 @@
         <div class="player-wrapper">
           <span id="liveBadge" class="live-badge" style="display: none;">🔴 LIVE</span>
           <div id="youtubePlayer"></div>
-          <img id="placeholderImage" src="/assets/BRB.jpg" alt="We'll be right back" class="placeholder-image" style="display: none; width: 560px; height: 315px;" />
-          <img id="onDemandImage" src="/assets/OnDemand.png" alt="On Demand" class="placeholder-image" style="display: none; width: 560px; height: 315px;" />
+          <img id="placeholderImage" src="/assets/BRB.jpg" alt="We'll be right back" class="placeholder-image" style="display: none;" />
+          <img id="onDemandImage" src="/assets/OnDemand.png" alt="On Demand" class="placeholder-image" style="display: none;" />
         </div>
         <button id="liveChatButton" class="live-chat-button" style="display: none;" onclick="openLiveChat()">💬 Open Live Chat</button>
       </div>
@@ -101,6 +101,8 @@
     <p>© <span id="year"></span> Azure Core Underground. All rights reserved.</p>
     <p>
       <button id="cocButton" class="coc-button">Microsoft Event Code of Conduct</button>
+      <span class="footer-divider">|</span>
+      <a href="admin.html" class="admin-link">Schedule Admin</a>
     </p>
   </footer>
 
@@ -139,9 +141,10 @@
     // Video schedule
     var videoSchedule = [];
     var currentVideoIndex = -1;
+    var API_BASE = 'https://func-acu-schedule.azurewebsites.net/api';
 
     // Load video schedule from API (with fallback to static file)
-    fetch('/api/schedule')
+    fetch(API_BASE + '/schedule')
       .then(function(response) { 
         if (!response.ok) throw new Error('API not available');
         return response.json(); 
@@ -175,9 +178,14 @@
 
     var player;
     function onYouTubeIframeAPIReady() {
+      // Calculate responsive size based on container
+      const wrapper = document.querySelector('.player-wrapper');
+      const width = wrapper ? wrapper.offsetWidth : 960;
+      const height = Math.round(width * 9 / 16); // 16:9 aspect ratio
+      
       player = new YT.Player('youtubePlayer', {
-        height: '315',
-        width: '560',
+        height: height.toString(),
+        width: '100%',
         videoId: '',
         playerVars: {
           'controls': 1,
@@ -191,6 +199,16 @@
           'onStateChange': onPlayerStateChange
         }
       });
+      
+      // Make iframe responsive after creation
+      setTimeout(() => {
+        const iframe = document.querySelector('#youtubePlayer');
+        if (iframe) {
+          iframe.style.width = '100%';
+          iframe.style.aspectRatio = '16 / 9';
+          iframe.style.height = 'auto';
+        }
+      }, 100);
     }
 
     function onPlayerReady(event) {
@@ -458,6 +476,16 @@
     displayTimezone();
     updateClock();
     setInterval(updateClock, 1000);
+    
+    // Handle window resize to keep player responsive
+    window.addEventListener('resize', function() {
+      const iframe = document.querySelector('#youtubePlayer');
+      if (iframe) {
+        iframe.style.width = '100%';
+        iframe.style.aspectRatio = '16 / 9';
+        iframe.style.height = 'auto';
+      }
+    });
   </script>
 </body>
 </html>

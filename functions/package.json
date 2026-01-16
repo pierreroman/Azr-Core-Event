@@ -1,0 +1,14 @@
+{
+  "name": "schedule-function",
+  "version": "1.0.0",
+  "description": "Azure Functions for schedule management",
+  "main": "src/functions/*.js",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0",
+    "@azure/identity": "^4.0.0",
+    "@azure/storage-blob": "^12.17.0"
+  }
+}
