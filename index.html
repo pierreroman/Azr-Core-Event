@@ -141,9 +141,10 @@
     // Video schedule
     var videoSchedule = [];
     var currentVideoIndex = -1;
+    var API_BASE = 'https://func-acu-schedule.azurewebsites.net/api';
 
     // Load video schedule from API (with fallback to static file)
-    fetch('/api/schedule')
+    fetch(API_BASE + '/schedule')
       .then(function(response) { 
         if (!response.ok) throw new Error('API not available');
         return response.json(); 

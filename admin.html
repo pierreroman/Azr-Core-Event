@@ -215,13 +215,14 @@
 
   <script>
     let schedule = [];
+    const API_BASE = 'https://func-acu-schedule.azurewebsites.net/api';
 
     // Load schedule on page load
     document.addEventListener('DOMContentLoaded', loadSchedule);
 
     async function loadSchedule() {
       try {
-        const response = await fetch('/api/schedule');
+        const response = await fetch(API_BASE + '/schedule');
         if (!response.ok) throw new Error('API not available');
         const data = await response.json();
         schedule = data.schedule || [];
@@ -357,7 +358,7 @@
       };
 
       try {
-        const response = await fetch('/api/schedule', {
+        const response = await fetch(API_BASE + '/schedule', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
