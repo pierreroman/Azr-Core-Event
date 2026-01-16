@@ -238,6 +238,8 @@ h2 { margin-top: 0; font-size: 28px; }
 .register { text-align: center; }
 .register p { color: var(--muted); }
 
+.community { text-align: center; }
+.community p { color: var(--muted); }
 .community p a { color: var(--primary-2); text-decoration: none; }
 .community p a:hover { text-decoration: underline; }
 
