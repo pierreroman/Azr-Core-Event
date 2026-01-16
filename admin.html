@@ -76,7 +76,8 @@
       letter-spacing: 0.5px;
     }
     .form-group input,
-    .form-group textarea {
+    .form-group textarea,
+    .form-group select {
       background: var(--bg);
       border: 1px solid #243159;
       border-radius: 6px;
@@ -86,9 +87,18 @@
       font-family: inherit;
     }
     .form-group input:focus,
-    .form-group textarea:focus {
+    .form-group textarea:focus,
+    .form-group select:focus {
       outline: none;
       border-color: var(--primary-2);
+    }
+    .form-group select {
+      cursor: pointer;
+      width: 100%;
+    }
+    .form-group select option {
+      background: var(--bg);
+      color: var(--text);
     }
     .form-group textarea {
       resize: vertical;
@@ -205,7 +215,22 @@
     <div class="timezone-config">
       <div class="form-group">
         <label>Timezone</label>
-        <input type="text" id="timezone" value="America/New_York" placeholder="e.g., America/New_York" />
+        <select id="timezone">
+          <option value="America/New_York">America/New_York (EST/EDT: UTC-5/-4)</option>
+          <option value="America/Chicago">America/Chicago (CST/CDT: UTC-6/-5)</option>
+          <option value="America/Denver">America/Denver (MST/MDT: UTC-7/-6)</option>
+          <option value="America/Phoenix">America/Phoenix (MST: UTC-7, No DST)</option>
+          <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT: UTC-8/-7)</option>
+          <option value="America/Anchorage">America/Anchorage (AKST/AKDT: UTC-9/-8)</option>
+          <option value="Pacific/Honolulu">Pacific/Honolulu (HST: UTC-10, No DST)</option>
+          <option value="UTC">UTC (UTC+0)</option>
+          <option value="Europe/London">Europe/London (GMT/BST: UTC+0/+1)</option>
+          <option value="Europe/Paris">Europe/Paris (CET/CEST: UTC+1/+2)</option>
+          <option value="Europe/Berlin">Europe/Berlin (CET/CEST: UTC+1/+2)</option>
+          <option value="Asia/Tokyo">Asia/Tokyo (JST: UTC+9, No DST)</option>
+          <option value="Asia/Shanghai">Asia/Shanghai (CST: UTC+8, No DST)</option>
+          <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT: UTC+10/+11)</option>
+        </select>
       </div>
     </div>
 
