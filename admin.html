@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <base href="./" />
+  <title>Schedule Admin - Azure Core Underground</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .admin-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .admin-header h1 {
+      margin: 0;
+      color: var(--primary-2);
+    }
+    .schedule-form {
+      background: var(--surface);
+      border: 1px solid #243159;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .schedule-item {
+      background: var(--card);
+      border: 1px solid #243159;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .schedule-item.dragging {
+      opacity: 0.5;
+    }
+    .schedule-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .schedule-item-number {
+      background: var(--primary);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-group input,
+    .form-group textarea {
+      background: var(--bg);
+      border: 1px solid #243159;
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-2);
+    }
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+    .btn {
+      padding: 10px 18px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--primary-2);
+    }
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    .btn-success:hover {
+      background: #218838;
+    }
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+    .btn-danger:hover {
+      background: #c82333;
+    }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid #243159;
+      color: var(--text);
+    }
+    .btn-secondary:hover {
+      border-color: var(--primary-2);
+    }
+    .status-message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .status-message.success {
+      background: rgba(40, 167, 69, 0.2);
+      border: 1px solid #28a745;
+      color: #28a745;
+    }
+    .status-message.error {
+      background: rgba(220, 53, 69, 0.2);
+      border: 1px solid #dc3545;
+      color: #dc3545;
+    }
+    .status-message.show {
+      display: block;
+    }
+    .timezone-config {
+      background: var(--surface);
+      border: 1px solid #243159;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .drag-handle {
+      cursor: grab;
+      color: var(--muted);
+      margin-right: 12px;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+    .back-link {
+      color: var(--primary-2);
+      text-decoration: none;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    .loading {
+      text-align: center;
+      padding: 48px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <div class="admin-header">
+      <div>
+        <a href="index.html" class="back-link">← Back to Event</a>
+        <h1>Schedule Admin</h1>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="addNewItem()">+ Add Video</button>
+        <button class="btn btn-success" onclick="saveSchedule()">💾 Save Changes</button>
+      </div>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+
+    <div class="timezone-config">
+      <div class="form-group">
+        <label>Timezone</label>
+        <input type="text" id="timezone" value="America/New_York" placeholder="e.g., America/New_York" />
+      </div>
+    </div>
+
+    <div id="loading" class="loading">Loading schedule...</div>
+    <div id="scheduleList"></div>
+  </div>
+
+  <script>
+    let schedule = [];
+
+    // Load schedule on page load
+    document.addEventListener('DOMContentLoaded', loadSchedule);
+
+    async function loadSchedule() {
+      try {
+        const response = await fetch('/api/schedule');
+        if (!response.ok) throw new Error('API not available');
+        const data = await response.json();
+        schedule = data.schedule || [];
+        document.getElementById('timezone').value = data.timezone || 'America/New_York';
+        renderSchedule();
+      } catch (error) {
+        // Fallback to static file
+        try {
+          const response = await fetch('video-schedule.json');
+          const data = await response.json();
+          schedule = data.schedule || [];
+          document.getElementById('timezone').value = data.timezone || 'America/New_York';
+          renderSchedule();
+        } catch (e) {
+          showStatus('Error loading schedule: ' + e.message, 'error');
+          document.getElementById('loading').textContent = 'Failed to load schedule';
+        }
+      }
+    }
+
+    function renderSchedule() {
+      document.getElementById('loading').style.display = 'none';
+      const container = document.getElementById('scheduleList');
+      
+      // Sort by start time
+      schedule.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+      
+      container.innerHTML = schedule.map((item, index) => `
+        <div class="schedule-item" draggable="true" data-index="${index}">
+          <div class="schedule-item-header">
+            <div style="display: flex; align-items: center;">
+              <span class="drag-handle">☰</span>
+              <span class="schedule-item-number">${index + 1}</span>
+            </div>
+            <button class="btn btn-danger" onclick="removeItem(${index})">Remove</button>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Video ID</label>
+              <input type="text" value="${escapeHtml(item.videoId)}" onchange="updateItem(${index}, 'videoId', this.value)" placeholder="YouTube video ID" />
+            </div>
+            <div class="form-group">
+              <label>Start Time</label>
+              <input type="datetime-local" value="${toLocalDateTime(item.startTime)}" onchange="updateItem(${index}, 'startTime', this.value)" />
+            </div>
+            <div class="form-group">
+              <label>Duration (seconds)</label>
+              <input type="number" value="${item.duration}" onchange="updateItem(${index}, 'duration', parseInt(this.value))" placeholder="Duration in seconds" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label>Title</label>
+              <input type="text" value="${escapeHtml(item.title)}" onchange="updateItem(${index}, 'title', this.value)" placeholder="Video title" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label>Description</label>
+              <textarea onchange="updateItem(${index}, 'description', this.value)" placeholder="Video description">${escapeHtml(item.description)}</textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label>URL (optional)</label>
+              <input type="url" value="${escapeHtml(item.url || '')}" onchange="updateItem(${index}, 'url', this.value)" placeholder="https://..." />
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toLocalDateTime(isoString) {
+      if (!isoString) return '';
+      const date = new Date(isoString);
+      const offset = date.getTimezoneOffset();
+      const local = new Date(date.getTime() - offset * 60 * 1000);
+      return local.toISOString().slice(0, 16);
+    }
+
+    function fromLocalDateTime(localString) {
+      if (!localString) return '';
+      const date = new Date(localString);
+      return date.toISOString();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+    }
+
+    function updateItem(index, field, value) {
+      if (field === 'startTime') {
+        value = fromLocalDateTime(value);
+      }
+      schedule[index][field] = value;
+    }
+
+    function addNewItem() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 30);
+      
+      schedule.push({
+        videoId: '',
+        title: 'New Video',
+        description: '',
+        url: '',
+        startTime: now.toISOString(),
+        duration: 1800
+      });
+      renderSchedule();
+      
+      // Scroll to bottom
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function removeItem(index) {
+      if (confirm('Are you sure you want to remove this video?')) {
+        schedule.splice(index, 1);
+        renderSchedule();
+      }
+    }
+
+    async function saveSchedule() {
+      const timezone = document.getElementById('timezone').value;
+      
+      const data = {
+        timezone: timezone,
+        schedule: schedule
+      };
+
+      try {
+        const response = await fetch('/api/schedule', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to save');
+        }
+
+        showStatus('Schedule saved successfully!', 'success');
+      } catch (error) {
+        showStatus('Error saving schedule: ' + error.message, 'error');
+      }
+    }
+
+    function showStatus(message, type) {
+      const el = document.getElementById('statusMessage');
+      el.textContent = message;
+      el.className = 'status-message show ' + type;
+      
+      if (type === 'success') {
+        setTimeout(() => {
+          el.className = 'status-message';
+        }, 3000);
+      }
+    }
+  </script>
+</body>
+</html>
