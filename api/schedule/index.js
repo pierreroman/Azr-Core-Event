@@ -1,4 +1,4 @@
-const { ManagedIdentityCredential } = require("@azure/identity");
+const { ManagedIdentityCredential, ChainedTokenCredential } = require("@azure/identity");
 const { BlobServiceClient } = require("@azure/storage-blob");
 
 module.exports = async function (context, req) {
@@ -16,8 +16,13 @@ module.exports = async function (context, req) {
     }
 
     try {
-        // Use ManagedIdentityCredential for SWA
-        const credential = new ManagedIdentityCredential();
+        // Use ManagedIdentityCredential with retry options for SWA
+        const credential = new ManagedIdentityCredential({
+            retryOptions: {
+                maxRetries: 3,
+                retryDelayInMs: 1000
+            }
+        });
         
         // Create blob service client using managed identity
         const blobServiceClient = new BlobServiceClient(
