@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+func-deploy.zip
+
+# Build outputs
+dist/
+.azure/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
