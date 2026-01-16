@@ -6,7 +6,7 @@
       "title": "Pierre's Live test 3",
       "description": "testing embedding the chat features.",
       "url": "https://aka.ms/HotpatchingWindowsServer",
-      "startTime": "2026-01-15T16:30:00-05:00",
+      "startTime": "2026-01-16T11:00:00-05:00",
       "duration": 1500
     },
     {
@@ -14,7 +14,7 @@
       "title": "Azure Arc-enabled management and pay-as-you-go for Windows Server",
       "description": "Learn how to easily manage Windows Server on premises and across clouds with Azure Arc management features. Preview the new and upcoming value-added Windows Server management capabilities enabled by Azure Arc. Understand the new pay-as-you-go licensing for Windows Server 2025 including use cases and how to implement. Explore Remote Support, Best Practices Assessment, Windows Admin Center in Azure, Azure Site Recovery configuration, Network HUD and AccelNet. Speakers: Theo Tran, Artem Pronichkin.",
       "url": "https://aka.ms/ArcEnabledManagement",
-      "startTime": "2026-01-15T18:00:00-05:00",
+      "startTime": "2026-01-16T11:30:00-05:00",
       "duration": 1485
     },
     {
@@ -22,7 +22,7 @@
       "title": "Fine-tuned host networking for Windows Server 2025",
       "description": "Transform your network setup and management for Windows Server 2025 clusters with Network ATC. Stay on top of operational network issues with automatic notifications from Network HUD and discover how to achieve peak network performance for your workloads with AccelNet. Speakers: Param Mahajan, Basel Kablawi",
       "url": "https://aka.ms/FineTunedHostNetworking",
-      "startTime": "2026-01-15T18:30:00-05:00",
+      "startTime": "2026-01-16T12:00:00-05:00",
       "duration": 1520
     },
     {
@@ -30,7 +30,7 @@
       "title": "The support case files: Windows Server troubleshooting tips",
       "description": "These are your most requested support cases -- and we are breaking them down! Join us to learn first-hand from our Windows Server support engineers. Speakers: Giles Pauli, Jeff Hughes, Mike Rhoads, Pierre Roman.",
       "url": "https://aka.ms/SupportCaseFiles",
-      "startTime": "2026-01-15T19:30:00-05:00",
+      "startTime": "2026-01-16T12:30:00-05:00",
       "duration": 3242
     }
   ]
