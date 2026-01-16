@@ -1,40 +1,462 @@
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AzureCoreUnderground</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Azure Core Underground</title>
+  <meta name="description" content="Azure Core Underground — a community event focused on compute, network, and storage in Azure." />
+  <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
-    <header class="hero">
-        <div class="hero-content">
-            <h1>AzureCoreUnderground</h1>
-            <p>The community-driven event for Azure compute, networking, and storage pros.</p>
-            <a href="#sessions" class="btn">View Sessions</a>
+  <!-- Top bar / hero -->
+  <header class="hero">
+    <div class="hero-content">
+      <img src="assets/acu-logo.png" alt="Azure Core Underground Logo" class="logo" />
+      <h1>Azure Core Underground</h1>
+      <p class="tagline">Deep-dive sessions on Compute • Network • Storage in Azure</p>
+      <div class="clock-container">
+        <span class="video-clock" id="videoClock">0:00:00</span>
+        <span class="timezone" id="timezone"></span>
+      </div>
+      <a class="cta" href="#register">Register</a>
+      <a class="cta secondary" href="#agenda">Agenda</a>
+    </div>
+    <br />
+    <br />
+    <br />
+    <div class="hero-content">
+      <div id="scheduleStart" class="schedule-start"></div>
+      <div class="player-container">
+        <div class="player-wrapper">
+          <span id="liveBadge" class="live-badge" style="display: none;">🔴 LIVE</span>
+          <div id="youtubePlayer"></div>
+          <img id="placeholderImage" src="assets/well-be-right-back-neon-sign-animation-free-video.jpg" alt="We'll be right back" class="placeholder-image" style="display: none; width: 560px; height: 315px;" />
+          <img id="onDemandImage" src="assets/OnDemand.png" alt="On Demand" class="placeholder-image" style="display: none; width: 560px; height: 315px;" />
         </div>
-    </header>
+        <button id="liveChatButton" class="live-chat-button" style="display: none;" onclick="openLiveChat()">💬 Open Live Chat</button>
+      </div>
+      <p class="autoplay-note">Most browsers require videos to be muted for autoplay to work due to autoplay policies. The video will start automatically when the page loads, but it will be muted initially. You can unmute it using the player controls.</p>
+      <div class="now-playing">
+        <h3 id="videoTitle">Loading...</h3>
+        <p id="videoDescription"></p>
+        <div id="upcomingInfo" class="upcoming-info" style="display: none;">
+          <h4>Up Next</h4>
+          <p id="upcomingTitle"></p>
+          <p id="upcomingTime"></p>
+        </div>
+      </div>
+    </div>
+  </header>
 
-    <section id="about">
-        <h2>About AzureCoreUnderground</h2>
-        <p>AzureCoreUnderground is a free, community-focused event exploring real-world solutions 
-        across Compute, Network, and Storage in Azure.</p>
-    </section>
+  <!-- Highlights section -->
+  <section class="highlights">
+    <h2>Why Attend</h2>
+    <div class="cards">
+      <article class="card">
+        <h3>Real-World Scenarios</h3>
+        <p>Hands-on guidance for migrations, resiliency, automation, and performance tuning.</p>
+      </article>
+      <article class="card">
+        <h3>Expert Speakers</h3>
+        <p>Azure advocates and community leaders share practical patterns for modern infrastructure.</p>
+      </article>
+      <article class="card">
+        <h3>Live Demos</h3>
+        <p>Watch full-stack infrastructure demos with tooling you can apply immediately.</p>
+      </article>
+    </div>
+  </section>
 
-    <section id="sessions">
-        <h2>Sessions</h2>
-        <ul>
-            <li>Deep Dive into Azure Networking</li>
-            <li>Optimizing Compute Workloads on Azure</li>
-            <li>Next‑Gen Storage Strategies for Cloud Architects</li>
-        </ul>
-    </section>
+  <!-- Agenda preview -->
+  <section id="agenda" class="agenda">
+    <h2>Agenda</h2>
+    <ul class="agenda-list">
+      <li><strong>Keynote:</strong> The State of Azure Core — Compute, Network, Storage</li>
+      <li><strong>Breakout:</strong> Resilient architectures with Application Gateway, Firewall, and Private IP</li>
+      <li><strong>Breakout:</strong> Storage strategies: Azure Files, Blob, and performance best practices</li>
+      <li><strong>Breakout:</strong> Automating operations with managed identities and policy</li>
+    </ul>
+    <a class="cta" href="#full-agenda">View full agenda</a>
+  </section>
 
-    <footer>
-        <p>© 2026 AzureCoreUnderground</p>
-    </footer>
+  <!-- Register -->
+  <section id="register" class="register">
+    <h2>Register for Azure Core Underground</h2>
+    <p>Secure your spot for deep-dive sessions and hands-on demos.</p>
+    <a class="cta" href="https://example.com/register">Register Now</a>
+  </section>
+
+  <!-- Sponsors / Community -->
+  <section class="community">
+    <h2>Community & Sponsors</h2>
+    <p>Powered by the Azure community. Interested in sponsoring? <a href="mailto:organizers@azurecoreunderground.com">Contact us</a>.</p>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>© <span id="year"></span> Azure Core Underground. All rights reserved.</p>
+    <p>
+      <button id="cocButton" class="coc-button">Microsoft Event Code of Conduct</button>
+      <span class="footer-divider">|</span>
+      <a href="admin.html" class="admin-link">Schedule Admin</a>
+    </p>
+  </footer>
+
+  <!-- Code of Conduct Modal -->
+  <div id="cocModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeCocModal()">&times;</button>
+      <h2>Microsoft Event Code of Conduct</h2>
+      <p>Microsoft's mission is to empower every person and every organization on the planet to achieve more. This includes Microsoft parties where we seek to create a respectful, friendly, fun and inclusive experience for all participants. We do not tolerate harassing or disrespectful behavior, messages, images, or interactions by any party participant, in any form, at any aspect of the program including business and social activities, regardless of location.</p>
+      <p>We do not tolerate any behavior that is degrading to any gender, race, sexual orientation or disability, or any behavior that would violate the company's Anti-Harassment and Anti-Discrimination Policy, Equal Employment Opportunity Policy, or Standards of Business Conduct, even if the entertainment is not paid for by Microsoft. In short, the entire experience at the venue must meet our culture standards.</p>
+      <p>We encourage everyone to assist in creating a welcoming and safe environment. Please report any concerns, harassing behavior, or suspicious or disruptive activity to venue staff, the event host or owner, or the nearest event staff. We also encourage employees to contact their Microsoft Manager or our Business Conduct Hotline (1-877-320-MSFT or <a href="mailto:buscond@microsoft.com">buscond@microsoft.com</a>) at any time if you feel a party is against our policy or inconsistent with the Microsoft culture. Outside the United States, call collect to 1-470-219-7087.</p>
+      <p>Microsoft reserves the right to refuse admittance to or remove any person from a party at any time at its sole discretion. We make this policy visible for all Microsoft parties so all attendees can see what is expected and what steps they should take if they see or experience behavior not consistent with this policy.</p>
+    </div>
+  </div>
+
+  <script>
+    // Set dynamic year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Code of Conduct Modal
+    document.getElementById('cocButton').addEventListener('click', function() {
+      document.getElementById('cocModal').style.display = 'flex';
+    });
+    function closeCocModal() {
+      document.getElementById('cocModal').style.display = 'none';
+    }
+    // Close modal on overlay click
+    document.getElementById('cocModal').addEventListener('click', function(e) {
+      if (e.target === this) closeCocModal();
+    });
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeCocModal();
+    });
+
+    // Video schedule
+    var videoSchedule = [];
+    var currentVideoIndex = -1;
+
+    // Load video schedule from API (with fallback to static file)
+    fetch('/api/schedule')
+      .then(function(response) { 
+        if (!response.ok) throw new Error('API not available');
+        return response.json(); 
+      })
+      .catch(function() {
+        // Fallback to static file for local development
+        console.log('API not available, falling back to static file');
+        return fetch('video-schedule.json').then(function(r) { return r.json(); });
+      })
+      .then(function(data) {
+        videoSchedule = data.schedule;
+        // Sort by start time
+        videoSchedule.sort(function(a, b) {
+          return new Date(a.startTime) - new Date(b.startTime);
+        });
+        console.log('Video schedule loaded:', videoSchedule.length, 'videos');
+        // Display schedule start time
+        if (videoSchedule.length > 0) {
+          displayScheduleStart(videoSchedule[0].startTime);
+        }
+      })
+      .catch(function(error) {
+        console.error('Error loading video schedule:', error);
+      });
+
+    // YouTube IFrame API
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    var player;
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('youtubePlayer', {
+        height: '315',
+        width: '560',
+        videoId: '',
+        playerVars: {
+          'controls': 1,
+          'modestbranding': 0,
+          'rel': 0,
+          'autoplay': 1,
+          'mute': 1
+        },
+        events: {
+          'onReady': onPlayerReady,
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
+
+    function onPlayerReady(event) {
+      event.target.playVideo();
+      // Sync with server time
+      syncWithServerTime();
+      // Start checking for scheduled videos
+      setInterval(checkScheduledVideo, 1000);
+      // Check live status periodically
+      setInterval(checkLiveStatus, 2000);
+    }
+
+    var isCurrentlyLive = false;
+    var currentLiveVideoId = null;
+
+    function onPlayerStateChange(event) {
+      // Check live status when video starts playing
+      if (event.data === YT.PlayerState.PLAYING) {
+        checkLiveStatus();
+      }
+      // Hide live UI when video ends
+      if (event.data === YT.PlayerState.ENDED) {
+        isCurrentlyLive = false;
+        currentLiveVideoId = null;
+        hideLiveUI();
+      }
+    }
+
+    function checkLiveStatus() {
+      if (!player || !player.getVideoData) return;
+      
+      var videoData = player.getVideoData();
+      var videoId = videoData.video_id;
+      var isLive = videoData.isLive || false;
+      
+      if (isLive && !isCurrentlyLive) {
+        // Video just went live
+        isCurrentlyLive = true;
+        currentLiveVideoId = videoId;
+        showLiveUI(videoId);
+      } else if (!isLive && isCurrentlyLive) {
+        // Video is no longer live
+        isCurrentlyLive = false;
+        currentLiveVideoId = null;
+        hideLiveUI();
+      }
+    }
+
+    function showLiveUI(videoId) {
+      document.getElementById('liveBadge').style.display = 'inline-block';
+      document.getElementById('liveChatButton').style.display = 'inline-block';
+      document.getElementById('liveChatButton').setAttribute('data-video-id', videoId);
+    }
+
+    function hideLiveUI() {
+      document.getElementById('liveBadge').style.display = 'none';
+      document.getElementById('liveChatButton').style.display = 'none';
+    }
+
+    function openLiveChat() {
+      var videoId = document.getElementById('liveChatButton').getAttribute('data-video-id');
+      if (videoId) {
+        window.open('https://www.youtube.com/live_chat?v=' + videoId, 'LiveChat', 'width=400,height=600,scrollbars=yes,resizable=yes');
+      }
+    }
+
+    // Find and play the correct video based on current time
+    function checkScheduledVideo() {
+      if (videoSchedule.length === 0 || !player) return;
+
+      var now = new Date(Date.now() + serverTimeOffset);
+      var activeVideoIndex = -1;
+      var isInBreak = false;
+      var nextVideoIndex = -1;
+
+      // Find the video that should be playing now (within start time and duration)
+      for (var i = 0; i < videoSchedule.length; i++) {
+        var videoStart = new Date(videoSchedule[i].startTime);
+        var videoEnd = new Date(videoStart.getTime() + (videoSchedule[i].duration * 1000));
+        
+        if (now >= videoStart && now < videoEnd) {
+          // We're within this video's time window
+          activeVideoIndex = i;
+          break;
+        } else if (now >= videoEnd && i < videoSchedule.length - 1) {
+          // We're past this video, check if we're in a break before the next one
+          var nextVideoStart = new Date(videoSchedule[i + 1].startTime);
+          if (now < nextVideoStart) {
+            isInBreak = true;
+            nextVideoIndex = i + 1;
+            break;
+          }
+        }
+      }
+
+      // Check if we're before the first video
+      if (activeVideoIndex < 0 && !isInBreak && videoSchedule.length > 0) {
+        var firstVideoStart = new Date(videoSchedule[0].startTime);
+        if (now < firstVideoStart) {
+          nextVideoIndex = 0;
+        }
+      }
+
+      // If we found an active video, play it
+      if (activeVideoIndex >= 0) {
+        // Show player and hide placeholder
+        document.getElementById('youtubePlayer').style.display = 'block';
+        document.getElementById('placeholderImage').style.display = 'none';
+        document.getElementById('onDemandImage').style.display = 'none';
+
+        // If video changed, load the new one
+        if (activeVideoIndex !== currentVideoIndex) {
+          currentVideoIndex = activeVideoIndex;
+          var video = videoSchedule[currentVideoIndex];
+          
+          // Calculate how far into the video we should be
+          var videoStart = new Date(video.startTime);
+          var secondsIntoVideo = Math.floor((now - videoStart) / 1000);
+          
+          // Load and play video at correct position
+          player.loadVideoById({
+            videoId: video.videoId,
+            startSeconds: secondsIntoVideo
+          });
+          
+          // Update display
+          document.getElementById('videoTitle').textContent = video.title;
+          document.getElementById('videoDescription').innerHTML = video.description + 
+            '<br><a href="' + video.url + '" target="_blank" class="video-link">' + video.url + '</a>';
+          
+          console.log('Now playing:', video.title, 'at', secondsIntoVideo, 'seconds');
+        }
+
+        // Show remaining time for current video
+        var video = videoSchedule[currentVideoIndex];
+        var videoStart = new Date(video.startTime);
+        var videoEnd = new Date(videoStart.getTime() + (video.duration * 1000));
+        var timeRemaining = Math.floor((videoEnd - now) / 1000);
+        var mins = Math.floor(timeRemaining / 60);
+        var secs = timeRemaining % 60;
+        
+        // Check if there's a next video
+        var upNextIndex = activeVideoIndex + 1;
+        if (upNextIndex < videoSchedule.length) {
+          var nextVideo = videoSchedule[upNextIndex];
+          document.getElementById('upcomingInfo').style.display = 'block';
+          document.getElementById('upcomingTitle').textContent = nextVideo.title;
+          document.getElementById('upcomingTime').textContent = 'Current ends in ' + mins + 'm ' + secs + 's';
+        } else {
+          document.getElementById('upcomingInfo').style.display = 'none';
+        }
+      } 
+      // We're in a break between videos or before the first video
+      else if (isInBreak || nextVideoIndex >= 0) {
+        // Hide player and show placeholder
+        document.getElementById('youtubePlayer').style.display = 'none';
+        document.getElementById('placeholderImage').style.display = 'block';
+        document.getElementById('onDemandImage').style.display = 'none';
+        if (player && player.pauseVideo) {
+          player.pauseVideo();
+        }
+        currentVideoIndex = -1;
+
+        var nextVideo = videoSchedule[nextVideoIndex];
+        var nextStart = new Date(nextVideo.startTime);
+        var timeUntil = Math.floor((nextStart - now) / 1000);
+        var hours = Math.floor(timeUntil / 3600);
+        var minutes = Math.floor((timeUntil % 3600) / 60);
+        var seconds = timeUntil % 60;
+        
+        document.getElementById('videoTitle').textContent = 'Coming Up: ' + nextVideo.title;
+        if (hours > 0) {
+          document.getElementById('videoDescription').innerHTML = 
+            'Starts in ' + hours + 'h ' + minutes + 'm — ' + nextVideo.description +
+            '<br><a href="' + nextVideo.url + '" target="_blank" class="video-link">' + nextVideo.url + '</a>';
+        } else {
+          document.getElementById('videoDescription').innerHTML = 
+            'Starts in ' + minutes + 'm ' + seconds + 's — ' + nextVideo.description +
+            '<br><a href="' + nextVideo.url + '" target="_blank" class="video-link">' + nextVideo.url + '</a>';
+        }
+        document.getElementById('upcomingInfo').style.display = 'none';
+      }
+      // All videos have finished
+      else {
+        document.getElementById('youtubePlayer').style.display = 'none';
+        document.getElementById('placeholderImage').style.display = 'none';
+        document.getElementById('onDemandImage').style.display = 'block';
+        if (player && player.pauseVideo) {
+          player.pauseVideo();
+        }
+        document.getElementById('videoTitle').textContent = 'Thanks for watching!';
+        document.getElementById('videoDescription').textContent = 'All scheduled sessions have ended. Watch on demand anytime!';
+        document.getElementById('upcomingInfo').style.display = 'none';
+      }
+    }
+
+    var serverTimeOffset = 0;
+
+    // Sync local clock with YouTube server time
+    function syncWithServerTime() {
+      fetch('https://www.youtube.com', { method: 'HEAD', mode: 'no-cors' })
+        .then(function() {
+          // Use the YouTube API's server time if available via video data
+          if (player && player.getVideoData) {
+            var videoData = player.getVideoData();
+            // For live streams, get the actual broadcast time
+            if (player.getVideoUrl) {
+              // Make a request to get server Date header
+              fetch(window.location.href, { method: 'HEAD' })
+                .then(function(response) {
+                  var serverDate = response.headers.get('Date');
+                  if (serverDate) {
+                    var serverTime = new Date(serverDate).getTime();
+                    var localTime = Date.now();
+                    serverTimeOffset = serverTime - localTime;
+                  }
+                })
+                .catch(function() {
+                  console.log('Could not sync with server time');
+                });
+            }
+          }
+        })
+        .catch(function() {
+          console.log('Could not connect to sync time');
+        });
+      
+      // Re-sync every 5 minutes to prevent drift
+      setTimeout(syncWithServerTime, 300000);
+    }
+
+    // Update local time clock synchronized with server
+    function updateClock() {
+      var now = new Date(Date.now() + serverTimeOffset);
+      var hours = now.getHours();
+      var minutes = now.getMinutes();
+      var seconds = now.getSeconds();
+      document.getElementById('videoClock').textContent = 
+        hours + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+    }
+
+    // Get and display timezone
+    function displayTimezone() {
+      var timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      var abbr = new Date().toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
+      document.getElementById('timezone').textContent = abbr;
+    }
+
+    // Display schedule start day and time
+    function displayScheduleStart(startTimeStr) {
+      var startDate = new Date(startTimeStr);
+      var options = { 
+        weekday: 'long', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: 'numeric', 
+        minute: '2-digit',
+        timeZoneName: 'short'
+      };
+      var formattedDate = startDate.toLocaleDateString('en-US', options);
+      document.getElementById('scheduleStart').textContent = 'Schedule starts: ' + formattedDate;
+    }
+
+    // Start clock immediately and update every second
+    displayTimezone();
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
 </body>
 </html>
-``
