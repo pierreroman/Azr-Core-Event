@@ -1,27 +1,45 @@
-const { DefaultAzureCredential } = require("@azure/identity");
+const { ManagedIdentityCredential } = require("@azure/identity");
 const { BlobServiceClient } = require("@azure/storage-blob");
 
 module.exports = async function (context, req) {
-    const storageAccountName = process.env.STORAGE_ACCOUNT_NAME || "YOUR_STORAGE_ACCOUNT_NAME";
+    const storageAccountName = process.env.STORAGE_ACCOUNT_NAME;
     const containerName = process.env.STORAGE_CONTAINER_NAME || "schedules";
     const blobName = process.env.STORAGE_BLOB_NAME || "video-schedule.json";
 
-    // Use DefaultAzureCredential which will use the managed identity in Azure
-    const credential = new DefaultAzureCredential();
-    
-    // Create blob service client using managed identity
-    const blobServiceClient = new BlobServiceClient(
-        `https://${storageAccountName}.blob.core.windows.net`,
-        credential
-    );
+    if (!storageAccountName) {
+        context.res = {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+            body: { error: "Configuration error", message: "STORAGE_ACCOUNT_NAME not configured" }
+        };
+        return;
+    }
 
-    const containerClient = blobServiceClient.getContainerClient(containerName);
-    const blobClient = containerClient.getBlockBlobClient(blobName);
+    try {
+        // Use ManagedIdentityCredential for SWA
+        const credential = new ManagedIdentityCredential();
+        
+        // Create blob service client using managed identity
+        const blobServiceClient = new BlobServiceClient(
+            `https://${storageAccountName}.blob.core.windows.net`,
+            credential
+        );
 
-    if (req.method === "GET") {
-        await handleGet(context, blobClient);
-    } else if (req.method === "POST") {
-        await handlePost(context, req, blobClient);
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+        const blobClient = containerClient.getBlockBlobClient(blobName);
+
+        if (req.method === "GET") {
+            await handleGet(context, blobClient);
+        } else if (req.method === "POST") {
+            await handlePost(context, req, blobClient);
+        }
+    } catch (error) {
+        context.log.error("Authentication error:", error.message);
+        context.res = {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+            body: { error: "Authentication failed", message: error.message }
+        };
     }
 };
 
