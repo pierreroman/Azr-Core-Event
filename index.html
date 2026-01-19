@@ -73,15 +73,8 @@
   <!-- Agenda preview -->
   <section id="agenda" class="agenda">
     <h2>Agenda</h2>
-    <ul class="agenda-list">
-      <li><strong>Keynote:</strong> The State of Azure Core — Compute, Network, Storage</li>
-      <li><strong>Breakout:</strong> Resilient architectures with Application Gateway, Firewall, and Private IP</li>
-      <li><strong>Breakout:</strong> Storage strategies: Azure Files, Blob, and performance best practices</li>
-      <li><strong>Breakout:</strong> Automating operations with managed identities and policy</li>
-    </ul>
-    <div style="text-align: center;">
-      <a class="cta" href="#full-agenda">View full agenda</a>
-    </div>
+    <div id="agendaLoading" class="agenda-loading">Loading schedule...</div>
+    <div id="agendaColumns" class="agenda-columns"></div>
   </section>
 
   <!-- Register -->
@@ -166,9 +159,12 @@
         if (videoSchedule.length > 0) {
           displayScheduleStart(videoSchedule[0].startTime);
         }
+        // Render the agenda
+        renderAgenda(videoSchedule);
       })
       .catch(function(error) {
         console.error('Error loading video schedule:', error);
+        document.getElementById('agendaLoading').textContent = 'Failed to load schedule';
       });
 
     // YouTube IFrame API
@@ -474,6 +470,88 @@
       };
       var formattedDate = startDate.toLocaleDateString('en-US', options);
       document.getElementById('scheduleStart').textContent = 'Schedule starts: ' + formattedDate;
+    }
+
+    // Render agenda grouped by day
+    function renderAgenda(schedule) {
+      document.getElementById('agendaLoading').style.display = 'none';
+      var container = document.getElementById('agendaColumns');
+      
+      if (!schedule || schedule.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--muted);">No sessions scheduled yet.</p>';
+        return;
+      }
+      
+      // Group sessions by day
+      var dayGroups = {};
+      schedule.forEach(function(session) {
+        var date = new Date(session.startTime);
+        var dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        if (!dayGroups[dayKey]) {
+          dayGroups[dayKey] = [];
+        }
+        dayGroups[dayKey].push(session);
+      });
+      
+      // Sort days
+      var sortedDays = Object.keys(dayGroups).sort();
+      
+      // Build HTML for each day column
+      var html = '';
+      sortedDays.forEach(function(dayKey) {
+        var sessions = dayGroups[dayKey];
+        var firstSession = new Date(sessions[0].startTime);
+        
+        // Format day header
+        var dayName = firstSession.toLocaleDateString('en-US', { weekday: 'long' });
+        var dayDate = firstSession.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        
+        html += '<div class="agenda-day">';
+        html += '<div class="agenda-day-header">';
+        html += '<span class="day-name">' + dayName + '</span>';
+        html += '<span class="day-date">' + dayDate + '</span>';
+        html += '</div>';
+        html += '<div class="agenda-sessions">';
+        
+        sessions.forEach(function(session) {
+          var sessionDate = new Date(session.startTime);
+          var timeStr = sessionDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+          });
+          
+          // Calculate duration display
+          var durationMin = Math.round(session.duration / 60);
+          var durationStr = durationMin >= 60 
+            ? Math.floor(durationMin / 60) + 'h ' + (durationMin % 60) + 'm'
+            : durationMin + ' min';
+          
+          var url = session.url || 'https://www.youtube.com/watch?v=' + session.videoId;
+          
+          html += '<a href="' + escapeHtml(url) + '" class="agenda-session" target="_blank">';
+          html += '<div class="agenda-session-time">' + timeStr + '</div>';
+          html += '<div class="agenda-session-title">' + escapeHtml(session.title) + '</div>';
+          if (session.description) {
+            html += '<div class="agenda-session-description">' + escapeHtml(session.description) + '</div>';
+          }
+          html += '<div class="agenda-session-duration">⏱ ' + durationStr + '</div>';
+          html += '</a>';
+        });
+        
+        html += '</div></div>';
+      });
+      
+      container.innerHTML = html;
+    }
+    
+    // Helper to escape HTML
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
     }
 
     // Start clock immediately and update every second
