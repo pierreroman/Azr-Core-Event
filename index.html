@@ -31,7 +31,8 @@
       <div class="player-container">
         <div class="player-wrapper">
           <span id="liveBadge" class="live-badge" style="display: none;">🔴 LIVE</span>
-          <div id="youtubePlayer"></div>
+          <img id="loadingImage" src="/assets/Loading-Schedule.png" alt="Loading schedule..." class="placeholder-image" />
+          <div id="youtubePlayer" style="display: none;"></div>
           <img id="placeholderImage" src="/assets/BRB.jpg" alt="We'll be right back" class="placeholder-image" style="display: none;" />
           <img id="onDemandImage" src="/assets/OnDemand.png" alt="On Demand" class="placeholder-image" style="display: none;" />
         </div>
@@ -314,7 +315,8 @@
 
       // If we found an active video, play it
       if (activeVideoIndex >= 0) {
-        // Show player and hide placeholder
+        // Show player and hide placeholders
+        document.getElementById('loadingImage').style.display = 'none';
         document.getElementById('youtubePlayer').style.display = 'block';
         document.getElementById('placeholderImage').style.display = 'none';
         document.getElementById('onDemandImage').style.display = 'none';
@@ -364,6 +366,7 @@
       // We're in a break between videos or before the first video
       else if (isInBreak || nextVideoIndex >= 0) {
         // Hide player and show placeholder
+        document.getElementById('loadingImage').style.display = 'none';
         document.getElementById('youtubePlayer').style.display = 'none';
         document.getElementById('placeholderImage').style.display = 'block';
         document.getElementById('onDemandImage').style.display = 'none';
@@ -393,6 +396,7 @@
       }
       // All videos have finished
       else {
+        document.getElementById('loadingImage').style.display = 'none';
         document.getElementById('youtubePlayer').style.display = 'none';
         document.getElementById('placeholderImage').style.display = 'none';
         document.getElementById('onDemandImage').style.display = 'block';
