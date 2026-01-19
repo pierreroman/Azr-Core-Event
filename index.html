@@ -77,6 +77,22 @@
     <div id="agendaColumns" class="agenda-columns"></div>
   </section>
 
+  <!-- Session Detail Modal -->
+  <div id="sessionModal" class="session-modal-overlay" style="display: none;">
+    <div class="session-modal-content">
+      <button class="session-modal-close" onclick="closeSessionModal()">&times;</button>
+      <div class="session-modal-time" id="sessionModalTime"></div>
+      <h2 class="session-modal-title" id="sessionModalTitle"></h2>
+      <div class="session-modal-meta">
+        <span id="sessionModalDuration"></span>
+      </div>
+      <p class="session-modal-description" id="sessionModalDescription"></p>
+      <div class="session-modal-actions">
+        <a id="sessionModalLink" class="cta" href="#" target="_blank">Watch Video</a>
+      </div>
+    </div>
+  </div>
+
   <!-- Register -->
   <section id="register" class="register">
     <h2>Register for Azure Core Underground</h2>
@@ -484,12 +500,13 @@
       
       // Group sessions by day
       var dayGroups = {};
-      schedule.forEach(function(session) {
+      schedule.forEach(function(session, index) {
         var date = new Date(session.startTime);
         var dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
         if (!dayGroups[dayKey]) {
           dayGroups[dayKey] = [];
         }
+        session._index = index; // Store index for lookup
         dayGroups[dayKey].push(session);
       });
       
@@ -527,16 +544,14 @@
             ? Math.floor(durationMin / 60) + 'h ' + (durationMin % 60) + 'm'
             : durationMin + ' min';
           
-          var url = session.url || 'https://www.youtube.com/watch?v=' + session.videoId;
-          
-          html += '<a href="' + escapeHtml(url) + '" class="agenda-session" target="_blank">';
+          html += '<div class="agenda-session" onclick="openSessionModal(' + session._index + ')">';
           html += '<div class="agenda-session-time">' + timeStr + '</div>';
           html += '<div class="agenda-session-title">' + escapeHtml(session.title) + '</div>';
           if (session.description) {
             html += '<div class="agenda-session-description">' + escapeHtml(session.description) + '</div>';
           }
           html += '<div class="agenda-session-duration">⏱ ' + durationStr + '</div>';
-          html += '</a>';
+          html += '</div>';
         });
         
         html += '</div></div>';
@@ -553,6 +568,56 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;');
     }
+
+    // Session Modal Functions
+    function openSessionModal(index) {
+      var session = videoSchedule[index];
+      if (!session) return;
+      
+      var sessionDate = new Date(session.startTime);
+      var dateStr = sessionDate.toLocaleDateString('en-US', { 
+        weekday: 'long',
+        month: 'long', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      var durationMin = Math.round(session.duration / 60);
+      var durationStr = durationMin >= 60 
+        ? Math.floor(durationMin / 60) + ' hour' + (Math.floor(durationMin / 60) > 1 ? 's' : '') + ' ' + (durationMin % 60) + ' min'
+        : durationMin + ' minutes';
+      
+      var url = session.url || 'https://www.youtube.com/watch?v=' + session.videoId;
+      
+      document.getElementById('sessionModalTime').textContent = dateStr;
+      document.getElementById('sessionModalTitle').textContent = session.title;
+      document.getElementById('sessionModalDescription').textContent = session.description || 'No description available.';
+      document.getElementById('sessionModalDuration').textContent = '⏱ ' + durationStr;
+      document.getElementById('sessionModalLink').href = url;
+      
+      document.getElementById('sessionModal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function closeSessionModal() {
+      document.getElementById('sessionModal').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    
+    // Close session modal on overlay click
+    document.getElementById('sessionModal').addEventListener('click', function(e) {
+      if (e.target === this) closeSessionModal();
+    });
+    
+    // Close session modal on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeSessionModal();
+        closeCocModal();
+      }
+    });
 
     // Start clock immediately and update every second
     displayTimezone();
