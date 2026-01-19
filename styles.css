@@ -186,7 +186,7 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 }
 .upcoming-info h4 {
   margin: 0 0 4px;
-  color: var(--primary);
+  color: var(--primary-2);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -272,7 +272,7 @@ h2 { margin-top: 0; font-size: 28px; text-align: center; }
 
 .agenda-day-header .day-date {
   font-size: 14px;
-  opacity: 0.9;
+  color: #fff;
 }
 
 .agenda-sessions {
