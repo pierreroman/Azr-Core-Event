@@ -211,7 +211,7 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 }
 
 section { padding: 48px 24px; max-width: 100%; margin: 0 auto; }
-h2 { margin-top: 0; font-size: 28px; }
+h2 { margin-top: 0; font-size: 28px; text-align: center; }
 
 .highlights .cards {
   display: grid;
