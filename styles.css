@@ -246,6 +246,8 @@ h2 { margin-top: 0; font-size: 28px; }
   gap: 24px;
   overflow-x: auto;
   padding-bottom: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .agenda-day {
