@@ -195,6 +195,30 @@
       padding: 48px;
       color: var(--muted);
     }
+    .playlist-import {
+      background: var(--surface);
+      border: 1px solid #243159;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .playlist-import h3 {
+      margin: 0 0 12px 0;
+      color: var(--primary-2);
+      font-size: 14px;
+    }
+    .playlist-import .form-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .playlist-import .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    .playlist-import input {
+      width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -205,9 +229,25 @@
         <h1>Schedule Admin</h1>
       </div>
       <div class="btn-group">
+        <button class="btn" onclick="togglePlaylistImport()">📋 Import Playlist</button>
         <button class="btn btn-primary" onclick="addNewItem()">+ Add Video</button>
         <button class="btn btn-success" onclick="saveSchedule()">💾 Save Changes</button>
       </div>
+    </div>
+
+    <div id="playlistImport" class="playlist-import" style="display: none;">
+      <h3>Import from YouTube Playlist</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Playlist URL or ID</label>
+          <input type="text" id="playlistUrl" placeholder="https://youtube.com/playlist?list=... or PLxxxxx">
+        </div>
+        <button class="btn btn-primary" onclick="importPlaylist()">Import</button>
+        <button class="btn" onclick="togglePlaylistImport()">Cancel</button>
+      </div>
+      <p style="margin: 8px 0 0; font-size: 12px; color: var(--muted);">
+        Note: This will add videos from the playlist. Existing schedule items will be preserved.
+      </p>
     </div>
 
     <div id="statusMessage" class="status-message"></div>
@@ -421,6 +461,93 @@
           el.className = 'status-message';
         }, 3000);
       }
+    }
+
+    function togglePlaylistImport() {
+      const panel = document.getElementById('playlistImport');
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      if (panel.style.display === 'block') {
+        document.getElementById('playlistUrl').focus();
+      }
+    }
+
+    function extractPlaylistId(input) {
+      // Handle full URL: https://www.youtube.com/playlist?list=PLxxxxx
+      const urlMatch = input.match(/[?&]list=([^&]+)/);
+      if (urlMatch) return urlMatch[1];
+      
+      // Handle shortened URL or just the ID
+      if (input.startsWith('PL') || input.startsWith('UU') || input.startsWith('OL')) {
+        return input.trim();
+      }
+      
+      return input.trim();
+    }
+
+    async function importPlaylist() {
+      const input = document.getElementById('playlistUrl').value.trim();
+      if (!input) {
+        showStatus('Please enter a playlist URL or ID', 'error');
+        return;
+      }
+
+      const playlistId = extractPlaylistId(input);
+      showStatus('Fetching playlist...', 'success');
+
+      try {
+        // Use a public YouTube data extraction approach via oEmbed + page scraping workaround
+        // For full functionality, we'd need a YouTube Data API key
+        // Here we'll fetch using a CORS proxy or the YouTube API
+        
+        // Try to get playlist info via YouTube's RSS feed (works for public playlists)
+        const videos = await fetchPlaylistVideos(playlistId);
+        
+        if (videos.length === 0) {
+          showStatus('No videos found in playlist or playlist is private', 'error');
+          return;
+        }
+
+        // Add videos to schedule
+        const timezone = document.getElementById('timezone').value;
+        let startTime = new Date();
+        startTime.setMinutes(startTime.getMinutes() + 30); // Start 30 min from now
+
+        for (const video of videos) {
+          schedule.push({
+            videoId: video.videoId,
+            title: video.title,
+            description: video.description || '',
+            url: `https://www.youtube.com/watch?v=${video.videoId}`,
+            startTime: startTime.toISOString(),
+            duration: video.duration || 1800 // Default 30 min if unknown
+          });
+          
+          // Increment start time by duration for next video
+          startTime = new Date(startTime.getTime() + ((video.duration || 1800) * 1000));
+        }
+
+        renderSchedule();
+        togglePlaylistImport();
+        document.getElementById('playlistUrl').value = '';
+        showStatus(`Imported ${videos.length} videos from playlist!`, 'success');
+        
+      } catch (error) {
+        console.error('Playlist import error:', error);
+        showStatus('Error importing playlist: ' + error.message, 'error');
+      }
+    }
+
+    async function fetchPlaylistVideos(playlistId) {
+      // Use our Azure Function proxy to keep the API key secure server-side
+      const response = await fetch(`${API_BASE}/youtube/playlist/${playlistId}`);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch playlist');
+      }
+      
+      const data = await response.json();
+      return data.videos || [];
     }
   </script>
 </body>
