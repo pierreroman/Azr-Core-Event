@@ -240,8 +240,8 @@ h2 { margin-top: 0; font-size: 28px; }
 
 .community { text-align: center; }
 .community p { color: var(--muted); }
-.community p a { color: var(--primary-2); text-decoration: none; }
-.community p a:hover { text-decoration: underline; }
+.community p a { color: var(--primary-2); text-decoration: underline; }
+.community p a:hover { text-decoration: underline; color: #fff; }
 
 .coc-button {
   background: none;
