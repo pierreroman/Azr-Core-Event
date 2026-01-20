@@ -219,6 +219,49 @@
     .playlist-import input {
       width: 100%;
     }
+    .csv-import {
+      background: var(--surface);
+      border: 1px solid #243159;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .csv-import h3 {
+      margin: 0 0 12px 0;
+      color: var(--primary-2);
+      font-size: 14px;
+    }
+    .csv-import .form-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .csv-import .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+    }
+    .file-input-wrapper input[type=file] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .file-name {
+      color: var(--muted);
+      font-size: 14px;
+      margin-left: 12px;
+    }
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -230,6 +273,8 @@
       </div>
       <div class="btn-group">
         <button class="btn" onclick="togglePlaylistImport()">📋 Import Playlist</button>
+        <button class="btn" onclick="exportCSV()">📥 Export CSV</button>
+        <button class="btn" onclick="toggleCSVImport()">📤 Import CSV</button>
         <button class="btn btn-primary" onclick="addNewItem()">+ Add Video</button>
         <button class="btn btn-success" onclick="saveSchedule()">💾 Save Changes</button>
       </div>
@@ -247,6 +292,34 @@
       </div>
       <p style="margin: 8px 0 0; font-size: 12px; color: var(--muted);">
         Note: This will add videos from the playlist. Existing schedule items will be preserved.
+      </p>
+    </div>
+
+    <div id="csvImport" class="csv-import" style="display: none;">
+      <h3>Import from CSV File</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>CSV File</label>
+          <div style="display: flex; align-items: center;">
+            <div class="file-input-wrapper">
+              <button class="btn btn-secondary">Choose File</button>
+              <input type="file" id="csvFile" accept=".csv" onchange="updateFileName(this)">
+            </div>
+            <span id="csvFileName" class="file-name">No file selected</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Import Mode</label>
+          <select id="csvImportMode">
+            <option value="append">Append to existing</option>
+            <option value="replace">Replace all</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="importCSV()">Import</button>
+        <button class="btn" onclick="toggleCSVImport()">Cancel</button>
+      </div>
+      <p style="margin: 8px 0 0; font-size: 12px; color: var(--muted);">
+        CSV columns: videoId, title, description, url, startTime (ISO format), duration (seconds)
       </p>
     </div>
 
@@ -548,6 +621,177 @@
       
       const data = await response.json();
       return data.videos || [];
+    }
+
+    // CSV Export/Import Functions
+    function toggleCSVImport() {
+      const panel = document.getElementById('csvImport');
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      if (panel.style.display === 'none') {
+        document.getElementById('csvFile').value = '';
+        document.getElementById('csvFileName').textContent = 'No file selected';
+      }
+    }
+
+    function updateFileName(input) {
+      const fileName = input.files[0]?.name || 'No file selected';
+      document.getElementById('csvFileName').textContent = fileName;
+    }
+
+    function escapeCSVField(field) {
+      if (field === null || field === undefined) return '';
+      const str = String(field);
+      // Escape if contains comma, quote, or newline
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    function exportCSV() {
+      if (schedule.length === 0) {
+        showStatus('No schedule items to export', 'error');
+        return;
+      }
+
+      // CSV header
+      const headers = ['videoId', 'title', 'description', 'url', 'startTime', 'duration'];
+      const csvRows = [headers.join(',')];
+
+      // CSV data rows
+      for (const item of schedule) {
+        const row = [
+          escapeCSVField(item.videoId),
+          escapeCSVField(item.title),
+          escapeCSVField(item.description),
+          escapeCSVField(item.url),
+          escapeCSVField(item.startTime),
+          escapeCSVField(item.duration)
+        ];
+        csvRows.push(row.join(','));
+      }
+
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create download link
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = `schedule-export-${timestamp}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showStatus(`Exported ${schedule.length} items to CSV`, 'success');
+    }
+
+    function parseCSVLine(line) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        const nextChar = line[i + 1];
+        
+        if (inQuotes) {
+          if (char === '"' && nextChar === '"') {
+            current += '"';
+            i++; // Skip next quote
+          } else if (char === '"') {
+            inQuotes = false;
+          } else {
+            current += char;
+          }
+        } else {
+          if (char === '"') {
+            inQuotes = true;
+          } else if (char === ',') {
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+      }
+      result.push(current.trim());
+      return result;
+    }
+
+    function parseCSV(csvText) {
+      const lines = csvText.split(/\r?\n/).filter(line => line.trim());
+      if (lines.length < 2) {
+        throw new Error('CSV must have a header row and at least one data row');
+      }
+
+      const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+      const requiredHeaders = ['videoid', 'title', 'starttime', 'duration'];
+      
+      for (const required of requiredHeaders) {
+        if (!headers.includes(required)) {
+          throw new Error(`Missing required column: ${required}`);
+        }
+      }
+
+      const items = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i]);
+        if (values.length === 0 || (values.length === 1 && !values[0])) continue;
+
+        const item = {};
+        headers.forEach((header, index) => {
+          const value = values[index] || '';
+          // Normalize header names to match our data structure
+          const key = header === 'videoid' ? 'videoId' : 
+                      header === 'starttime' ? 'startTime' : header;
+          item[key] = value;
+        });
+
+        // Parse duration as number
+        item.duration = parseInt(item.duration) || 1800;
+        
+        items.push(item);
+      }
+
+      return items;
+    }
+
+    async function importCSV() {
+      const fileInput = document.getElementById('csvFile');
+      const importMode = document.getElementById('csvImportMode').value;
+
+      if (!fileInput.files || fileInput.files.length === 0) {
+        showStatus('Please select a CSV file', 'error');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      
+      try {
+        const text = await file.text();
+        const items = parseCSV(text);
+
+        if (items.length === 0) {
+          showStatus('No valid items found in CSV', 'error');
+          return;
+        }
+
+        if (importMode === 'replace') {
+          schedule = items;
+        } else {
+          schedule = schedule.concat(items);
+        }
+
+        renderSchedule();
+        toggleCSVImport();
+        showStatus(`Imported ${items.length} items from CSV (${importMode === 'replace' ? 'replaced' : 'appended'})`, 'success');
+
+      } catch (error) {
+        showStatus('Error parsing CSV: ' + error.message, 'error');
+      }
     }
   </script>
 </body>
