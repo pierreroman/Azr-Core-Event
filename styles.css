@@ -336,9 +336,9 @@ h2 { margin-top: 0; font-size: 28px; text-align: center; }
 }
 
 .agenda-day {
-  flex: 1;
+  flex: 1 1 300px;
   min-width: 280px;
-  max-width: 400px;
+  max-width: 600px;
 }
 
 .agenda-day-header {
