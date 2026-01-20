@@ -15,13 +15,19 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 .hero {
   background: radial-gradient(1000px 500px at 10% 0%, rgba(38,112,255,0.3), transparent 60%) , linear-gradient(180deg, #0a0f1f 0%, #0a0f1f 70%, #0c1224 100%);
   border-bottom: 1px solid #1c2544;
-  padding: 48px 24px;
+  padding: 24px 24px 48px;
   text-align: center;
   width: 100%;
   max-width: 100%;
 }
 
-.hero .logo { width: 120px; height: auto; margin-bottom: 16px; }
+.hero .logo { 
+  width: 480px; 
+  max-width: 90%; 
+  height: auto; 
+  margin: 0 auto 16px; 
+  display: block;
+}
 .hero h1 { font-size: 40px; margin: 8px 0 4px; }
 .hero .tagline { color: var(--muted); margin: 0 0 24px; }
 .clock-container {
@@ -101,23 +107,6 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
   50% { opacity: 0.7; }
 }
 
-.live-chat-container {
-  background: var(--surface);
-  border: 1px solid #243159;
-  border-radius: 8px;
-  overflow: hidden;
-  flex: 0 0 400px;
-  min-width: 350px;
-  max-width: 450px;
-  height: auto;
-}
-
-.live-chat-container iframe {
-  display: block;
-  width: 100%;
-  height: 500px;
-}
-
 .live-chat-button {
   display: inline-block;
   padding: 12px 20px;
@@ -186,7 +175,7 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 }
 .upcoming-info h4 {
   margin: 0 0 4px;
-  color: var(--primary);
+  color: var(--primary-2);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -212,6 +201,79 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 
 section { padding: 48px 24px; max-width: 100%; margin: 0 auto; }
 h2 { margin-top: 0; font-size: 28px; text-align: center; }
+
+/* About This Event section */
+.about-event {
+  background: var(--surface);
+  border-top: 1px solid #243159;
+  border-bottom: 1px solid #243159;
+}
+.about-content {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.about-content > p {
+  text-align: center;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.7;
+  max-width: 800px;
+  margin: 0 auto 16px;
+}
+.about-content > p strong {
+  color: var(--primary-2);
+}
+.about-content > p em {
+  color: var(--text);
+}
+.about-content .cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.about-content .card p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.about-content .card .card-summary {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid #243159;
+  font-size: 13px;
+  color: var(--text);
+}
+.about-audience {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 16px;
+}
+.about-audience > div {
+  background: var(--card);
+  border: 1px solid #243159;
+  border-radius: 12px;
+  padding: 20px;
+}
+.about-audience h4 {
+  margin: 0 0 12px;
+  color: var(--primary-2);
+  font-size: 16px;
+}
+.about-audience ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+.about-audience li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.about-audience li:last-child {
+  margin-bottom: 0;
+}
 
 .highlights .cards {
   display: grid;
@@ -251,9 +313,9 @@ h2 { margin-top: 0; font-size: 28px; text-align: center; }
 }
 
 .agenda-day {
-  flex: 1;
+  flex: 1 1 328px;
   min-width: 280px;
-  max-width: 400px;
+  max-width: 600px;
 }
 
 .agenda-day-header {
@@ -272,7 +334,7 @@ h2 { margin-top: 0; font-size: 28px; text-align: center; }
 
 .agenda-day-header .day-date {
   font-size: 14px;
-  opacity: 0.9;
+  color: #fff;
 }
 
 .agenda-sessions {
@@ -423,22 +485,38 @@ h2 { margin-top: 0; font-size: 28px; text-align: center; }
 }
 
 @media (max-width: 768px) {
+  .hero .logo {
+    width: 280px;
+    max-width: 80%;
+  }
+  
+  .hero h1 {
+    font-size: 28px;
+  }
+  
+  .hero .tagline {
+    font-size: 14px;
+  }
+  
   .agenda-columns {
     flex-direction: column;
+    overflow-x: hidden;
   }
   
   .agenda-day {
-    max-width: none;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .agenda-session {
+    height: auto;
+    min-height: 120px;
   }
 }
 
 .register { text-align: center; }
 .register p { color: var(--muted); }
-
-.community { text-align: center; }
-.community p { color: var(--muted); }
-.community p a { color: var(--primary-2); text-decoration: underline; }
-.community p a:hover { text-decoration: underline; color: #fff; }
 
 .coc-button {
   background: none;

@@ -13,14 +13,13 @@
   <!-- Top bar / hero -->
   <header class="hero">
     <div class="hero-content">
-      <img src="/assets/acu-logo.png" alt="Azure Core Underground Logo" class="logo" style="width: 480px; height: auto;" />
+      <img src="/assets/acu-logo.png" alt="Azure Core Underground Logo" class="logo" />
       <h1>Azure Core Underground</h1>
       <p class="tagline">Deep-dive sessions on Compute • Network • Storage in Azure</p>
       <a class="cta" href="#register">Register</a>
       <a class="cta secondary" href="#agenda">Agenda</a>
+      <a class="cta secondary" href="#about">About</a>
     </div>
-    <br />
-    <br />
     <br />
     <div class="hero-content">
       <div id="scheduleStart" class="schedule-start"></div>
@@ -30,6 +29,7 @@
           <img id="loadingImage" src="/assets/Loading-Schedule.png" alt="Loading schedule..." class="placeholder-image" />
           <div id="youtubePlayer" style="display: none;"></div>
           <img id="placeholderImage" src="/assets/BRB.jpg" alt="We'll be right back" class="placeholder-image" style="display: none;" />
+          <img id="seeYouTomorrowImage" src="/assets/See-you-tomorrow.png" alt="See you tomorrow!" class="placeholder-image" style="display: none;" />
           <img id="onDemandImage" src="/assets/OnDemand.png" alt="On Demand" class="placeholder-image" style="display: none;" />
         </div>
         <button id="liveChatButton" class="live-chat-button" style="display: none;" onclick="openLiveChat()">💬 Open Live Chat</button>
@@ -46,6 +46,54 @@
       </div>
     </div>
   </header>
+
+  <!-- About This Event section -->
+  <section id="about" class="about-event">
+    <h2>About This Event</h2>
+    <div class="about-content">
+      <p><strong>Azure Core Underground</strong> is a deep-technical, engineering-led, Azure infrastructure event built for the people who actually <em>run</em> Azure in production. If you've ever been on call at 2am wondering why something broke, or how to stop it from breaking again — you're in the right place.</p>
+      <p>It's about <strong>how Azure behaves in the real world</strong>, and what that means for the people designing, operating, and securing infrastructure at scale. Less theory. Fewer slides. More reality.</p>
+      
+      <div class="cards">
+        <article class="card">
+          <h3>🧱 Build Azure Infrastructure</h3>
+          <p>Getting the foundations right. Sessions go deep into how Azure environments are designed, provisioned, and automated — from day-one decisions that have long-term consequences.</p>
+          <p class="card-summary"><strong>In short:</strong> How to design Azure infrastructure you won't regret six months later.</p>
+        </article>
+        <article class="card">
+          <h3>🔧 Operate Azure Workloads</h3>
+          <p>All about day-2 operations — what happens after go-live. Focus on running Azure at scale: monitoring, governance, patching, identity, hybrid operations, and keeping systems running.</p>
+          <p class="card-summary"><strong>In short:</strong> How to keep Azure stable, secure, and manageable when it's under pressure.</p>
+        </article>
+        <article class="card">
+          <h3>🚀 Optimize Azure at Scale</h3>
+          <p>Making Azure better over time. Dives into performance tuning, cost optimization, reliability, modernization, and understanding the tradeoffs that matter in production.</p>
+          <p class="card-summary"><strong>In short:</strong> How to improve performance, control costs, and reduce risk without breaking what already works.</p>
+        </article>
+      </div>
+
+      <div class="about-audience">
+        <div class="audience-for">
+          <h4>Who It's For</h4>
+          <ul>
+            <li>IT professionals running Azure in production</li>
+            <li>Infrastructure, platform, and SRE engineers</li>
+            <li>Hybrid and enterprise operations teams</li>
+            <li>Anyone who cares about blast radius, failure modes, and operational tradeoffs</li>
+          </ul>
+        </div>
+        <div class="audience-takeaways">
+          <h4>What You'll Walk Away With</h4>
+          <ul>
+            <li>Clear mental models for Azure infrastructure decisions</li>
+            <li>Real-world patterns (and anti-patterns) used in production</li>
+            <li>Practical guidance you can apply immediately</li>
+            <li>Fewer unknowns when designing or operating Azure at scale</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- Highlights section -->
   <section class="highlights">
@@ -94,12 +142,6 @@
     <h2>Register for Azure Core Underground</h2>
     <p>Secure your spot for deep-dive sessions and hands-on demos.</p>
     <a class="cta" href="https://example.com/register">Register Now</a>
-  </section>
-
-  <!-- Sponsors / Community -->
-  <section class="community">
-    <h2>Community & Sponsors</h2>
-    <p>Powered by the Azure community. Interested in sponsoring? <a href="mailto:organizers@azurecoreunderground.com">Contact us</a>.</p>
   </section>
 
   <!-- Footer -->
@@ -327,6 +369,7 @@
         document.getElementById('loadingImage').style.display = 'none';
         document.getElementById('youtubePlayer').style.display = 'block';
         document.getElementById('placeholderImage').style.display = 'none';
+        document.getElementById('seeYouTomorrowImage').style.display = 'none';
         document.getElementById('onDemandImage').style.display = 'none';
 
         // If video changed, load the new one
@@ -376,7 +419,6 @@
         // Hide player and show placeholder
         document.getElementById('loadingImage').style.display = 'none';
         document.getElementById('youtubePlayer').style.display = 'none';
-        document.getElementById('placeholderImage').style.display = 'block';
         document.getElementById('onDemandImage').style.display = 'none';
         if (player && player.pauseVideo) {
           player.pauseVideo();
@@ -385,13 +427,34 @@
 
         var nextVideo = videoSchedule[nextVideoIndex];
         var nextStart = new Date(nextVideo.startTime);
+        
+        // Check if next video is on a different day
+        var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        var nextVideoDay = new Date(nextStart.getFullYear(), nextStart.getMonth(), nextStart.getDate());
+        var isNextVideoTomorrow = nextVideoDay > today;
+        
+        if (isNextVideoTomorrow) {
+          document.getElementById('placeholderImage').style.display = 'none';
+          document.getElementById('seeYouTomorrowImage').style.display = 'block';
+        } else {
+          document.getElementById('placeholderImage').style.display = 'block';
+          document.getElementById('seeYouTomorrowImage').style.display = 'none';
+        }
+        
         var timeUntil = Math.floor((nextStart - now) / 1000);
         var hours = Math.floor(timeUntil / 3600);
         var minutes = Math.floor((timeUntil % 3600) / 60);
         var seconds = timeUntil % 60;
         
         document.getElementById('videoTitle').textContent = 'Coming Up: ' + nextVideo.title;
-        if (hours > 0) {
+        if (isNextVideoTomorrow) {
+          var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          var nextDayName = dayNames[nextStart.getDay()];
+          var nextTimeStr = nextStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          document.getElementById('videoDescription').innerHTML = 
+            'See you ' + nextDayName + ' at ' + nextTimeStr + ' — ' + nextVideo.description +
+            '<br><a href="' + nextVideo.url + '" target="_blank" class="video-link">' + nextVideo.url + '</a>';
+        } else if (hours > 0) {
           document.getElementById('videoDescription').innerHTML = 
             'Starts in ' + hours + 'h ' + minutes + 'm — ' + nextVideo.description +
             '<br><a href="' + nextVideo.url + '" target="_blank" class="video-link">' + nextVideo.url + '</a>';
@@ -407,6 +470,7 @@
         document.getElementById('loadingImage').style.display = 'none';
         document.getElementById('youtubePlayer').style.display = 'none';
         document.getElementById('placeholderImage').style.display = 'none';
+        document.getElementById('seeYouTomorrowImage').style.display = 'none';
         document.getElementById('onDemandImage').style.display = 'block';
         if (player && player.pauseVideo) {
           player.pauseVideo();
