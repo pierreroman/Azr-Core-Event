@@ -29,6 +29,7 @@
           <img id="loadingImage" src="/assets/Loading-Schedule.png" alt="Loading schedule..." class="placeholder-image" />
           <div id="youtubePlayer" style="display: none;"></div>
           <img id="placeholderImage" src="/assets/BRB.jpg" alt="We'll be right back" class="placeholder-image" style="display: none;" />
+          <img id="seeYouTomorrowImage" src="/assets/see-you-tomorrow.png" alt="See you tomorrow" class="placeholder-image" style="display: none;" />
           <img id="onDemandImage" src="/assets/OnDemand.png" alt="On Demand" class="placeholder-image" style="display: none;" />
         </div>
         <button id="liveChatButton" class="live-chat-button" style="display: none;" onclick="openLiveChat()">💬 Open Live Chat</button>
@@ -368,6 +369,7 @@
         document.getElementById('loadingImage').style.display = 'none';
         document.getElementById('youtubePlayer').style.display = 'block';
         document.getElementById('placeholderImage').style.display = 'none';
+        document.getElementById('seeYouTomorrowImage').style.display = 'none';
         document.getElementById('onDemandImage').style.display = 'none';
 
         // If video changed, load the new one
@@ -417,7 +419,6 @@
         // Hide player and show placeholder
         document.getElementById('loadingImage').style.display = 'none';
         document.getElementById('youtubePlayer').style.display = 'none';
-        document.getElementById('placeholderImage').style.display = 'block';
         document.getElementById('onDemandImage').style.display = 'none';
         if (player && player.pauseVideo) {
           player.pauseVideo();
@@ -426,13 +427,34 @@
 
         var nextVideo = videoSchedule[nextVideoIndex];
         var nextStart = new Date(nextVideo.startTime);
+        
+        // Check if next video is on a different day
+        var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        var nextVideoDay = new Date(nextStart.getFullYear(), nextStart.getMonth(), nextStart.getDate());
+        var isNextVideoTomorrow = nextVideoDay > today;
+        
+        if (isNextVideoTomorrow) {
+          document.getElementById('placeholderImage').style.display = 'none';
+          document.getElementById('seeYouTomorrowImage').style.display = 'block';
+        } else {
+          document.getElementById('placeholderImage').style.display = 'block';
+          document.getElementById('seeYouTomorrowImage').style.display = 'none';
+        }
+        
         var timeUntil = Math.floor((nextStart - now) / 1000);
         var hours = Math.floor(timeUntil / 3600);
         var minutes = Math.floor((timeUntil % 3600) / 60);
         var seconds = timeUntil % 60;
         
         document.getElementById('videoTitle').textContent = 'Coming Up: ' + nextVideo.title;
-        if (hours > 0) {
+        if (isNextVideoTomorrow) {
+          var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          var nextDayName = dayNames[nextStart.getDay()];
+          var nextTimeStr = nextStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          document.getElementById('videoDescription').innerHTML = 
+            'See you ' + nextDayName + ' at ' + nextTimeStr + ' — ' + nextVideo.description +
+            '<br><a href="' + nextVideo.url + '" target="_blank" class="video-link">' + nextVideo.url + '</a>';
+        } else if (hours > 0) {
           document.getElementById('videoDescription').innerHTML = 
             'Starts in ' + hours + 'h ' + minutes + 'm — ' + nextVideo.description +
             '<br><a href="' + nextVideo.url + '" target="_blank" class="video-link">' + nextVideo.url + '</a>';
@@ -448,6 +470,7 @@
         document.getElementById('loadingImage').style.display = 'none';
         document.getElementById('youtubePlayer').style.display = 'none';
         document.getElementById('placeholderImage').style.display = 'none';
+        document.getElementById('seeYouTomorrowImage').style.display = 'none';
         document.getElementById('onDemandImage').style.display = 'block';
         if (player && player.pauseVideo) {
           player.pauseVideo();
