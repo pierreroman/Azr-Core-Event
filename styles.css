@@ -21,7 +21,13 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
   max-width: 100%;
 }
 
-.hero .logo { width: 120px; height: auto; margin-bottom: 16px; }
+.hero .logo { 
+  width: 480px; 
+  max-width: 90%; 
+  height: auto; 
+  margin: 0 auto 16px; 
+  display: block;
+}
 .hero h1 { font-size: 40px; margin: 8px 0 4px; }
 .hero .tagline { color: var(--muted); margin: 0 0 24px; }
 .clock-container {
@@ -508,6 +514,19 @@ h2 { margin-top: 0; font-size: 28px; text-align: center; }
 }
 
 @media (max-width: 768px) {
+  .hero .logo {
+    width: 280px;
+    max-width: 80%;
+  }
+  
+  .hero h1 {
+    font-size: 28px;
+  }
+  
+  .hero .tagline {
+    font-size: 14px;
+  }
+  
   .agenda-columns {
     flex-direction: column;
     overflow-x: hidden;
