@@ -510,10 +510,18 @@ h2 { margin-top: 0; font-size: 28px; text-align: center; }
 @media (max-width: 768px) {
   .agenda-columns {
     flex-direction: column;
+    overflow-x: hidden;
   }
   
   .agenda-day {
-    max-width: none;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .agenda-session {
+    height: auto;
+    min-height: 120px;
   }
 }
 
