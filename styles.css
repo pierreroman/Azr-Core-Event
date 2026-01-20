@@ -15,7 +15,7 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 .hero {
   background: radial-gradient(1000px 500px at 10% 0%, rgba(38,112,255,0.3), transparent 60%) , linear-gradient(180deg, #0a0f1f 0%, #0a0f1f 70%, #0c1224 100%);
   border-bottom: 1px solid #1c2544;
-  padding: 48px 24px;
+  padding: 24px 24px 48px;
   text-align: center;
   width: 100%;
   max-width: 100%;
@@ -212,6 +212,40 @@ html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); f
 
 section { padding: 48px 24px; max-width: 100%; margin: 0 auto; }
 h2 { margin-top: 0; font-size: 28px; text-align: center; }
+
+/* About This Event section */
+.about-event {
+  background: var(--surface);
+  border-top: 1px solid #243159;
+  border-bottom: 1px solid #243159;
+}
+.about-content {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.about-content > p {
+  text-align: center;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.7;
+  max-width: 800px;
+  margin: 0 auto 24px;
+}
+.about-content > p strong {
+  color: var(--primary-2);
+}
+.about-content .cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.about-note {
+  text-align: center;
+  color: var(--text);
+  font-style: italic;
+  font-size: 14px;
+}
 
 .highlights .cards {
   display: grid;
