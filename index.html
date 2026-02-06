@@ -778,11 +778,13 @@
             try {
                 const branding = JSON.parse(stored);
                 
-                // Apply event name
+                // Apply event name (use as-is, don't append year)
                 if (branding.eventName) {
-                    document.title = branding.eventName + ' 2026';
-                    document.getElementById('site-title').textContent = branding.eventName + ' 2026';
-                    document.getElementById('site-tagline').textContent = branding.eventName + ' - a community event focused on compute, network, and storage in Azure.';
+                    document.title = branding.eventName;
+                    document.getElementById('site-title').textContent = branding.eventName;
+                    // Extract base name without year for tagline
+                    const baseName = branding.eventName.replace(/\s*\d{4}$/, '');
+                    document.getElementById('site-tagline').textContent = baseName + ' - a community event focused on compute, network, and storage in Azure.';
                 }
                 
                 // Apply logo
