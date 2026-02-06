@@ -1,0 +1,1 @@
+{"properties":{"platform":{"enabled":true},"globalValidation":{"requireAuthentication":false,"unauthenticatedClientAction":"AllowAnonymous"},"identityProviders":{"azureStaticWebApps":{"enabled":true,"registration":{"clientId":"lemon-beach-0a645ad0f.4.azurestaticapps.net"}}}}}
