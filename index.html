@@ -242,7 +242,7 @@
                 return `
                     <div class="speaker-card" onclick="openSpeakerModal('${speaker.id}')">
                         <div class="speaker-avatar" style="${avatarStyle}">
-                            ${!speaker.headshotUrl ? initials : ''}
+                            ${!headshotUrl ? initials : ''}
                         </div>
                         <h3 class="speaker-name">${escapeHtml(speaker.name || 'Unknown')}</h3>
                         <p class="speaker-title">${escapeHtml(speaker.title || '')}</p>
