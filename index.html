@@ -743,29 +743,38 @@
         
         // Load markdown content from API
         async function loadMarkdownContent() {
+            // Helper to parse markdown safely
+            function parseMarkdown(content) {
+                try {
+                    // marked.parse() for v4+, marked() for older versions
+                    return typeof marked.parse === 'function' ? marked.parse(content) : marked(content);
+                } catch (e) {
+                    console.error('Markdown parse error:', e);
+                    return content; // Return raw content if parsing fails
+                }
+            }
+            
             // Load About content
             try {
                 const aboutResponse = await fetch('/api/content/about');
                 if (aboutResponse.ok) {
                     const aboutData = await aboutResponse.json();
-                    document.getElementById('about-content').innerHTML = marked.parse(aboutData.content);
+                    document.getElementById('about-content').innerHTML = parseMarkdown(aboutData.content);
                 } else {
-                    // Fallback to static content file
-                    const staticAbout = await fetch('/content/about.md');
-                    if (staticAbout.ok) {
-                        const content = await staticAbout.text();
-                        document.getElementById('about-content').innerHTML = marked.parse(content);
-                    }
+                    throw new Error('API returned ' + aboutResponse.status);
                 }
             } catch (error) {
-                console.log('Loading about from static file');
+                console.log('API error for about, trying static file:', error.message);
                 try {
                     const staticAbout = await fetch('/content/about.md');
                     if (staticAbout.ok) {
                         const content = await staticAbout.text();
-                        document.getElementById('about-content').innerHTML = marked.parse(content);
+                        document.getElementById('about-content').innerHTML = parseMarkdown(content);
+                    } else {
+                        document.getElementById('about-content').innerHTML = '<p>About content unavailable.</p>';
                     }
                 } catch (e) {
+                    console.error('Static about file error:', e);
                     document.getElementById('about-content').innerHTML = '<p>About content unavailable.</p>';
                 }
             }
@@ -775,24 +784,22 @@
                 const cocResponse = await fetch('/api/content/code-of-conduct');
                 if (cocResponse.ok) {
                     const cocData = await cocResponse.json();
-                    document.getElementById('coc-content').innerHTML = marked.parse(cocData.content);
+                    document.getElementById('coc-content').innerHTML = parseMarkdown(cocData.content);
                 } else {
-                    // Fallback to static content file
-                    const staticCoc = await fetch('/content/code-of-conduct.md');
-                    if (staticCoc.ok) {
-                        const content = await staticCoc.text();
-                        document.getElementById('coc-content').innerHTML = marked.parse(content);
-                    }
+                    throw new Error('API returned ' + cocResponse.status);
                 }
             } catch (error) {
-                console.log('Loading CoC from static file');
+                console.log('API error for CoC, trying static file:', error.message);
                 try {
                     const staticCoc = await fetch('/content/code-of-conduct.md');
                     if (staticCoc.ok) {
                         const content = await staticCoc.text();
-                        document.getElementById('coc-content').innerHTML = marked.parse(content);
+                        document.getElementById('coc-content').innerHTML = parseMarkdown(content);
+                    } else {
+                        document.getElementById('coc-content').innerHTML = '<p>Code of Conduct unavailable.</p>';
                     }
                 } catch (e) {
+                    console.error('Static CoC file error:', e);
                     document.getElementById('coc-content').innerHTML = '<p>Code of Conduct unavailable.</p>';
                 }
             }
