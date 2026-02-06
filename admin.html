@@ -6,7 +6,7 @@
     <title>Admin Dashboard - Azure Core Underground</title>
     <link rel="stylesheet" href="styles.css">
     <!-- Markdown parser for content editors -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
 </head>
 <body>
     <div class="admin-dashboard">
@@ -369,10 +369,30 @@ Azure Core Underground is a **free, community-driven virtual conference** for Az
             });
         }
         
+        // Helper to parse markdown safely
+        function parseMarkdown(content) {
+            if (typeof marked === 'undefined') {
+                console.error('marked library not loaded');
+                return content;
+            }
+            try {
+                // marked.parse() for v4+, marked() for older versions
+                if (typeof marked.parse === 'function') {
+                    return marked.parse(content);
+                } else if (typeof marked === 'function') {
+                    return marked(content);
+                }
+                return content;
+            } catch (e) {
+                console.error('Markdown parse error:', e);
+                return content;
+            }
+        }
+        
         function updateMarkdownPreview(markdown, previewId) {
             const preview = document.getElementById(previewId);
             if (markdown.trim()) {
-                preview.innerHTML = marked.parse(markdown);
+                preview.innerHTML = parseMarkdown(markdown);
             } else {
                 preview.innerHTML = '<p class="text-muted">Preview will appear here...</p>';
             }
