@@ -745,12 +745,30 @@
         async function loadMarkdownContent() {
             // Helper to parse markdown safely
             function parseMarkdown(content) {
+                // Debug: Check if marked is loaded
+                console.log('marked type:', typeof marked);
+                console.log('marked.parse type:', typeof marked?.parse);
+                
+                if (typeof marked === 'undefined') {
+                    console.error('marked library not loaded!');
+                    return '<p style="color:red;">Markdown library not loaded</p>' + content;
+                }
+                
                 try {
-                    // marked.parse() for v4+, marked() for older versions
-                    return typeof marked.parse === 'function' ? marked.parse(content) : marked(content);
+                    let html;
+                    if (typeof marked.parse === 'function') {
+                        html = marked.parse(content);
+                    } else if (typeof marked === 'function') {
+                        html = marked(content);
+                    } else {
+                        console.error('marked is loaded but has no parse function');
+                        return content;
+                    }
+                    console.log('Parsed HTML preview:', html.substring(0, 200));
+                    return html;
                 } catch (e) {
                     console.error('Markdown parse error:', e);
-                    return content; // Return raw content if parsing fails
+                    return content;
                 }
             }
             
