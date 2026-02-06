@@ -34,7 +34,7 @@ async function getSpeakers(request, context) {
                 title: entity.title || '',
                 company: entity.company || '',
                 bio: entity.bio || '',
-                headshotFile: entity.headshotFile || '', // Filename in /images/speakers/
+                headshotFile: entity.headshotFile || '', // Filename in blob storage speakerheadshots container
                 linkedin: entity.linkedin || '',
                 twitter: entity.twitter || '',
                 sessionIds: entity.sessionIds ? JSON.parse(entity.sessionIds) : []

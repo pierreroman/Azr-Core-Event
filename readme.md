@@ -109,7 +109,7 @@ A community conference website for Azure infrastructure professionals, featuring
 - **Add Speaker** - Form with:
   - Name, title, company
   - Biography (multi-line)
-  - Headshot filename (for `/images/speakers/` folder)
+  - Headshot filename (for blob storage `speakerheadshots` container)
   - Social links (LinkedIn, Twitter)
   - Session IDs (comma-separated)
 - **Edit Speaker** - Full editing of all fields
@@ -171,7 +171,7 @@ A community conference website for Azure infrastructure professionals, featuring
 - **Managed Identity** - Function App uses system-assigned managed identity for Table Storage access (no connection strings)
 - **Azure AD Authentication** - Admin pages require authenticated users
 - **No Public Blob Access** - Storage account has `allowBlobPublicAccess: false`
-- **Static Headshots** - Speaker images stored in `/images/speakers/` folder in repo
+- **Speaker Headshots** - Images stored in blob storage `speakerheadshots` container (public blob access)
 - **Security Headers** - X-Content-Type-Options, X-Frame-Options configured
 
 ---

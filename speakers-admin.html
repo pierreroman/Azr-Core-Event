@@ -74,7 +74,7 @@
                     <label for="headshotFile">Headshot Filename</label>
                     <input type="text" id="headshotFile" placeholder="e.g., rick-claus.jpg">
                     <div class="headshot-hint">
-                        Place image in /images/speakers/ folder. Recommended: 400x400px, JPG/PNG/WebP
+                        Upload image to blob storage speakerheadshots container. Recommended: 400x400px, JPG/PNG/WebP
                     </div>
                     <div class="headshot-preview" id="headshotPreview">
                         <span style="color: var(--muted);">No image</span>
@@ -114,7 +114,7 @@
         function updateHeadshotPreview(filename) {
             const preview = document.getElementById('headshotPreview');
             if (filename) {
-                preview.innerHTML = `<img src="/images/speakers/${filename}" onerror="this.parentElement.innerHTML='<span style=\\'color: var(--muted);\\'>Image not found</span>'"">`;
+                preview.innerHTML = `<img src="https://azcorestorage2026.blob.core.windows.net/speakerheadshots/${filename}" onerror="this.parentElement.innerHTML='<span style=\\'color: var(--muted);\\'>Image not found</span>'"">`;
             } else {
                 preview.innerHTML = '<span style="color: var(--muted);">No image</span>';
             }
@@ -158,7 +158,7 @@
                     <div class="speaker-card-header">
                         <div class="speaker-headshot">
                             ${speaker.headshotFile 
-                                ? `<img src="/images/speakers/${speaker.headshotFile}" onerror="this.parentElement.innerHTML='👤'" alt="${speaker.name}">`
+                                ? `<img src="https://azcorestorage2026.blob.core.windows.net/speakerheadshots/${speaker.headshotFile}" onerror="this.parentElement.innerHTML='👤'" alt="${speaker.name}">`
                                 : '👤'
                             }
                         </div>

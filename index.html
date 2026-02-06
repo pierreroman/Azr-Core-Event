@@ -233,7 +233,7 @@
             );
             
             grid.innerHTML = sortedSpeakers.map(speaker => {
-                const headshotUrl = speaker.headshotFile ? `/images/speakers/${speaker.headshotFile}` : '';
+                const headshotUrl = speaker.headshotFile ? `https://azcorestorage2026.blob.core.windows.net/speakerheadshots/${speaker.headshotFile}` : '';
                 const avatarStyle = headshotUrl 
                     ? `background-image: url('${headshotUrl}')`
                     : '';
@@ -273,7 +273,7 @@
             
             // Set avatar
             const avatarEl = document.getElementById('speaker-modal-avatar');
-            const headshotUrl = speaker.headshotFile ? `/images/speakers/${speaker.headshotFile}` : '';
+            const headshotUrl = speaker.headshotFile ? `https://azcorestorage2026.blob.core.windows.net/speakerheadshots/${speaker.headshotFile}` : '';
             if (headshotUrl) {
                 avatarEl.style.backgroundImage = `url('${headshotUrl}')`;
                 avatarEl.textContent = '';
