@@ -1896,3 +1896,224 @@ footer .copyright {
 .file-input-hidden {
     display: none;
 }
+
+/* ======================================
+   Markdown Content Styles
+   ====================================== */
+
+.markdown-content {
+    line-height: 1.7;
+    color: var(--text);
+}
+
+.markdown-content h1 {
+    font-size: 2.5rem;
+    margin: 0 0 1.5rem 0;
+    color: var(--text);
+    text-align: center;
+}
+
+.markdown-content h2 {
+    font-size: 1.8rem;
+    margin: 2rem 0 1rem 0;
+    color: var(--text);
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 0.5rem;
+}
+
+.markdown-content h3 {
+    font-size: 1.4rem;
+    margin: 1.5rem 0 0.75rem 0;
+    color: var(--primary-2);
+}
+
+.markdown-content h4 {
+    font-size: 1.2rem;
+    margin: 1.25rem 0 0.5rem 0;
+}
+
+.markdown-content p {
+    margin: 0 0 1rem 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+    margin: 0 0 1rem 0;
+    padding-left: 1.5rem;
+}
+
+.markdown-content li {
+    margin-bottom: 0.5rem;
+}
+
+.markdown-content strong {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.markdown-content em {
+    font-style: italic;
+}
+
+.markdown-content a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.markdown-content a:hover {
+    text-decoration: underline;
+}
+
+.markdown-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 1rem 0;
+    display: block;
+}
+
+.markdown-content img[alt*="Logo"],
+.markdown-content img[alt*="logo"] {
+    max-width: 300px;
+    margin: 1rem auto;
+}
+
+.markdown-content blockquote {
+    border-left: 4px solid var(--primary);
+    margin: 1rem 0;
+    padding: 0.5rem 1rem;
+    background: rgba(0, 120, 212, 0.1);
+    border-radius: 0 8px 8px 0;
+}
+
+.markdown-content code {
+    background: var(--card-bg);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+}
+
+.markdown-content pre {
+    background: var(--card-bg);
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.markdown-content pre code {
+    background: none;
+    padding: 0;
+}
+
+.markdown-content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2rem 0;
+}
+
+.markdown-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.markdown-content th,
+.markdown-content td {
+    border: 1px solid var(--border);
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.markdown-content th {
+    background: var(--card-bg);
+    font-weight: 600;
+}
+
+/* Markdown Editor Styles */
+.markdown-editor {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    min-height: 400px;
+}
+
+.markdown-editor-pane {
+    display: flex;
+    flex-direction: column;
+}
+
+.markdown-editor-pane h4 {
+    margin: 0 0 10px 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.markdown-editor textarea {
+    flex: 1;
+    width: 100%;
+    min-height: 350px;
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.markdown-preview {
+    flex: 1;
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    overflow-y: auto;
+    max-height: 500px;
+}
+
+.markdown-cheatsheet {
+    margin-top: 15px;
+    padding: 15px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.markdown-cheatsheet summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.markdown-cheatsheet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.markdown-cheatsheet-item {
+    font-size: 0.85rem;
+}
+
+.markdown-cheatsheet-item code {
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+@media (max-width: 768px) {
+    .markdown-editor {
+        grid-template-columns: 1fr;
+    }
+    
+    .markdown-preview {
+        max-height: 300px;
+    }
+}

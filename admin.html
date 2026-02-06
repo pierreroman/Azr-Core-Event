@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Azure Core Underground</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Markdown parser for content editors -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="admin-dashboard">
@@ -203,17 +205,42 @@
             <div class="content-editor">
                 <h3>📜 Code of Conduct</h3>
                 <p class="text-muted mb-15">
-                    Edit the HTML content for the Code of Conduct modal. Changes are saved to browser storage.
+                    Edit the Code of Conduct using Markdown. Changes are saved to Azure Blob Storage and shared across all users.
                 </p>
-                <textarea id="cocContent" placeholder="Enter HTML content..."></textarea>
-                <div class="editor-actions">
-                    <button class="btn btn-primary" onclick="saveContent('coc')">💾 Save Changes</button>
-                    <button class="btn btn-secondary" onclick="previewContent('coc')">👁️ Preview</button>
-                    <button class="btn btn-secondary" onclick="resetContent('coc')">🔄 Reset to Default</button>
+                
+                <div class="markdown-editor">
+                    <div class="markdown-editor-pane">
+                        <h4>✏️ Edit (Markdown)</h4>
+                        <textarea id="cocContent" placeholder="# Code of Conduct&#10;&#10;Write your content in Markdown..."></textarea>
+                    </div>
+                    <div class="markdown-editor-pane">
+                        <h4>👁️ Live Preview</h4>
+                        <div class="markdown-preview markdown-content" id="cocPreview">
+                            <p class="text-muted">Preview will appear here...</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="content-preview section-hidden" id="cocPreview">
-                    <h4>Preview</h4>
-                    <div id="cocPreviewContent"></div>
+                
+                <details class="markdown-cheatsheet">
+                    <summary>📝 Markdown Cheatsheet</summary>
+                    <div class="markdown-cheatsheet-grid">
+                        <div class="markdown-cheatsheet-item"><code># Heading 1</code> - Main title</div>
+                        <div class="markdown-cheatsheet-item"><code>## Heading 2</code> - Section title</div>
+                        <div class="markdown-cheatsheet-item"><code>**bold**</code> - <strong>Bold text</strong></div>
+                        <div class="markdown-cheatsheet-item"><code>*italic*</code> - <em>Italic text</em></div>
+                        <div class="markdown-cheatsheet-item"><code>- item</code> - Bullet list</div>
+                        <div class="markdown-cheatsheet-item"><code>1. item</code> - Numbered list</div>
+                        <div class="markdown-cheatsheet-item"><code>[text](url)</code> - Link</div>
+                        <div class="markdown-cheatsheet-item"><code>![alt](url)</code> - Image</div>
+                        <div class="markdown-cheatsheet-item"><code>---</code> - Horizontal line</div>
+                        <div class="markdown-cheatsheet-item"><code>> quote</code> - Blockquote</div>
+                    </div>
+                </details>
+                
+                <div class="editor-actions">
+                    <button class="btn btn-primary" onclick="saveMarkdownContent('code-of-conduct')">💾 Save to Cloud</button>
+                    <button class="btn btn-secondary" onclick="resetMarkdownContent('code-of-conduct')">🔄 Reset to Default</button>
+                    <span id="coc-status" class="text-muted text-small"></span>
                 </div>
             </div>
         </section>
@@ -223,17 +250,42 @@
             <div class="content-editor">
                 <h3>ℹ️ About This Event</h3>
                 <p class="text-muted mb-15">
-                    Edit the HTML content for the About section. Changes are saved to browser storage.
+                    Edit the About section using Markdown. Changes are saved to Azure Blob Storage and shared across all users.
                 </p>
-                <textarea id="aboutContent" placeholder="Enter HTML content..."></textarea>
-                <div class="editor-actions">
-                    <button class="btn btn-primary" onclick="saveContent('about')">💾 Save Changes</button>
-                    <button class="btn btn-secondary" onclick="previewContent('about')">👁️ Preview</button>
-                    <button class="btn btn-secondary" onclick="resetContent('about')">🔄 Reset to Default</button>
+                
+                <div class="markdown-editor">
+                    <div class="markdown-editor-pane">
+                        <h4>✏️ Edit (Markdown)</h4>
+                        <textarea id="aboutContent" placeholder="# About&#10;&#10;Write your content in Markdown..."></textarea>
+                    </div>
+                    <div class="markdown-editor-pane">
+                        <h4>👁️ Live Preview</h4>
+                        <div class="markdown-preview markdown-content" id="aboutPreview">
+                            <p class="text-muted">Preview will appear here...</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="content-preview section-hidden" id="aboutPreview">
-                    <h4>Preview</h4>
-                    <div id="aboutPreviewContent"></div>
+                
+                <details class="markdown-cheatsheet">
+                    <summary>📝 Markdown Cheatsheet</summary>
+                    <div class="markdown-cheatsheet-grid">
+                        <div class="markdown-cheatsheet-item"><code># Heading 1</code> - Main title</div>
+                        <div class="markdown-cheatsheet-item"><code>## Heading 2</code> - Section title</div>
+                        <div class="markdown-cheatsheet-item"><code>**bold**</code> - <strong>Bold text</strong></div>
+                        <div class="markdown-cheatsheet-item"><code>*italic*</code> - <em>Italic text</em></div>
+                        <div class="markdown-cheatsheet-item"><code>- item</code> - Bullet list</div>
+                        <div class="markdown-cheatsheet-item"><code>1. item</code> - Numbered list</div>
+                        <div class="markdown-cheatsheet-item"><code>[text](url)</code> - Link</div>
+                        <div class="markdown-cheatsheet-item"><code>![alt](url)</code> - Image</div>
+                        <div class="markdown-cheatsheet-item"><code>---</code> - Horizontal line</div>
+                        <div class="markdown-cheatsheet-item"><code>> quote</code> - Blockquote</div>
+                    </div>
+                </details>
+                
+                <div class="editor-actions">
+                    <button class="btn btn-primary" onclick="saveMarkdownContent('about')">💾 Save to Cloud</button>
+                    <button class="btn btn-secondary" onclick="resetMarkdownContent('about')">🔄 Reset to Default</button>
+                    <span id="about-status" class="text-muted text-small"></span>
                 </div>
             </div>
         </section>
@@ -242,66 +294,198 @@
     <script>
         const BLOB_STORAGE_URL = 'https://azcorestorage2026.blob.core.windows.net/speakerheadshots';
         
-        // Default content
-        const defaultContent = {
-            coc: `<h2>Code of Conduct</h2>
-<p>Azure Core Underground is dedicated to providing a harassment-free conference experience for everyone.</p>
+        // Default markdown content (fallback)
+        const defaultMarkdownContent = {
+            'code-of-conduct': `# Code of Conduct
 
-<h3>Expected Behavior</h3>
-<ul>
-    <li>Be respectful and inclusive</li>
-    <li>Exercise consideration and empathy</li>
-    <li>Refrain from demeaning, discriminatory, or harassing behavior</li>
-    <li>Be mindful of your surroundings and fellow participants</li>
-</ul>
+Azure Core Underground is dedicated to providing a harassment-free conference experience for everyone.
 
-<h3>Unacceptable Behavior</h3>
-<ul>
-    <li>Harassment, intimidation, or discrimination</li>
-    <li>Offensive verbal comments related to personal characteristics</li>
-    <li>Inappropriate use of sexual images or language</li>
-    <li>Deliberate intimidation, stalking, or following</li>
-    <li>Sustained disruption of talks or events</li>
-</ul>
+## Expected Behavior
 
-<h3>Reporting</h3>
-<p>If you experience or witness unacceptable behavior, please report it to the event organizers immediately.</p>
+- **Be respectful and inclusive** - Treat all participants with respect
+- **Exercise consideration and empathy** - Be mindful of others
+- **Refrain from demeaning or harassing behavior** - Keep it professional
 
-<p><strong>Thank you for helping make this a welcoming, friendly event for all!</strong></p>`,
-            
-            about: `<h2>About Azure Core Underground</h2>
-<p>Azure Core Underground is a free, community-driven virtual conference for Azure infrastructure professionals.</p>
+## Unacceptable Behavior
 
-<h3>What to Expect</h3>
-<ul>
-    <li>Deep technical sessions on Azure infrastructure</li>
-    <li>Expert speakers from the Azure community</li>
-    <li>Live Q&A and interactive discussions</li>
-    <li>Networking opportunities with peers</li>
-</ul>
+- Harassment, intimidation, or discrimination
+- Offensive verbal comments
+- Inappropriate use of sexual images or language
+- Deliberate intimidation or stalking
 
-<h3>Who Should Attend</h3>
-<p>This event is perfect for:</p>
-<ul>
-    <li>Cloud architects and engineers</li>
-    <li>IT professionals working with Azure</li>
-    <li>DevOps and platform engineers</li>
-    <li>Anyone interested in Azure infrastructure</li>
-</ul>
+## Reporting
 
-<p><strong>Join us for a day of learning and community!</strong></p>`
+If you experience or witness unacceptable behavior, please report it to the event organizers.
+
+---
+
+**Thank you for helping make this a welcoming event for all!**`,
+
+            'about': `# About Azure Core Underground
+
+Azure Core Underground is a **free, community-driven virtual conference** for Azure infrastructure professionals.
+
+## What to Expect
+
+- Deep technical sessions on Azure infrastructure
+- Expert speakers from the Azure community
+- Live Q&A and interactive discussions
+- Networking opportunities with peers
+
+## Who Should Attend
+
+- Cloud architects and engineers
+- IT professionals working with Azure
+- DevOps and platform engineers
+- Anyone interested in Azure infrastructure
+
+---
+
+**Join us for a day of learning and community!**`
         };
         
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             loadUserInfo();
-            loadContent('coc');
-            loadContent('about');
+            loadMarkdownContent('code-of-conduct', 'cocContent', 'cocPreview');
+            loadMarkdownContent('about', 'aboutContent', 'aboutPreview');
             loadBranding();
             setupUploadHandlers();
             setupBrandingHandlers();
+            setupMarkdownEditors();
             loadExistingHeadshots();
         });
+        
+        // Setup live preview for markdown editors
+        function setupMarkdownEditors() {
+            // CoC editor
+            document.getElementById('cocContent').addEventListener('input', function() {
+                updateMarkdownPreview(this.value, 'cocPreview');
+            });
+            
+            // About editor
+            document.getElementById('aboutContent').addEventListener('input', function() {
+                updateMarkdownPreview(this.value, 'aboutPreview');
+            });
+        }
+        
+        function updateMarkdownPreview(markdown, previewId) {
+            const preview = document.getElementById(previewId);
+            if (markdown.trim()) {
+                preview.innerHTML = marked.parse(markdown);
+            } else {
+                preview.innerHTML = '<p class="text-muted">Preview will appear here...</p>';
+            }
+        }
+        
+        // Load markdown content from API
+        async function loadMarkdownContent(type, textareaId, previewId) {
+            const textarea = document.getElementById(textareaId);
+            const preview = document.getElementById(previewId);
+            const statusId = type === 'code-of-conduct' ? 'coc-status' : 'about-status';
+            const statusEl = document.getElementById(statusId);
+            
+            try {
+                statusEl.textContent = 'Loading...';
+                const response = await fetch(`/api/content/${type}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    textarea.value = data.content;
+                    updateMarkdownPreview(data.content, previewId);
+                    
+                    if (data.isDefault) {
+                        statusEl.textContent = 'Using default content';
+                    } else {
+                        statusEl.textContent = `Last saved: ${new Date(data.lastModified).toLocaleString()}`;
+                    }
+                } else {
+                    // Fallback to default
+                    textarea.value = defaultMarkdownContent[type];
+                    updateMarkdownPreview(defaultMarkdownContent[type], previewId);
+                    statusEl.textContent = 'API unavailable - using default';
+                }
+            } catch (error) {
+                console.log('Loading markdown from default:', error);
+                textarea.value = defaultMarkdownContent[type];
+                updateMarkdownPreview(defaultMarkdownContent[type], previewId);
+                statusEl.textContent = 'API unavailable - using default';
+            }
+        }
+        
+        // Save markdown content to API
+        async function saveMarkdownContent(type) {
+            const textareaId = type === 'code-of-conduct' ? 'cocContent' : 'aboutContent';
+            const statusId = type === 'code-of-conduct' ? 'coc-status' : 'about-status';
+            const content = document.getElementById(textareaId).value;
+            const statusEl = document.getElementById(statusId);
+            
+            try {
+                statusEl.textContent = 'Saving...';
+                const response = await fetch(`/api/content/${type}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showAlert(`${type === 'code-of-conduct' ? 'Code of Conduct' : 'About'} saved to cloud!`, 'success');
+                    statusEl.textContent = `Saved: ${new Date().toLocaleString()}`;
+                } else {
+                    const error = await response.json();
+                    showAlert(`Failed to save: ${error.error}`, 'danger');
+                    statusEl.textContent = 'Save failed';
+                }
+            } catch (error) {
+                console.error('Error saving content:', error);
+                showAlert('Failed to save content. Check console for details.', 'danger');
+                statusEl.textContent = 'Save failed';
+            }
+        }
+        
+        // Reset markdown content to default
+        async function resetMarkdownContent(type) {
+            const displayName = type === 'code-of-conduct' ? 'Code of Conduct' : 'About';
+            
+            if (!confirm(`Reset ${displayName} to default content? This will delete the custom content from cloud storage.`)) {
+                return;
+            }
+            
+            const textareaId = type === 'code-of-conduct' ? 'cocContent' : 'aboutContent';
+            const previewId = type === 'code-of-conduct' ? 'cocPreview' : 'aboutPreview';
+            const statusId = type === 'code-of-conduct' ? 'coc-status' : 'about-status';
+            const statusEl = document.getElementById(statusId);
+            
+            try {
+                statusEl.textContent = 'Resetting...';
+                const response = await fetch(`/api/content/${type}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById(textareaId).value = data.content;
+                    updateMarkdownPreview(data.content, previewId);
+                    showAlert(`${displayName} reset to default!`, 'success');
+                    statusEl.textContent = 'Using default content';
+                } else {
+                    // Just reset locally
+                    document.getElementById(textareaId).value = defaultMarkdownContent[type];
+                    updateMarkdownPreview(defaultMarkdownContent[type], previewId);
+                    showAlert('Reset to default (API unavailable)', 'warning');
+                    statusEl.textContent = 'Using default content';
+                }
+            } catch (error) {
+                // Fallback - just reset locally
+                document.getElementById(textareaId).value = defaultMarkdownContent[type];
+                updateMarkdownPreview(defaultMarkdownContent[type], previewId);
+                showAlert('Reset to default locally', 'success');
+                statusEl.textContent = 'Using default content';
+            }
+        }
         
         // User info
         async function loadUserInfo() {
@@ -340,40 +524,6 @@
             }
             
             return false;
-        }
-        
-        // Content management
-        function loadContent(type) {
-            const stored = localStorage.getItem(`acu-${type}-content`);
-            const textarea = document.getElementById(`${type}Content`);
-            textarea.value = stored || defaultContent[type];
-        }
-        
-        function saveContent(type) {
-            const content = document.getElementById(`${type}Content`).value;
-            localStorage.setItem(`acu-${type}-content`, content);
-            showAlert(`${type === 'coc' ? 'Code of Conduct' : 'About'} content saved!`, 'success');
-        }
-        
-        function previewContent(type) {
-            const content = document.getElementById(`${type}Content`).value;
-            const previewDiv = document.getElementById(`${type}Preview`);
-            const previewContent = document.getElementById(`${type}PreviewContent`);
-            
-            if (previewDiv.classList.contains('section-hidden')) {
-                previewContent.innerHTML = content;
-                previewDiv.classList.remove('section-hidden');
-            } else {
-                previewDiv.classList.add('section-hidden');
-            }
-        }
-        
-        function resetContent(type) {
-            if (confirm(`Reset ${type === 'coc' ? 'Code of Conduct' : 'About'} to default content?`)) {
-                document.getElementById(`${type}Content`).value = defaultContent[type];
-                localStorage.removeItem(`acu-${type}-content`);
-                showAlert('Content reset to default', 'success');
-            }
         }
         
         // Upload handling
