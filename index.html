@@ -9,9 +9,9 @@
 <body>
     <!-- Hero Section -->
     <section class="hero">
-        <img src="assets/acu-logo.png" alt="Azure Core Underground Logo" class="hero-logo">
-        <h1>Azure Core Underground 2026</h1>
-        <p class="tagline">Azure Core Underground - a community event focused on compute, network, and storage in Azure.</p>
+        <img src="assets/acu-logo.png" alt="Event Logo" class="hero-logo" id="site-logo">
+        <h1 id="site-title">Azure Core Underground 2026</h1>
+        <p class="tagline" id="site-tagline">Azure Core Underground - a community event focused on compute, network, and storage in Azure.</p>
         
         <div>
             <a href="#about" class="cta">About</a>
@@ -765,9 +765,44 @@
         
         // Load schedule and speakers when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            applyBranding();
             loadSchedule();
             loadSpeakers();
         });
+        
+        // Apply branding from localStorage
+        function applyBranding() {
+            const stored = localStorage.getItem('acu-branding');
+            if (!stored) return;
+            
+            try {
+                const branding = JSON.parse(stored);
+                
+                // Apply event name
+                if (branding.eventName) {
+                    document.title = branding.eventName + ' 2026';
+                    document.getElementById('site-title').textContent = branding.eventName + ' 2026';
+                    document.getElementById('site-tagline').textContent = branding.eventName + ' - a community event focused on compute, network, and storage in Azure.';
+                }
+                
+                // Apply logo
+                if (branding.logo && branding.logo !== '/assets/acu-logo.png') {
+                    document.getElementById('site-logo').src = branding.logo;
+                }
+                
+                // Apply colors via CSS custom properties
+                // Primary Color -> --primary (buttons, links)
+                // Secondary Color -> --primary-2 (highlights, gradients)
+                if (branding.primaryColor) {
+                    document.documentElement.style.setProperty('--primary', branding.primaryColor);
+                }
+                if (branding.secondaryColor) {
+                    document.documentElement.style.setProperty('--primary-2', branding.secondaryColor);
+                }
+            } catch (e) {
+                console.error('Error applying branding:', e);
+            }
+        }
     </script>
 
 </body>

@@ -63,6 +63,21 @@ A community conference website for Azure infrastructure professionals, featuring
 
 **Authentication:** Requires Azure AD login (configured in staticwebapp.config.json)
 
+Central dashboard with navigation to all admin functions:
+
+- **Schedule Management** - Link to schedule-admin.html
+- **Speaker Management** - Link to speakers-admin.html
+- **Branding** - Customize event name, logo, and color scheme
+- **Headshot Upload** - Upload speaker images directly to blob storage
+- **Code of Conduct Editor** - Edit CoC content (stored in browser localStorage)
+- **About Editor** - Edit About section content (stored in browser localStorage)
+
+---
+
+### Schedule Admin (schedule-admin.html)
+
+**Authentication:** Requires Azure AD login
+
 #### Schedule Management
 
 - **View All Sessions** - Table with title, video ID, date/time, duration, and actions
@@ -91,11 +106,6 @@ A community conference website for Azure infrastructure professionals, featuring
   - Creates sequential schedule entries with proper timing
   - Skips private/deleted videos
   - Shows detailed import progress and results
-
-#### Navigation
-
-- Link to Speakers Admin
-- Return to main site
 
 ---
 
@@ -196,8 +206,10 @@ A community conference website for Azure infrastructure professionals, featuring
 |--------|----------|------|-------------|
 | GET | `/api/speakers` | Anonymous | Get all speakers |
 | GET | `/api/speakers/{id}` | Anonymous | Get single speaker |
+| GET | `/api/speakers/headshots` | Anonymous | List all headshot images |
 | POST | `/api/speakers` | Authenticated | Add new speaker |
 | POST | `/api/speakers/extract` | Authenticated | Extract from schedule |
+| POST | `/api/speakers/headshot` | Authenticated | Upload headshot image |
 | PUT | `/api/speakers/{id}` | Authenticated | Update speaker |
 | DELETE | `/api/speakers/{id}` | Authenticated | Delete speaker |
 
@@ -327,8 +339,9 @@ azd monitor --logs
 
 ```
 ├── index.html              # Main public website
-├── admin.html              # Schedule admin dashboard
-├── speakers-admin.html     # Speakers admin dashboard
+├── admin.html              # Admin dashboard (navigation hub)
+├── schedule-admin.html     # Schedule management
+├── speakers-admin.html     # Speakers management
 ├── styles.css              # All CSS styles (consolidated)
 ├── staticwebapp.config.json # SWA routing and auth config
 ├── azure.yaml              # AZD project definition
@@ -338,7 +351,7 @@ azd monitor --logs
 │   ├── host.json           # Functions host config
 │   └── src/functions/
 │       ├── schedule.js     # Schedule CRUD + CSV/Playlist import/export
-│       └── speakers.js     # Speakers CRUD + extract
+│       └── speakers.js     # Speakers CRUD + extract + headshot upload
 ├── infra/
 │   ├── main.bicep          # Main Bicep template (subscription scope)
 │   ├── resources.bicep     # All Azure resources with RBAC

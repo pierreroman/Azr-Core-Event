@@ -1,14 +1,22 @@
 const { app } = require("@azure/functions");
 const { TableClient } = require("@azure/data-tables");
 const { ManagedIdentityCredential } = require("@azure/identity");
+const { BlobServiceClient } = require("@azure/storage-blob");
 
 const storageAccountName = process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
 const tableName = "Speakers";
+const headshotsContainer = "speakerheadshots";
 
 function getTableClient() {
     const credential = new ManagedIdentityCredential();
     const url = `https://${storageAccountName}.table.core.windows.net`;
     return new TableClient(url, tableName, credential);
+}
+
+function getBlobServiceClient() {
+    const credential = new ManagedIdentityCredential();
+    const url = `https://${storageAccountName}.blob.core.windows.net`;
+    return new BlobServiceClient(url, credential);
 }
 
 // Generate a URL-safe speaker ID from name
@@ -348,6 +356,121 @@ async function extractSpeakers(request, context) {
     }
 }
 
+// GET /api/speakers/headshots - List all headshot images
+async function listHeadshots(request, context) {
+    try {
+        const blobServiceClient = getBlobServiceClient();
+        const containerClient = blobServiceClient.getContainerClient(headshotsContainer);
+        
+        const headshots = [];
+        for await (const blob of containerClient.listBlobsFlat()) {
+            headshots.push({
+                name: blob.name,
+                size: blob.properties.contentLength,
+                contentType: blob.properties.contentType,
+                lastModified: blob.properties.lastModified
+            });
+        }
+        
+        // Sort by name
+        headshots.sort((a, b) => a.name.localeCompare(b.name));
+        
+        return {
+            status: 200,
+            jsonBody: { headshots }
+        };
+    } catch (error) {
+        context.log("Error listing headshots:", error);
+        return {
+            status: 500,
+            jsonBody: { error: "Failed to list headshots", details: error.message }
+        };
+    }
+}
+
+// POST /api/speakers/headshot - Upload a headshot image
+async function uploadHeadshot(request, context) {
+    try {
+        const contentType = request.headers.get('content-type') || '';
+        
+        if (!contentType.includes('multipart/form-data')) {
+            return {
+                status: 400,
+                jsonBody: { error: "Content-Type must be multipart/form-data" }
+            };
+        }
+        
+        // Parse multipart form data
+        const formData = await request.formData();
+        const file = formData.get('file');
+        
+        if (!file) {
+            return {
+                status: 400,
+                jsonBody: { error: "No file provided" }
+            };
+        }
+        
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            return {
+                status: 400,
+                jsonBody: { error: "Invalid file type. Allowed: JPEG, PNG, WebP" }
+            };
+        }
+        
+        // Validate file size (10MB max)
+        const maxSize = 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+            return {
+                status: 400,
+                jsonBody: { error: "File too large. Maximum size: 10MB" }
+            };
+        }
+        
+        // Sanitize filename
+        const originalName = file.name || 'headshot.jpg';
+        const safeName = originalName
+            .toLowerCase()
+            .replace(/[^a-z0-9.-]/g, '-')
+            .replace(/-+/g, '-');
+        
+        // Upload to blob storage
+        const blobServiceClient = getBlobServiceClient();
+        const containerClient = blobServiceClient.getContainerClient(headshotsContainer);
+        const blockBlobClient = containerClient.getBlockBlobClient(safeName);
+        
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        await blockBlobClient.uploadData(buffer, {
+            blobHTTPHeaders: {
+                blobContentType: file.type
+            }
+        });
+        
+        const url = `https://${storageAccountName}.blob.core.windows.net/${headshotsContainer}/${safeName}`;
+        
+        return {
+            status: 201,
+            jsonBody: {
+                message: "Headshot uploaded successfully",
+                filename: safeName,
+                url: url,
+                size: file.size,
+                contentType: file.type
+            }
+        };
+    } catch (error) {
+        context.log("Error uploading headshot:", error);
+        return {
+            status: 500,
+            jsonBody: { error: "Failed to upload headshot", details: error.message }
+        };
+    }
+}
+
 // Register routes
 app.http("getSpeakers", {
     methods: ["GET"],
@@ -391,11 +514,27 @@ app.http("extractSpeakers", {
     handler: extractSpeakers
 });
 
+app.http("listHeadshots", {
+    methods: ["GET"],
+    authLevel: "anonymous",
+    route: "speakers/headshots",
+    handler: listHeadshots
+});
+
+app.http("uploadHeadshot", {
+    methods: ["POST"],
+    authLevel: "anonymous",
+    route: "speakers/headshot",
+    handler: uploadHeadshot
+});
+
 module.exports = {
     getSpeakers,
     getSpeaker,
     addSpeaker,
     updateSpeaker,
     deleteSpeaker,
-    extractSpeakers
+    extractSpeakers,
+    listHeadshots,
+    uploadHeadshot
 };

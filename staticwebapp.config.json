@@ -5,6 +5,10 @@
       "allowedRoles": ["authenticated"]
     },
     {
+      "route": "/schedule-admin.html",
+      "allowedRoles": ["authenticated"]
+    },
+    {
       "route": "/speakers-admin.html",
       "allowedRoles": ["authenticated"]
     },
@@ -30,7 +34,7 @@
     },
     {
       "route": "/api/speakers/*",
-      "methods": ["PUT", "DELETE"],
+      "methods": ["PUT", "DELETE", "POST"],
       "allowedRoles": ["authenticated"]
     },
     {

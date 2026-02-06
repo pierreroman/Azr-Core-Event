@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Admin - Azure Core Underground</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>📅 Schedule Manager</h1>
+            <div class="user-info">
+                <a href="admin.html" class="btn btn-secondary">← Admin Dashboard</a>
+                <span id="user-name">Loading...</span>
+                <a href="/.auth/logout" class="btn btn-secondary">Logout</a>
+            </div>
+        </div>
+        
+        <div id="message-container"></div>
+        
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">
+            <button class="btn btn-primary" onclick="openAddModal()">+ Add Schedule Item</button>
+            <button class="btn btn-success" onclick="openPlaylistModal()">📺 Import YouTube Playlist</button>
+            <button class="btn btn-secondary" onclick="exportSchedule()">📥 Export CSV</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">📤 Import CSV</button>
+            <input type="file" id="import-file" accept=".csv" style="display: none;" onchange="importSchedule(event)">
+            <button id="delete-selected-btn" class="btn btn-danger" onclick="deleteSelected()" style="display: none;">🗑️ Delete Selected (<span id="selected-count">0</span>)</button>
+        </div>
+        
+        <div id="schedule-container">
+            <div class="loading">Loading schedule...</div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Modal -->
+    <div id="schedule-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Add Schedule Item</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="schedule-form" onsubmit="saveScheduleItem(event)">
+                <input type="hidden" id="item-id">
+                
+                <div class="form-group">
+                    <label for="title">Title *</label>
+                    <input type="text" id="title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="videoId">YouTube Video ID *</label>
+                    <input type="text" id="videoId" required placeholder="e.g., dQw4w9WgXcQ">
+                </div>
+                
+                <div class="form-group">
+                    <label for="startTime">Start Time (Eastern Time) *</label>
+                    <input type="datetime-local" id="startTime" required>
+                    <small style="color: #6c757d; display: block; margin-top: 4px;">
+                        Enter time in Eastern Time (ET). Visitors will see this converted to their local timezone.
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="duration">Duration (seconds)</label>
+                    <input type="number" id="duration" min="0" step="1" value="0" placeholder="e.g., 3600 for 1 hour">
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" placeholder="Session description..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="url">YouTube URL (optional)</label>
+                    <input type="url" id="url" placeholder="https://www.youtube.com/watch?v=...">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Playlist Import Modal -->
+    <div id="playlist-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Import YouTube Playlist</h2>
+                <button class="close-btn" onclick="closePlaylistModal()">&times;</button>
+            </div>
+            <form id="playlist-form" onsubmit="importPlaylist(event)">
+                <div class="form-group">
+                    <label for="playlist-id">YouTube Playlist ID or URL *</label>
+                    <input type="text" id="playlist-id" required placeholder="e.g., PLxxxxxx or https://www.youtube.com/playlist?list=PLxxxxxx">
+                    <small style="color: #6c757d; display: block; margin-top: 4px;">
+                        You can paste the full playlist URL or just the playlist ID.
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="api-key">YouTube API Key (optional)</label>
+                    <input type="password" id="api-key" placeholder="Leave blank to use stored key">
+                    <small style="color: #6c757d; display: block; margin-top: 4px;">
+                        A default API key is configured. Only enter a key here if you want to use a different one.
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="start-date">First Session Start Time *</label>
+                    <input type="datetime-local" id="start-date" required>
+                    <small style="color: #6c757d; display: block; margin-top: 4px;">
+                        Videos will be scheduled sequentially starting from this time.
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="timezone">Your Timezone</label>
+                    <select id="timezone">
+                        <optgroup label="North America">
+                            <option value="-10:00">Hawaii-Aleutian Standard Time (HST, UTC-10)</option>
+                            <option value="-09:00">Alaska Standard Time (AKST, UTC-9)</option>
+                            <option value="-08:00">Alaska Daylight Time (AKDT, UTC-8)</option>
+                            <option value="-08:00">Pacific Standard Time (PST, UTC-8)</option>
+                            <option value="-07:00">Pacific Daylight Time (PDT, UTC-7)</option>
+                            <option value="-07:00">Mountain Standard Time (MST, UTC-7)</option>
+                            <option value="-06:00">Mountain Daylight Time (MDT, UTC-6)</option>
+                            <option value="-06:00">Central Standard Time (CST, UTC-6)</option>
+                            <option value="-05:00">Central Daylight Time (CDT, UTC-5)</option>
+                            <option value="-05:00" selected>Eastern Standard Time (EST, UTC-5)</option>
+                            <option value="-04:00">Eastern Daylight Time (EDT, UTC-4)</option>
+                            <option value="-04:00">Atlantic Standard Time (AST, UTC-4)</option>
+                            <option value="-03:00">Atlantic Daylight Time (ADT, UTC-3)</option>
+                            <option value="-03:30">Newfoundland Standard Time (NST, UTC-3:30)</option>
+                            <option value="-02:30">Newfoundland Daylight Time (NDT, UTC-2:30)</option>
+                        </optgroup>
+                        <optgroup label="Central & South America">
+                            <option value="-06:00">Mexico City (CST, UTC-6)</option>
+                            <option value="-05:00">Bogota, Lima, Quito (COT/PET, UTC-5)</option>
+                            <option value="-04:00">Caracas (VET, UTC-4)</option>
+                            <option value="-04:00">Santiago (CLT, UTC-4)</option>
+                            <option value="-03:00">Buenos Aires (ART, UTC-3)</option>
+                            <option value="-03:00">São Paulo, Brasilia (BRT, UTC-3)</option>
+                            <option value="-02:00">Fernando de Noronha (FNT, UTC-2)</option>
+                        </optgroup>
+                        <optgroup label="Europe & UK">
+                            <option value="+00:00">Greenwich Mean Time (GMT, UTC+0)</option>
+                            <option value="+00:00">Western European Time (WET, UTC+0)</option>
+                            <option value="+01:00">British Summer Time (BST, UTC+1)</option>
+                            <option value="+01:00">Central European Time (CET, UTC+1)</option>
+                            <option value="+02:00">Central European Summer Time (CEST, UTC+2)</option>
+                            <option value="+02:00">Eastern European Time (EET, UTC+2)</option>
+                            <option value="+03:00">Eastern European Summer Time (EEST, UTC+3)</option>
+                            <option value="+03:00">Moscow Standard Time (MSK, UTC+3)</option>
+                        </optgroup>
+                        <optgroup label="Africa">
+                            <option value="+00:00">Casablanca, Monrovia (UTC+0)</option>
+                            <option value="+01:00">West Africa Time (WAT, UTC+1)</option>
+                            <option value="+02:00">Central Africa Time (CAT, UTC+2)</option>
+                            <option value="+02:00">South Africa Standard Time (SAST, UTC+2)</option>
+                            <option value="+03:00">East Africa Time (EAT, UTC+3)</option>
+                        </optgroup>
+                        <optgroup label="Middle East">
+                            <option value="+02:00">Israel Standard Time (IST, UTC+2)</option>
+                            <option value="+03:00">Israel Daylight Time (IDT, UTC+3)</option>
+                            <option value="+03:00">Arabia Standard Time (AST, UTC+3)</option>
+                            <option value="+03:30">Iran Standard Time (IRST, UTC+3:30)</option>
+                            <option value="+04:00">Gulf Standard Time (GST, UTC+4)</option>
+                            <option value="+04:30">Afghanistan Time (AFT, UTC+4:30)</option>
+                        </optgroup>
+                        <optgroup label="Asia">
+                            <option value="+05:00">Pakistan Standard Time (PKT, UTC+5)</option>
+                            <option value="+05:30">India Standard Time (IST, UTC+5:30)</option>
+                            <option value="+05:45">Nepal Time (NPT, UTC+5:45)</option>
+                            <option value="+06:00">Bangladesh Standard Time (BST, UTC+6)</option>
+                            <option value="+06:30">Myanmar Time (MMT, UTC+6:30)</option>
+                            <option value="+07:00">Indochina Time (ICT, UTC+7)</option>
+                            <option value="+08:00">China Standard Time (CST, UTC+8)</option>
+                            <option value="+08:00">Singapore Time (SGT, UTC+8)</option>
+                            <option value="+08:00">Hong Kong Time (HKT, UTC+8)</option>
+                            <option value="+08:00">Philippine Time (PHT, UTC+8)</option>
+                            <option value="+08:00">Western Australia (AWST, UTC+8)</option>
+                            <option value="+09:00">Japan Standard Time (JST, UTC+9)</option>
+                            <option value="+09:00">Korea Standard Time (KST, UTC+9)</option>
+                        </optgroup>
+                        <optgroup label="Australia & Pacific">
+                            <option value="+09:30">Australian Central Standard Time (ACST, UTC+9:30)</option>
+                            <option value="+10:00">Australian Eastern Standard Time (AEST, UTC+10)</option>
+                            <option value="+10:30">Australian Central Daylight Time (ACDT, UTC+10:30)</option>
+                            <option value="+11:00">Australian Eastern Daylight Time (AEDT, UTC+11)</option>
+                            <option value="+11:00">Solomon Islands Time (SBT, UTC+11)</option>
+                            <option value="+12:00">New Zealand Standard Time (NZST, UTC+12)</option>
+                            <option value="+12:00">Fiji Time (FJT, UTC+12)</option>
+                            <option value="+13:00">New Zealand Daylight Time (NZDT, UTC+13)</option>
+                            <option value="+13:00">Tonga Time (TOT, UTC+13)</option>
+                            <option value="+14:00">Line Islands Time (LINT, UTC+14)</option>
+                        </optgroup>
+                        <optgroup label="Atlantic & Other">
+                            <option value="-12:00">Baker Island (AoE, UTC-12)</option>
+                            <option value="-11:00">American Samoa (SST, UTC-11)</option>
+                            <option value="-01:00">Azores Standard Time (AZOT, UTC-1)</option>
+                            <option value="+00:00">UTC (Coordinated Universal Time)</option>
+                        </optgroup>
+                    </select>
+                    <small style="color: #6c757d; display: block; margin-top: 4px;">
+                        Select the timezone for the start time above.
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="session-gap">Gap Between Sessions (minutes)</label>
+                    <input type="number" id="session-gap" min="0" value="15" placeholder="Minutes between end of one video and start of next">
+                    <small style="color: #6c757d; display: block; margin-top: 4px;">
+                        Time to add between the end of one video and the start of the next.
+                    </small>
+                </div>
+                
+                <div id="playlist-preview" style="display: none; margin: 20px 0; padding: 16px; background: var(--card); border-radius: 8px;">
+                    <h4 style="margin: 0 0 12px; color: var(--primary-2);">Import Progress</h4>
+                    <div id="playlist-status"></div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closePlaylistModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="import-playlist-btn">📺 Import Playlist</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        let scheduleData = [];
+        
+        // Get user info
+        async function getUserInfo() {
+            try {
+                const response = await fetch('/.auth/me');
+                const data = await response.json();
+                if (data.clientPrincipal) {
+                    document.getElementById('user-name').textContent = 
+                        data.clientPrincipal.userDetails || data.clientPrincipal.userId;
+                }
+            } catch (error) {
+                console.error('Error fetching user info:', error);
+            }
+        }
+        
+        // Show message
+        function showMessage(text, type = 'success') {
+            const container = document.getElementById('message-container');
+            container.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000);
+        }
+        
+        // Load schedule
+        async function loadSchedule() {
+            try {
+                const response = await fetch('/api/schedule');
+                const data = await response.json();
+                console.log('Loaded schedule data:', data);
+                console.log('First item ID:', data.schedule?.[0]?.id);
+                scheduleData = data.schedule || [];
+                renderSchedule();
+            } catch (error) {
+                console.error('Error loading schedule:', error);
+                document.getElementById('schedule-container').innerHTML = 
+                    '<div class="message error">Failed to load schedule. Make sure the API is configured.</div>';
+            }
+        }
+        
+        // Render schedule table
+        function renderSchedule() {
+            if (scheduleData.length === 0) {
+                document.getElementById('schedule-container').innerHTML = 
+                    '<p style="color: var(--muted); text-align: center; padding: 48px;">No schedule items yet. Click "Add Schedule Item" to get started.</p>';
+                return;
+            }
+            
+            const html = `
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"><input type="checkbox" id="select-all" onchange="toggleSelectAll(this.checked)" title="Select all"></th>
+                            <th>Title</th>
+                            <th>Video ID</th>
+                            <th>Start Time</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${scheduleData.map(item => `
+                            <tr>
+                                <td><input type="checkbox" class="item-checkbox" data-id="${item.id}" onchange="updateSelectedCount()"></td>
+                                <td>${escapeHtml(item.title)}</td>
+                                <td><code>${escapeHtml(item.videoId)}</code></td>
+                                <td>${formatDate(item.startTime)}</td>
+                                <td>${formatDuration(item.duration)}</td>
+                                <td class="actions">
+                                    <button class="btn btn-secondary" onclick="editItem('${item.id}')">Edit</button>
+                                    <button class="btn btn-danger" onclick="deleteItem('${item.id}')">Delete</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('schedule-container').innerHTML = html;
+            updateSelectedCount();
+        }
+        
+        // Helper functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatDate(isoString) {
+            return new Date(isoString).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            });
+        }
+        
+        function formatDuration(seconds) {
+            if (!seconds) return '-';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        // Modal functions
+        function openAddModal() {
+            document.getElementById('modal-title').textContent = 'Add Schedule Item';
+            document.getElementById('schedule-form').reset();
+            document.getElementById('item-id').value = '';
+            document.getElementById('schedule-modal').classList.add('active');
+        }
+        
+        function editItem(id) {
+            const item = scheduleData.find(i => i.id === id);
+            if (!item) return;
+            
+            document.getElementById('modal-title').textContent = 'Edit Schedule Item';
+            document.getElementById('item-id').value = id;
+            document.getElementById('title').value = item.title;
+            document.getElementById('videoId').value = item.videoId;
+            
+            // Convert stored time to datetime-local format in Eastern Time
+            // datetime-local needs YYYY-MM-DDTHH:MM format
+            const date = new Date(item.startTime);
+            const easternTime = date.toLocaleString('sv-SE', { timeZone: 'America/New_York' }).slice(0, 16);
+            document.getElementById('startTime').value = easternTime;
+            
+            document.getElementById('duration').value = item.duration || 0;
+            document.getElementById('description').value = item.description || '';
+            document.getElementById('url').value = item.url || '';
+            
+            document.getElementById('schedule-modal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('schedule-modal').classList.remove('active');
+        }
+        
+        // Save schedule item
+        async function saveScheduleItem(event) {
+            event.preventDefault();
+            
+            const id = document.getElementById('item-id').value;
+            const startTimeValue = document.getElementById('startTime').value;
+            
+            console.log('Save called with ID:', id, '| ID type:', typeof id, '| ID length:', id?.length);
+            
+            // Validate required fields
+            if (!document.getElementById('title').value || !document.getElementById('videoId').value || !startTimeValue) {
+                showMessage('Please fill in all required fields.', 'error');
+                return;
+            }
+            
+            // Format startTime - datetime-local gives YYYY-MM-DDTHH:MM in local time
+            // We need to interpret this as Eastern Time and convert to ISO
+            let startTime;
+            try {
+                // The datetime-local value is in Eastern Time (event timezone)
+                // Create a date string that explicitly specifies Eastern timezone
+                // Note: America/New_York handles EST/EDT automatically
+                const [datePart, timePart] = startTimeValue.split('T');
+                const [year, month, day] = datePart.split('-');
+                const [hour, minute] = timePart.split(':');
+                
+                // Create date in Eastern timezone and convert to ISO
+                const easternDate = new Date(Date.UTC(
+                    parseInt(year), 
+                    parseInt(month) - 1, 
+                    parseInt(day), 
+                    parseInt(hour), 
+                    parseInt(minute)
+                ));
+                
+                // Adjust for Eastern Time offset (EST = UTC-5, EDT = UTC-4)
+                // For February 2026, it's EST (UTC-5)
+                const estOffset = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
+                startTime = new Date(easternDate.getTime() + estOffset).toISOString();
+            } catch (e) {
+                console.error('Time parsing error:', e);
+                showMessage('Invalid start time format.', 'error');
+                return;
+            }
+            
+            const data = {
+                title: document.getElementById('title').value,
+                videoId: document.getElementById('videoId').value,
+                startTime: startTime,
+                duration: parseInt(document.getElementById('duration').value) || 0,
+                description: document.getElementById('description').value,
+                url: document.getElementById('url').value || `https://www.youtube.com/watch?v=${document.getElementById('videoId').value}`
+            };
+            
+            console.log('Saving data:', data);
+            
+            try {
+                // URL-encode the ID to handle special characters like hyphens
+                const url = id ? `/api/schedule/${encodeURIComponent(id)}` : '/api/schedule';
+                const method = id ? 'PUT' : 'POST';
+                
+                console.log('Request:', method, url);
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`Failed to save: ${response.status} - ${errorText}`);
+                }
+                
+                closeModal();
+                showMessage(id ? 'Schedule item updated!' : 'Schedule item added!');
+                loadSchedule();
+            } catch (error) {
+                console.error('Error saving:', error);
+                showMessage(`Failed to save: ${error.message}`, 'error');
+            }
+        }
+        
+        // Delete schedule item
+        async function deleteItem(id) {
+            if (!confirm('Are you sure you want to delete this schedule item?')) {
+                return;
+            }
+            
+            try {
+                // URL-encode the ID to handle special characters
+                const response = await fetch(`/api/schedule/${encodeURIComponent(id)}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to delete');
+                }
+                
+                showMessage('Schedule item deleted!');
+                loadSchedule();
+            } catch (error) {
+                console.error('Error deleting:', error);
+                showMessage('Failed to delete schedule item. Please try again.', 'error');
+            }
+        }
+        
+        // Export schedule as CSV
+        async function exportSchedule() {
+            try {
+                showMessage('Exporting schedule...');
+                const response = await fetch('/api/schedule?format=csv');
+                
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`Export failed: ${response.status} - ${text}`);
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `schedule-export-${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showMessage('Schedule exported successfully!');
+            } catch (error) {
+                console.error('Error exporting:', error);
+                showMessage('Failed to export schedule. Please try again.', 'error');
+            }
+        }
+        
+        // Import schedule from CSV
+        async function importSchedule(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Reset file input so same file can be selected again
+            event.target.value = '';
+            
+            if (!confirm(`Import "${file.name}"?\n\nThis will:\n- Update existing items (by sessionId)\n- Create new items (if sessionId is blank or new)\n\nContinue?`)) {
+                return;
+            }
+            
+            try {
+                showMessage('Importing schedule...');
+                
+                const content = await file.text();
+                
+                const response = await fetch('/api/schedule?action=import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/csv' },
+                    body: content
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Import failed');
+                }
+                
+                let message = `Import complete: ${result.created} created, ${result.updated} updated`;
+                if (result.errors && result.errors.length > 0) {
+                    message += `\n\nErrors:\n${result.errors.join('\n')}`;
+                    console.warn('Import errors:', result.errors);
+                    showMessage(message, 'error');
+                } else {
+                    showMessage(message);
+                }
+                
+                loadSchedule();
+            } catch (error) {
+                console.error('Error importing:', error);
+                showMessage(`Failed to import: ${error.message}`, 'error');
+            }
+        }
+        
+        // Toggle select all checkboxes
+        function toggleSelectAll(checked) {
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            checkboxes.forEach(cb => cb.checked = checked);
+            updateSelectedCount();
+        }
+        
+        // Update the selected count and show/hide delete button
+        function updateSelectedCount() {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            const count = checkboxes.length;
+            const countSpan = document.getElementById('selected-count');
+            const deleteBtn = document.getElementById('delete-selected-btn');
+            const selectAllCheckbox = document.getElementById('select-all');
+            
+            if (countSpan) countSpan.textContent = count;
+            if (deleteBtn) deleteBtn.style.display = count > 0 ? 'inline-block' : 'none';
+            
+            // Update select-all checkbox state
+            const allCheckboxes = document.querySelectorAll('.item-checkbox');
+            if (selectAllCheckbox && allCheckboxes.length > 0) {
+                selectAllCheckbox.checked = count === allCheckboxes.length;
+                selectAllCheckbox.indeterminate = count > 0 && count < allCheckboxes.length;
+            }
+        }
+        
+        // Delete selected items
+        async function deleteSelected() {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
+            
+            if (ids.length === 0) {
+                showMessage('No items selected.', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete ${ids.length} item(s)?\n\nThis cannot be undone.`)) {
+                return;
+            }
+            
+            showMessage(`Deleting ${ids.length} items...`);
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const id of ids) {
+                try {
+                    const response = await fetch(`/api/schedule/${encodeURIComponent(id)}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    console.error('Error deleting item:', id, error);
+                    errorCount++;
+                }
+            }
+            
+            if (errorCount > 0) {
+                showMessage(`Deleted ${successCount} items. ${errorCount} failed.`, 'error');
+            } else {
+                showMessage(`Successfully deleted ${successCount} items.`);
+            }
+            
+            loadSchedule();
+        }
+        
+        // Open playlist import modal
+        function openPlaylistModal() {
+            document.getElementById('playlist-modal').classList.add('active');
+            document.getElementById('playlist-preview').style.display = 'none';
+            document.getElementById('playlist-form').reset();
+            
+            // Set default start date to tomorrow at 9 AM
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(9, 0, 0, 0);
+            document.getElementById('start-date').value = tomorrow.toISOString().slice(0, 16);
+        }
+        
+        // Close playlist import modal
+        function closePlaylistModal() {
+            document.getElementById('playlist-modal').classList.remove('active');
+        }
+        
+        // Extract playlist ID from URL or raw ID
+        function extractPlaylistId(input) {
+            if (!input) return null;
+            
+            // If it looks like a URL, extract the list parameter
+            if (input.includes('youtube.com') || input.includes('youtu.be')) {
+                const match = input.match(/[?&]list=([^&]+)/);
+                if (match) return match[1];
+            }
+            
+            // Otherwise, assume it's a raw playlist ID
+            return input.trim();
+        }
+        
+        // Import YouTube playlist
+        async function importPlaylist(event) {
+            event.preventDefault();
+            
+            const playlistInput = document.getElementById('playlist-id').value;
+            const playlistId = extractPlaylistId(playlistInput);
+            const apiKey = document.getElementById('api-key').value.trim();
+            const startDate = document.getElementById('start-date').value;
+            const timezone = document.getElementById('timezone').value;
+            const sessionGap = parseInt(document.getElementById('session-gap').value) || 15;
+            
+            if (!playlistId) {
+                showMessage('Please enter a valid playlist ID or URL.', 'error');
+                return;
+            }
+            
+            const previewDiv = document.getElementById('playlist-preview');
+            const statusDiv = document.getElementById('playlist-status');
+            const importBtn = document.getElementById('import-playlist-btn');
+            
+            previewDiv.style.display = 'block';
+            statusDiv.innerHTML = '<p>🔄 Fetching playlist from YouTube...</p>';
+            importBtn.disabled = true;
+            importBtn.textContent = 'Importing...';
+            
+            try {
+                const requestBody = {
+                    playlistId,
+                    startDate,
+                    timezone,
+                    sessionDuration: sessionGap
+                };
+                
+                // Only include apiKey if provided (otherwise server uses stored key)
+                if (apiKey) {
+                    requestBody.apiKey = apiKey;
+                }
+                
+                const response = await fetch('/api/schedule?action=playlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    // Show both error and details if available
+                    let errorMsg = result.error || 'Import failed';
+                    if (result.details) {
+                        errorMsg += ': ' + result.details;
+                    }
+                    throw new Error(errorMsg);
+                }
+                
+                let statusHtml = `<p style="color: #22c55e;">✅ Successfully imported ${result.created} videos!</p>`;
+                
+                if (result.skipped > 0) {
+                    statusHtml += `<p style="color: var(--muted);">⏭️ Skipped ${result.skipped} private/deleted videos</p>`;
+                }
+                
+                if (result.errors && result.errors.length > 0) {
+                    statusHtml += `<p style="color: #ef4444;">⚠️ ${result.errors.length} errors:</p>`;
+                    statusHtml += `<ul style="color: #ef4444; font-size: 12px; max-height: 100px; overflow-y: auto;">`;
+                    result.errors.forEach(err => {
+                        statusHtml += `<li>${err}</li>`;
+                    });
+                    statusHtml += '</ul>';
+                }
+                
+                if (result.videos && result.videos.length > 0) {
+                    statusHtml += `<p style="margin-top: 12px; color: var(--muted);">Imported videos:</p>`;
+                    statusHtml += `<ul style="font-size: 12px; max-height: 150px; overflow-y: auto; color: var(--text);">`;
+                    result.videos.slice(0, 20).forEach(v => {
+                        const time = new Date(v.startTime).toLocaleString();
+                        statusHtml += `<li><strong>${v.title}</strong> - ${time}</li>`;
+                    });
+                    if (result.videos.length > 20) {
+                        statusHtml += `<li>... and ${result.videos.length - 20} more</li>`;
+                    }
+                    statusHtml += '</ul>';
+                }
+                
+                statusDiv.innerHTML = statusHtml;
+                showMessage(`Playlist imported: ${result.created} videos added!`);
+                loadSchedule();
+                
+            } catch (error) {
+                console.error('Error importing playlist:', error);
+                statusDiv.innerHTML = `<p style="color: #ef4444;">❌ Error: ${error.message}</p>`;
+                showMessage(`Failed to import playlist: ${error.message}`, 'error');
+            } finally {
+                importBtn.disabled = false;
+                importBtn.textContent = '📺 Import Playlist';
+            }
+        }
+        
+        // Initialize
+        getUserInfo();
+        loadSchedule();
+    </script>
+</body>
+</html>

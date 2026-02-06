@@ -8,7 +8,7 @@ Deploy the Azure Core Underground event website with a Static Web App frontend, 
 **Web Frontend (web)**
 - **Technology Stack**: HTML/CSS/JavaScript Static Web Application
 - **Application Type**: Event schedule and speaker showcase website
-- **Files**: index.html, admin.html, speakers-admin.html, styles.css
+- **Files**: index.html, admin.html, schedule-admin.html, speakers-admin.html, styles.css
 - **Hosting**: Azure Static Web App (Standard tier)
 
 **API Backend (api)**
