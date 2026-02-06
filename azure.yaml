@@ -1,0 +1,31 @@
+# Azure Developer CLI (azd) project configuration
+# Run 'azd up' to provision infrastructure and deploy
+
+name: azurecoreunderground
+
+metadata:
+  template: azurecoreunderground@0.0.1-beta
+
+services:
+  web:
+    project: .
+    dist: .
+    language: js
+    host: staticwebapp
+  
+  api:
+    project: ./api
+    language: js
+    host: function
+
+hooks:
+  postprovision:
+    shell: pwsh
+    run: |
+      # Link Function App backend to Static Web App
+      Write-Host "Linking Function App to Static Web App..."
+      az staticwebapp backends link `
+        --name $env:AZURE_STATICWEBAPP_NAME `
+        --resource-group $env:AZURE_RESOURCE_GROUP `
+        --backend-resource-id $env:AZURE_FUNCTION_APP_ID `
+        --backend-region $env:AZURE_LOCATION

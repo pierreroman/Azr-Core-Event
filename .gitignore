@@ -15,6 +15,14 @@ api/local.settings.json
 *.zip
 logs/
 
+# Bicep generated ARM templates
+infra/*.json
+!infra/main.parameters.json
+
+# AZD environment files
+.azure/**/
+!.azure/plan.md
+
 # OS files
 .DS_Store
 Thumbs.db

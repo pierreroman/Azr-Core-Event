@@ -245,6 +245,84 @@ func start
 
 ---
 
+## Full Deployment with Azure Developer CLI (azd)
+
+This project includes an Azure Developer CLI (azd) template for deploying the complete infrastructure.
+
+### Prerequisites
+
+- [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli) installed and logged in
+- [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) installed
+- Azure subscription with Contributor access
+
+### What Gets Deployed
+
+| Resource | SKU | Description |
+|----------|-----|-------------|
+| Static Web App | Standard | Frontend hosting with custom domains |
+| Function App | EP1 (Elastic Premium) | API backend with managed identity |
+| Storage Account | Standard_LRS | Tables + blob storage (no shared keys) |
+| User-Assigned Managed Identity | - | RBAC access to storage |
+| Application Insights | - | Monitoring and logging |
+| Log Analytics Workspace | PerGB2018 | Centralized logs |
+
+### Deployment Steps
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/pierreroman/Azr-Core-Event.git
+cd Azr-Core-Event
+
+# 2. Initialize azd (first time only)
+azd init
+
+# 3. Deploy everything (provision + deploy)
+azd up
+```
+
+The `azd up` command will:
+1. Prompt for environment name and Azure location
+2. Create a new resource group: `rg-{environment-name}`
+3. Provision all Azure resources using Bicep
+4. Deploy the Static Web App frontend
+5. Deploy the Function App backend
+6. Link the Function App to the Static Web App
+
+### Post-Deployment Configuration
+
+After deployment, configure the following:
+
+1. **Custom Domain** (optional) - Add custom domain in Azure Portal for the Static Web App
+2. **Admin Access** - Configure Azure AD authentication for admin pages
+3. **Speaker Headshots** - Upload images to the `speakerheadshots` blob container
+
+### Infrastructure Files
+
+| File | Description |
+|------|-------------|
+| `azure.yaml` | AZD project definition with services and hooks |
+| `infra/main.bicep` | Main template (subscription scope) |
+| `infra/resources.bicep` | All Azure resources with RBAC |
+| `infra/main.parameters.json` | Parameter values |
+
+### Other azd Commands
+
+```bash
+# View deployment outputs
+azd env get-values
+
+# Redeploy code only (no infra changes)
+azd deploy
+
+# Tear down all resources
+azd down
+
+# View logs
+azd monitor --logs
+```
+
+---
+
 ## File Structure
 
 ```
@@ -253,6 +331,7 @@ func start
 ├── speakers-admin.html     # Speakers admin dashboard
 ├── styles.css              # All CSS styles (consolidated)
 ├── staticwebapp.config.json # SWA routing and auth config
+├── azure.yaml              # AZD project definition
 ├── readme.md               # This file
 ├── api/
 │   ├── package.json        # Node.js dependencies
@@ -260,11 +339,15 @@ func start
 │   └── src/functions/
 │       ├── schedule.js     # Schedule CRUD + CSV/Playlist import/export
 │       └── speakers.js     # Speakers CRUD + extract
+├── infra/
+│   ├── main.bicep          # Main Bicep template (subscription scope)
+│   ├── resources.bicep     # All Azure resources with RBAC
+│   └── main.parameters.json # Deployment parameters
 ├── assets/
 │   ├── acu-logo.png        # Conference logo
 │   └── Loading-Schedule.png # Placeholder image
 ├── images/
-│   └── speakers/           # Speaker headshot images
+│   └── speakers/           # Speaker headshot images (legacy)
 └── .github/workflows/
     └── azure-functions-deploy.yml # CI/CD pipeline
 ```
@@ -278,5 +361,6 @@ func start
 - **Database:** Azure Table Storage
 - **Hosting:** Azure Static Web Apps (Standard tier)
 - **Authentication:** Azure AD / Microsoft Entra ID
+- **Infrastructure:** Bicep, Azure Developer CLI (azd)
 - **CI/CD:** GitHub Actions with OIDC
 - **Video:** YouTube IFrame API
