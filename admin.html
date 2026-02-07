@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="styles.css">
     <!-- Markdown parser for content editors -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <!-- HTML sanitizer to prevent XSS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body>
     <div class="admin-dashboard">
@@ -369,15 +371,11 @@ Azure Core Underground is a **free, community-driven virtual conference** for Az
             });
         }
         
-        // Helper to parse markdown safely
+        // Helper to parse markdown safely with XSS sanitization
         function parseMarkdown(content) {
-            // Debug: Check if marked is loaded
-            console.log('marked type:', typeof marked);
-            console.log('marked.parse type:', typeof marked?.parse);
-            
             if (typeof marked === 'undefined') {
                 console.error('marked library not loaded!');
-                return '<p style="color:red;">Markdown library not loaded</p>' + content;
+                return DOMPurify.sanitize('<p>Markdown library not loaded</p>');
             }
             
             try {
@@ -388,13 +386,13 @@ Azure Core Underground is a **free, community-driven virtual conference** for Az
                     html = marked(content);
                 } else {
                     console.error('marked is loaded but has no parse function');
-                    return content;
+                    return DOMPurify.sanitize(content);
                 }
-                console.log('Parsed HTML preview:', html.substring(0, 200));
-                return html;
+                // Sanitize HTML to prevent XSS attacks
+                return DOMPurify.sanitize(html);
             } catch (e) {
                 console.error('Markdown parse error:', e);
-                return content;
+                return DOMPurify.sanitize(content);
             }
         }
         
