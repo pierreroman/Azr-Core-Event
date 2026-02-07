@@ -157,6 +157,17 @@
                     </div>
                 </div>
                 
+                <div class="form-group">
+                    <label class="label-bold">Section Visibility</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hideSponsors">
+                            <span>Hide Sponsors Section</span>
+                        </label>
+                        <small class="text-muted">When checked, the sponsors section and nav link will be hidden on the main site</small>
+                    </div>
+                </div>
+                
                 <div class="color-preview">
                     <h4>Preview</h4>
                     <div id="brandingPreview" class="branding-preview">
@@ -694,7 +705,8 @@ Azure Core Underground is a **free, community-driven virtual conference** for Az
             logo: '/assets/acu-logo.png',
             primaryColor: '#0078D4',
             secondaryColor: '#50E6FF',
-            accentColor: '#FFB900'
+            accentColor: '#FFB900',
+            hideSponsors: false
         };
         
         const colorPresets = {
@@ -747,6 +759,9 @@ Azure Core Underground is a **free, community-driven virtual conference** for Az
             document.getElementById('accentColor').value = branding.accentColor || defaultBranding.accentColor;
             document.getElementById('accentColorHex').value = branding.accentColor || defaultBranding.accentColor;
             
+            // Load visibility settings
+            document.getElementById('hideSponsors').checked = branding.hideSponsors || false;
+            
             updateBrandingPreview();
         }
         
@@ -756,7 +771,8 @@ Azure Core Underground is a **free, community-driven virtual conference** for Az
                 logo: document.getElementById('logoPreview').src,
                 primaryColor: document.getElementById('primaryColor').value,
                 secondaryColor: document.getElementById('secondaryColor').value,
-                accentColor: document.getElementById('accentColor').value
+                accentColor: document.getElementById('accentColor').value,
+                hideSponsors: document.getElementById('hideSponsors').checked
             };
             
             localStorage.setItem('acu-branding', JSON.stringify(branding));

@@ -21,7 +21,7 @@
             <a href="#about" class="cta">About</a>
             <a href="#schedule" class="cta">Schedule</a>
             <a href="#speakers" class="cta">Speakers</a>
-            <a href="#sponsors" class="cta">Sponsors</a>
+            <a href="#sponsors" class="cta" id="nav-sponsors">Sponsors</a>
         </div>
     </section>
 
@@ -851,6 +851,14 @@
                 }
                 if (branding.secondaryColor) {
                     document.documentElement.style.setProperty('--primary-2', branding.secondaryColor);
+                }
+                
+                // Hide sponsors section if configured
+                if (branding.hideSponsors) {
+                    const sponsorsSection = document.getElementById('sponsors');
+                    const sponsorsNav = document.getElementById('nav-sponsors');
+                    if (sponsorsSection) sponsorsSection.style.display = 'none';
+                    if (sponsorsNav) sponsorsNav.style.display = 'none';
                 }
             } catch (e) {
                 console.error('Error applying branding:', e);
