@@ -177,3 +177,102 @@ These three security improvements significantly enhance the security posture of 
 3. **CSP**: Provides defense-in-depth against various injection attacks
 
 All changes are minimal, focused, and maintain existing functionality while adding critical security protections.
+---
+
+## 4. Insecure Randomness Fix (CodeQL)
+
+### Vulnerability
+Session IDs and speaker IDs were generated using `Math.random()`, which is not cryptographically secure. This makes IDs potentially predictable.
+
+**Vulnerable code (schedule.js):**
+```javascript
+const random = Math.random().toString(36).substring(2, 8);
+```
+
+### Fix
+Replaced with Node.js `crypto.randomBytes()` for cryptographically secure random values:
+
+**Fixed code (schedule.js):**
+```javascript
+const crypto = require("crypto");
+const random = crypto.randomBytes(4).toString("hex");
+```
+
+### Impact
+- **Before**: IDs could potentially be predicted or brute-forced
+- **After**: IDs use cryptographically secure randomness
+
+### Files Modified
+- `api/src/functions/schedule.js` - `generateSessionId()` function
+- `api/src/functions/speakers.js` - `generateSpeakerId()` function
+
+---
+
+## 5. Subresource Integrity (SRI) for CDN Scripts
+
+### Vulnerability
+CDN-loaded scripts (marked.js and DOMPurify) lacked integrity hashes, making them vulnerable to CDN compromise or man-in-the-middle attacks.
+
+**Vulnerable code:**
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+```
+
+### Fix
+Added SRI hashes with `integrity` and `crossorigin` attributes:
+
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js" 
+        integrity="sha384-QsSpx6a0USazT7nK7w8qXDgpSAPhFsb2XtpoLFQ5+X2yFN6hvCKnwEzN8M5FWaJb" 
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" 
+        integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" 
+        crossorigin="anonymous"></script>
+```
+
+### Impact
+- **Before**: Browser would execute any script served by CDN
+- **After**: Browser verifies script hash before execution; rejects tampered scripts
+
+### Files Modified
+- `index.html` - Lines 9, 11
+- `admin.html` - Lines 9, 11
+
+---
+
+## 6. URL Sanitization Fix (CodeQL)
+
+### Vulnerability
+URL validation in `schedule-admin.html` used simple `includes()` checks which could be bypassed.
+
+**Vulnerable code:**
+```javascript
+if (!youtubeUrl.includes('youtube.com') && !youtubeUrl.includes('youtu.be')) {
+    // reject
+}
+```
+
+### Fix
+Replaced with proper URL parsing using the `URL` constructor:
+
+**Fixed code:**
+```javascript
+try {
+    const url = new URL(youtubeUrl);
+    const isYouTube = url.hostname === 'www.youtube.com' || 
+                      url.hostname === 'youtube.com' || 
+                      url.hostname === 'youtu.be';
+    if (!isYouTube) {
+        // reject
+    }
+} catch (e) {
+    // invalid URL
+}
+```
+
+### Impact
+- **Before**: Attacker could use URLs like `evil.com?x=youtube.com` to bypass validation
+- **After**: Only actual YouTube hostnames are accepted
+
+### Files Modified
+- `schedule-admin.html` - URL validation in YouTube playlist import

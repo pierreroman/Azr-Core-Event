@@ -645,14 +645,29 @@
         function extractPlaylistId(input) {
             if (!input) return null;
             
-            // If it looks like a URL, extract the list parameter
-            if (input.includes('youtube.com') || input.includes('youtu.be')) {
-                const match = input.match(/[?&]list=([^&]+)/);
-                if (match) return match[1];
-            }
+            const trimmed = input.trim();
             
-            // Otherwise, assume it's a raw playlist ID
-            return input.trim();
+            // Try to parse as URL and validate hostname
+            try {
+                const url = new URL(trimmed);
+                const hostname = url.hostname.toLowerCase();
+                // Only allow youtube.com and youtu.be domains
+                if (hostname === 'youtube.com' || hostname === 'www.youtube.com' || 
+                    hostname === 'youtu.be' || hostname === 'www.youtu.be' ||
+                    hostname.endsWith('.youtube.com')) {
+                    const listParam = url.searchParams.get('list');
+                    if (listParam) return listParam;
+                }
+                // If URL but not YouTube, reject it
+                return null;
+            } catch (e) {
+                // Not a valid URL - assume it's a raw playlist ID
+                // Validate it looks like a playlist ID (alphanumeric with - and _)
+                if (/^[A-Za-z0-9_-]+$/.test(trimmed)) {
+                    return trimmed;
+                }
+                return null;
+            }
         }
         
         // Import YouTube playlist

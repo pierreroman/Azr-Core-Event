@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const { TableClient } = require("@azure/data-tables");
 const { ManagedIdentityCredential } = require("@azure/identity");
 const { BlobServiceClient } = require("@azure/storage-blob");
+const crypto = require("crypto");
 
 const storageAccountName = process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
 const tableName = "Speakers";
@@ -25,7 +26,7 @@ function generateSpeakerId(name) {
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-')
         .substring(0, 50);
-    const random = Math.random().toString(36).substring(2, 6);
+    const random = crypto.randomBytes(2).toString("hex"); // 4 cryptographically secure hex chars
     return `${slug}-${random}`;
 }
 

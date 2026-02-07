@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { TableClient } = require("@azure/data-tables");
 const { ManagedIdentityCredential } = require("@azure/identity");
+const crypto = require("crypto");
 
 const storageAccountName = process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
 const tableName = "VideoSchedule";
@@ -15,7 +16,7 @@ function getTableClient() {
 function generateSessionId() {
     // Format: sess_<timestamp>_<random>
     const timestamp = Date.now().toString(36); // Base36 for shorter string
-    const random = Math.random().toString(36).substring(2, 8); // 6 random chars
+    const random = crypto.randomBytes(4).toString("hex"); // 8 cryptographically secure hex chars
     return `sess_${timestamp}_${random}`;
 }
 
