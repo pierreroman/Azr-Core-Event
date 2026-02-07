@@ -84,6 +84,15 @@ resource speakerHeadshotsContainer 'Microsoft.Storage/storageAccounts/blobServic
   }
 }
 
+// Create sponsorlogos container with public blob access
+resource sponsorLogosContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'sponsorlogos'
+  properties: {
+    publicAccess: 'Blob'
+  }
+}
+
 // Create Table Storage service
 resource tableService 'Microsoft.Storage/storageAccounts/tableServices@2023-01-01' = {
   parent: storageAccount
@@ -100,6 +109,12 @@ resource videoScheduleTable 'Microsoft.Storage/storageAccounts/tableServices/tab
 resource speakersTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-01-01' = {
   parent: tableService
   name: 'Speakers'
+}
+
+// Create Sponsors table
+resource sponsorsTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-01-01' = {
+  parent: tableService
+  name: 'Sponsors'
 }
 
 // ============================================================================
@@ -202,6 +217,10 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
       appSettings: [
         {
           name: 'AZURE_STORAGE_ACCOUNT'
+          value: storageAccount.name
+        }
+        {
+          name: 'STORAGE_ACCOUNT_NAME'
           value: storageAccount.name
         }
         {

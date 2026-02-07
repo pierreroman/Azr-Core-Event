@@ -2,11 +2,16 @@ const { app } = require("@azure/functions");
 const { ManagedIdentityCredential } = require("@azure/identity");
 const { BlobServiceClient } = require("@azure/storage-blob");
 
-const storageAccountName = process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
+const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
+const clientId = process.env.AZURE_CLIENT_ID;
 const contentContainer = "sitecontent";
 
+function getCredential() {
+    return clientId ? new ManagedIdentityCredential({ clientId }) : new ManagedIdentityCredential();
+}
+
 function getBlobServiceClient() {
-    const credential = new ManagedIdentityCredential();
+    const credential = getCredential();
     const url = `https://${storageAccountName}.blob.core.windows.net`;
     return new BlobServiceClient(url, credential);
 }

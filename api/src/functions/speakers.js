@@ -4,18 +4,23 @@ const { ManagedIdentityCredential } = require("@azure/identity");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 
-const storageAccountName = process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
+const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
+const clientId = process.env.AZURE_CLIENT_ID;
 const tableName = "Speakers";
 const headshotsContainer = "speakerheadshots";
 
+function getCredential() {
+    return clientId ? new ManagedIdentityCredential({ clientId }) : new ManagedIdentityCredential();
+}
+
 function getTableClient() {
-    const credential = new ManagedIdentityCredential();
+    const credential = getCredential();
     const url = `https://${storageAccountName}.table.core.windows.net`;
     return new TableClient(url, tableName, credential);
 }
 
 function getBlobServiceClient() {
-    const credential = new ManagedIdentityCredential();
+    const credential = getCredential();
     const url = `https://${storageAccountName}.blob.core.windows.net`;
     return new BlobServiceClient(url, credential);
 }
@@ -245,7 +250,7 @@ async function deleteSpeaker(request, context) {
 // POST /api/speakers/extract - Extract speakers from schedule descriptions
 async function extractSpeakers(request, context) {
     try {
-        const credential = new ManagedIdentityCredential();
+        const credential = getCredential();
         const scheduleClient = new TableClient(
             `https://${storageAccountName}.table.core.windows.net`,
             "VideoSchedule",

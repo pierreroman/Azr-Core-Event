@@ -3,11 +3,16 @@ const { TableClient } = require("@azure/data-tables");
 const { ManagedIdentityCredential } = require("@azure/identity");
 const crypto = require("crypto");
 
-const storageAccountName = process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
+const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
+const clientId = process.env.AZURE_CLIENT_ID;
 const tableName = "VideoSchedule";
 
+function getCredential() {
+    return clientId ? new ManagedIdentityCredential({ clientId }) : new ManagedIdentityCredential();
+}
+
 function getTableClient() {
-    const credential = new ManagedIdentityCredential();
+    const credential = getCredential();
     const url = `https://${storageAccountName}.table.core.windows.net`;
     return new TableClient(url, tableName, credential);
 }
