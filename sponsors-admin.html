@@ -416,9 +416,20 @@
                 const item = addUploadItem(progressContainer, file.name, preview, 'Uploading...');
 
                 try {
-                    await uploadFile(file);
-                    item.querySelector('.upload-status').textContent = 'Uploaded successfully!';
+                    const result = await uploadFile(file);
+                    item.querySelector('.upload-status').textContent = `Uploaded as: ${result.filename}`;
                     item.querySelector('.upload-status').classList.add('success');
+                    // Show a button to use this filename
+                    const useBtn = document.createElement('button');
+                    useBtn.className = 'btn btn-primary btn-small';
+                    useBtn.textContent = 'Use this logo';
+                    useBtn.style.marginTop = '4px';
+                    useBtn.onclick = () => {
+                        document.getElementById('logoFile').value = result.filename;
+                        updateLogoPreview(result.filename);
+                        showAlert(`Logo filename set to "${result.filename}"`, 'success');
+                    };
+                    item.querySelector('.upload-info').appendChild(useBtn);
                 } catch (error) {
                     item.querySelector('.upload-status').textContent = `Error: ${error.message}`;
                     item.querySelector('.upload-status').classList.add('error');
@@ -469,7 +480,7 @@
                 if (data.logos && data.logos.length > 0) {
                     grid.innerHTML = data.logos.map(l => `
                         <div class="headshot-item">
-                            <img src="${BLOB_STORAGE_URL}/${l.name}" alt="${l.name}" onclick="copyFilename('${l.name}')" style="object-fit: contain;">
+                            <img src="${BLOB_STORAGE_URL}/${l.name}" alt="${l.name}" onclick="useLogoFilename('${l.name}')" title="Click to use this filename" style="object-fit: contain; cursor: pointer;">
                             <div class="filename">${l.name}</div>
                         </div>
                     `).join('');
@@ -484,6 +495,13 @@
         function copyFilename(filename) {
             navigator.clipboard.writeText(filename);
             showAlert(`Copied "${filename}" to clipboard`, 'success');
+        }
+
+        function useLogoFilename(filename) {
+            document.getElementById('logoFile').value = filename;
+            updateLogoPreview(filename);
+            navigator.clipboard.writeText(filename);
+            showAlert(`Logo filename set to "${filename}" and copied to clipboard`, 'success');
         }
 
         // ==================== HELPERS ====================
