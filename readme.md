@@ -1,6 +1,6 @@
 # Azure Core Underground 2026
 
-A community conference website for Azure infrastructure professionals, featuring dynamic schedule management, YouTube video integration, and speaker profiles.
+A community conference website for Azure infrastructure professionals, featuring dynamic schedule management, YouTube video integration, speaker profiles, and sponsor management — all backed by Azure Functions, Table Storage, and Blob Storage with managed identity.
 
 **Live Site:** <https://www.azurecoreunderground.com/>
 
@@ -10,17 +10,17 @@ A community conference website for Azure infrastructure professionals, featuring
 
 #### Hero & Navigation
 
-- **ACU Logo** - Conference logo displayed prominently above the title
+- **ACU Logo** — Conference logo displayed prominently above the title
 - Conference branding and tagline
 - Quick navigation to About, Schedule, Speakers, and Sponsors sections
 
 #### Video Player Section
 
-- **Embedded YouTube Player** - Automatically loads and plays the current session
-- **Live Stream Detection** - Shows "LIVE" badge when stream is broadcasting
-- **Now Playing Info Box** - Displays current session title, description, and YouTube link
-- **Up Next Box** - Shows the next scheduled session with live countdown timer
-- **Live Chat Button** - Opens YouTube live chat in a popup window during streams
+- **Embedded YouTube Player** — Automatically loads and plays the current session
+- **Live Stream Detection** — Shows "LIVE" badge when stream is broadcasting
+- **Now Playing Info Box** — Displays current session title, description, and YouTube link
+- **Up Next Box** — Shows the next scheduled session with live countdown timer
+- **Live Chat Button** — Opens YouTube live chat in a popup window during streams
 
 #### Dynamic Schedule
 
@@ -43,12 +43,21 @@ A community conference website for Azure infrastructure professionals, featuring
   - Full biography with clickable links
   - List of their sessions (clickable to open session details)
 
+#### Sponsors Section
+
+- Fetches sponsors from API, grouped by tier (Platinum, Gold, Silver, Bronze, Community)
+- Logo grid with tier headings
+- **Sponsor Detail Modal** on click showing:
+  - Large logo image
+  - Sponsor name and tier badge
+  - Website link
+  - Markdown-rendered description
+
 #### Additional Sections
 
-- **About** - Event description and target audience with feature cards
-- **Sponsors** - Sponsor logos grid
-- **Code of Conduct** - Modal with community guidelines
-- **Footer** - Event info and links
+- **About** — Event description loaded from Content API (server-side Markdown stored in Blob Storage)
+- **Code of Conduct** — Modal with community guidelines loaded from Content API
+- **Footer** — Event info and links
 
 #### Accessibility & UX
 
@@ -56,49 +65,51 @@ A community conference website for Azure infrastructure professionals, featuring
 - Click outside modal to close
 - Responsive design for all screen sizes
 - Loading states for async content
+- XSS protection via DOMPurify sanitization
 
 ---
 
 ### Admin Dashboard (admin.html)
 
-**Authentication:** Requires Azure AD login (configured in staticwebapp.config.json)
+**Authentication:** Requires Microsoft Entra ID login (configured in staticwebapp.config.json)
 
 Central dashboard with navigation to all admin functions:
 
-- **Schedule Management** - Link to schedule-admin.html
-- **Speaker Management** - Link to speakers-admin.html
-- **Branding** - Customize event name, logo, and color scheme
-- **Headshot Upload** - Upload speaker images directly to blob storage
-- **Code of Conduct Editor** - Edit CoC content (stored in browser localStorage)
-- **About Editor** - Edit About section content (stored in browser localStorage)
+- **Schedule Management** — Link to schedule-admin.html
+- **Speaker Management** — Link to speakers-admin.html
+- **Sponsor Management** — Link to sponsors-admin.html
+- **Branding** — Customize event name, logo, and color scheme
+- **Headshot Upload** — Upload speaker images directly to blob storage
+- **Code of Conduct Editor** — Edit CoC content (saved to Blob Storage via Content API)
+- **About Editor** — Edit About section content (saved to Blob Storage via Content API)
 
 ---
 
 ### Schedule Admin (schedule-admin.html)
 
-**Authentication:** Requires Azure AD login
+**Authentication:** Requires Microsoft Entra ID login
 
 #### Schedule Management
 
-- **View All Sessions** - Table with title, video ID, date/time, duration, and actions
-- **Add Session** - Form with video ID, title, description, start time, and duration
-- **Edit Session** - Inline editing of any session field
-- **Delete Session** - Single delete with confirmation
-- **Multi-Select Delete** - Checkbox selection for bulk deletion
+- **View All Sessions** — Table with title, video ID, date/time, duration, and actions
+- **Add Session** — Form with video ID, title, description, start time, and duration
+- **Edit Session** — Inline editing of any session field
+- **Delete Session** — Single delete with confirmation
+- **Multi-Select Delete** — Checkbox selection for bulk deletion
 
 #### CSV Export/Import
 
-- **Export to CSV** - Downloads schedule as RFC 4180 compliant CSV
+- **Export to CSV** — Downloads schedule as RFC 4180 compliant CSV
   - Excel formula protection (prefixes dangerous characters with single quote)
   - Handles multi-line descriptions and special characters
-- **Import from CSV** - Upload CSV to create/update sessions
+- **Import from CSV** — Upload CSV to create/update sessions
   - Creates new sessions or updates existing (by sessionId)
   - Validates required columns (videoId, title, startTime)
   - Reports success/error counts
 
 #### YouTube Playlist Import
 
-- **Import from YouTube Playlist** - Bulk import videos from any public YouTube playlist
+- **Import from YouTube Playlist** — Bulk import videos from any public YouTube playlist
   - Enter playlist URL or ID
   - Requires YouTube Data API v3 key (free from Google Cloud Console)
   - Set first session start time and gap between sessions
@@ -111,27 +122,56 @@ Central dashboard with navigation to all admin functions:
 
 ### Speakers Admin (speakers-admin.html)
 
-**Authentication:** Requires Azure AD login
+**Authentication:** Requires Microsoft Entra ID login
 
 #### Speaker Management
 
-- **View All Speakers** - Card grid with avatar, name, title, company, and social links
-- **Add Speaker** - Form with:
+- **View All Speakers** — Card grid with avatar, name, title, company, and social links
+- **Add Speaker** — Form with:
   - Name, title, company
   - Biography (multi-line)
-  - Headshot filename (for blob storage `speakerheadshots` container)
-  - Social links (LinkedIn, Twitter)
+  - Headshot filename (references blob in `speakerheadshots` container)
+  - Real-time headshot preview as filename is typed
+  - Social links (LinkedIn, Twitter/X)
   - Session IDs (comma-separated)
-- **Edit Speaker** - Full editing of all fields
-- **Delete Speaker** - With confirmation
-- **Headshot Preview** - Shows image preview when filename is entered
+- **Edit Speaker** — Full editing of all fields
+- **Delete Speaker** — With confirmation
 
 #### Extract Speakers
 
-- **Auto-Extract from Schedule** - Parses session descriptions for "Speaker:" patterns
+- **Auto-Extract from Schedule** — Parses session descriptions for "Speaker:" patterns
 - Automatically creates speaker entries with linked sessions
 - Updates existing speakers with new session links
 - Reports created/updated counts
+
+---
+
+### Sponsors Admin (sponsors-admin.html)
+
+**Authentication:** Requires Microsoft Entra ID login
+
+#### Sponsor Management
+
+- **View All Sponsors** — Card grid with logo, name, tier badge, website link, and enable/disable toggle
+- **Add Sponsor** — Form with:
+  - Sponsor name, tier (Platinum/Gold/Silver/Bronze/Community), sort order
+  - Website URL
+  - Logo filename (references blob in `sponsorlogos` container)
+  - Real-time logo preview as filename is typed
+  - Description with Markdown support and live preview
+  - Enable/disable toggle for public visibility
+- **Edit Sponsor** — Full editing of all fields
+- **Delete Sponsor** — With confirmation
+- **Enable/Disable** — Quick toggle for public visibility
+- **Stats Bar** — Total sponsors, enabled count, logos count
+
+#### Logo Upload
+
+- **Drag & Drop Upload Zone** — Upload logo images (JPG, PNG, WebP, SVG, max 10MB)
+- **Automatic Filename Sanitization** — Uploaded files are lowercased and URL-safe
+- **"Use this logo" Button** — After upload, one-click auto-fill of the logo filename field
+- **Existing Logos Grid** — Browse and click to auto-fill the logo filename field
+- Images stored in `sponsorlogos` blob container with public blob access
 
 ---
 
@@ -143,7 +183,9 @@ Central dashboard with navigation to all admin functions:
 |----------|------|---------|
 | `lemon-beach-0a645ad0f` | Azure Static Web App (Standard) | Hosts frontend HTML/CSS/JS |
 | `azcoreunderground-api` | Azure Function App (Node.js 20) | REST API backend |
-| `azcorestorage2026` | Azure Storage Account | Table Storage for data |
+| `azcorestorage2026` | Azure Storage Account | Table Storage + Blob Storage |
+| User-Assigned Managed Identity | Managed Identity | RBAC access from Function App to Storage |
+| Application Insights + Log Analytics | Monitoring | Logging and diagnostics |
 | `rg-AzureCoreUnderground` | Resource Group | Contains all resources |
 
 ### Data Storage (Azure Table Storage)
@@ -171,18 +213,43 @@ Central dashboard with navigation to all admin functions:
 | title | string | Job title |
 | company | string | Company name |
 | bio | string | Biography |
-| headshotFile | string | Image filename |
+| headshotFile | string | Image filename in `speakerheadshots` container |
 | linkedin | string | LinkedIn URL |
 | twitter | string | Twitter/X URL |
 | sessionIds | JSON string | Array of session IDs |
 
+#### Sponsors Table
+
+| Field | Type | Description |
+|-------|------|-------------|
+| partitionKey | string | "sponsor" |
+| rowKey | string | Sponsor ID (name-slug) |
+| name | string | Sponsor display name |
+| logoFile | string | Image filename in `sponsorlogos` container |
+| tier | string | Tier level (platinum/gold/silver/bronze/community) |
+| website | string | Sponsor website URL |
+| description | string | Markdown description |
+| sortOrder | string | Sort priority (lower = first) |
+| enabled | string | "true"/"false" for public visibility |
+
+### Blob Storage Containers
+
+| Container | Access | Purpose |
+|-----------|--------|---------|
+| `speakerheadshots` | Public Blob | Speaker headshot images |
+| `sponsorlogos` | Public Blob | Sponsor logo images |
+| `sitecontent` | Private | Markdown content (about, code-of-conduct) |
+
 ### Security
 
-- **Managed Identity** - Function App uses system-assigned managed identity for Table Storage access (no connection strings)
-- **Azure AD Authentication** - Admin pages require authenticated users
-- **No Public Blob Access** - Storage account has `allowBlobPublicAccess: false`
-- **Speaker Headshots** - Images stored in blob storage `speakerheadshots` container (public blob access)
-- **Security Headers** - X-Content-Type-Options, X-Frame-Options configured
+- **User-Assigned Managed Identity** — Function App authenticates to Storage via RBAC (no connection strings or shared keys)
+- **Microsoft Entra ID Authentication** — Admin pages require authenticated users via SWA auth
+- **Role Assignments** — Storage Blob Data Owner, Blob Data Contributor, Table Data Contributor, Queue Data Contributor, Storage Account Contributor
+- **XSS Protection** — DOMPurify sanitization on all user-generated Markdown/HTML content
+- **Content Security Policy** — `X-Content-Type-Options`, `X-Frame-Options`, CSP headers configured in `staticwebapp.config.json`
+- **CodeQL Analysis** — Automated security scanning via GitHub Actions (weekly + on push/PR)
+- **Input Validation** — File type and size validation on uploads, filename sanitization
+- **`allowSharedKeyAccess: false`** — Storage account disables shared key access, enforcing RBAC-only
 
 ---
 
@@ -208,16 +275,38 @@ Central dashboard with navigation to all admin functions:
 | GET | `/api/speakers/{id}` | Anonymous | Get single speaker |
 | GET | `/api/speakers/headshots` | Anonymous | List all headshot images |
 | POST | `/api/speakers` | Authenticated | Add new speaker |
-| POST | `/api/speakers/extract` | Authenticated | Extract from schedule |
+| POST | `/api/speakers/extract` | Authenticated | Extract speakers from schedule |
 | POST | `/api/speakers/headshot` | Authenticated | Upload headshot image |
 | PUT | `/api/speakers/{id}` | Authenticated | Update speaker |
 | DELETE | `/api/speakers/{id}` | Authenticated | Delete speaker |
+
+### Sponsors API (`/api/sponsors`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/sponsors` | Anonymous | Get all sponsors (sorted by tier) |
+| GET | `/api/sponsors/{id}` | Anonymous | Get single sponsor |
+| GET | `/api/sponsors/logos` | Anonymous | List all logo images |
+| POST | `/api/sponsors` | Authenticated | Add new sponsor |
+| POST | `/api/sponsors/logo` | Authenticated | Upload logo image |
+| PUT | `/api/sponsors/{id}` | Authenticated | Update sponsor |
+| DELETE | `/api/sponsors/{id}` | Authenticated | Delete sponsor |
+
+### Content API (`/api/content`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/content/{type}` | Anonymous | Get markdown content (about, code-of-conduct) |
+| PUT | `/api/content/{type}` | Authenticated | Save markdown content to Blob Storage |
+| DELETE | `/api/content/{type}` | Authenticated | Reset content to defaults |
 
 ---
 
 ## CI/CD
 
-### GitHub Actions Workflow
+### GitHub Actions Workflows
+
+#### Azure Functions Deploy (`.github/workflows/azure-functions-deploy.yml`)
 
 **Trigger:** Push to `main` branch (paths: `api/**`) or manual dispatch
 
@@ -230,7 +319,25 @@ Central dashboard with navigation to all admin functions:
 5. Restart Function App (clears disk space)
 6. Deploy to Azure Functions
 
-**File:** `.github/workflows/azure-functions-deploy.yml`
+#### Static Web App Deploy (`.github/workflows/azure-static-web-apps-lemon-beach-0a645ad0f.yml`)
+
+**Trigger:** Push to `main` branch, or pull request on `main`
+
+**Steps:**
+
+1. Checkout repository
+2. Build and deploy via `Azure/static-web-apps-deploy@v1`
+3. Closes staging environments on PR close
+
+> **Note:** The SWA workflow does _not_ deploy the `api/` folder — the Function App is linked as a separate backend via managed identity.
+
+#### CodeQL Security Analysis (`.github/workflows/codeql.yml`)
+
+**Trigger:** Push to `main`, pull requests on `main`, weekly schedule (Monday at midnight UTC)
+
+- Automated JavaScript/TypeScript code scanning
+- Security vulnerability detection
+- Results reported to GitHub Security tab
 
 ---
 
@@ -252,8 +359,12 @@ func start
 
 ### Environment Variables
 
-- `STORAGE_ACCOUNT_NAME` - Azure Storage account name (default: `azcorestorage2026`)
-- `YOUTUBE_API_KEY` - (Optional) YouTube Data API v3 key for playlist imports
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AZURE_STORAGE_ACCOUNT` | Azure Storage account name | `azcorestorage2026` |
+| `STORAGE_ACCOUNT_NAME` | Alternative storage account name (fallback) | `azcorestorage2026` |
+| `AZURE_CLIENT_ID` | Client ID for user-assigned managed identity | _(none — uses default credential)_ |
+| `YOUTUBE_API_KEY` | YouTube Data API v3 key for playlist imports | _(optional)_ |
 
 ---
 
@@ -274,8 +385,8 @@ This project includes an Azure Developer CLI (azd) template for deploying the co
 | Static Web App | Standard | Frontend hosting with custom domains |
 | Function App | EP1 (Elastic Premium) | API backend with managed identity |
 | Storage Account | Standard_LRS | Tables + blob storage (no shared keys) |
-| User-Assigned Managed Identity | - | RBAC access to storage |
-| Application Insights | - | Monitoring and logging |
+| User-Assigned Managed Identity | — | RBAC access to storage |
+| Application Insights | — | Monitoring and logging |
 | Log Analytics Workspace | PerGB2018 | Centralized logs |
 
 ### Deployment Steps
@@ -304,9 +415,10 @@ The `azd up` command will:
 
 After deployment, configure the following:
 
-1. **Custom Domain** (optional) - Add custom domain in Azure Portal for the Static Web App
-2. **Admin Access** - Configure Azure AD authentication for admin pages
-3. **Speaker Headshots** - Upload images to the `speakerheadshots` blob container
+1. **Custom Domain** (optional) — Add custom domain in Azure Portal for the Static Web App
+2. **Admin Access** — Configure Microsoft Entra ID authentication for admin pages
+3. **Speaker Headshots** — Upload images via the Speakers Admin page
+4. **Sponsor Logos** — Upload images via the Sponsors Admin page
 
 ### Infrastructure Files
 
@@ -338,31 +450,40 @@ azd monitor --logs
 ## File Structure
 
 ```
-├── index.html              # Main public website
-├── admin.html              # Admin dashboard (navigation hub)
-├── schedule-admin.html     # Schedule management
-├── speakers-admin.html     # Speakers management
-├── styles.css              # All CSS styles (consolidated)
-├── staticwebapp.config.json # SWA routing and auth config
-├── azure.yaml              # AZD project definition
-├── readme.md               # This file
+├── index.html                 # Main public website
+├── admin.html                 # Admin dashboard (navigation hub)
+├── schedule-admin.html        # Schedule management
+├── speakers-admin.html        # Speakers management
+├── sponsors-admin.html        # Sponsors management
+├── styles.css                 # All CSS styles (consolidated)
+├── staticwebapp.config.json   # SWA routing, auth, and security headers
+├── azure.yaml                 # AZD project definition
+├── SECURITY_IMPROVEMENTS.md   # Security fixes documentation
+├── readme.md                  # This file
 ├── api/
-│   ├── package.json        # Node.js dependencies
-│   ├── host.json           # Functions host config
+│   ├── package.json           # Node.js dependencies
+│   ├── host.json              # Functions host config
 │   └── src/functions/
-│       ├── schedule.js     # Schedule CRUD + CSV/Playlist import/export
-│       └── speakers.js     # Speakers CRUD + extract + headshot upload
+│       ├── schedule.js        # Schedule CRUD + CSV/Playlist import/export
+│       ├── speakers.js        # Speakers CRUD + extract + headshot upload
+│       ├── sponsors.js        # Sponsors CRUD + logo upload
+│       └── content.js         # About/CoC content management (Blob Storage)
+├── content/
+│   ├── about.md               # Default about page content
+│   └── code-of-conduct.md     # Default code of conduct content
 ├── infra/
-│   ├── main.bicep          # Main Bicep template (subscription scope)
-│   ├── resources.bicep     # All Azure resources with RBAC
-│   └── main.parameters.json # Deployment parameters
+│   ├── main.bicep             # Main Bicep template (subscription scope)
+│   ├── resources.bicep        # All Azure resources with RBAC
+│   └── main.parameters.json   # Deployment parameters
 ├── assets/
-│   ├── acu-logo.png        # Conference logo
-│   └── Loading-Schedule.png # Placeholder image
+│   ├── acu-logo.png           # Conference logo
+│   └── Loading-Schedule.png   # Placeholder image
 ├── images/
-│   └── speakers/           # Speaker headshot images (legacy)
+│   └── speakers/              # Speaker headshot images (legacy/local)
 └── .github/workflows/
-    └── azure-functions-deploy.yml # CI/CD pipeline
+    ├── azure-functions-deploy.yml                  # Function App CI/CD
+    ├── azure-static-web-apps-lemon-beach-0a645ad0f.yml  # SWA CI/CD
+    └── codeql.yml                                  # Security scanning
 ```
 
 ---
@@ -372,8 +493,11 @@ azd monitor --logs
 - **Frontend:** HTML5, CSS3, Vanilla JavaScript
 - **Backend:** Azure Functions (Node.js 20, v4 programming model)
 - **Database:** Azure Table Storage
+- **File Storage:** Azure Blob Storage (headshots, logos, site content)
 - **Hosting:** Azure Static Web Apps (Standard tier)
-- **Authentication:** Azure AD / Microsoft Entra ID
+- **Authentication:** Microsoft Entra ID (Azure AD)
+- **Identity:** User-Assigned Managed Identity with RBAC
 - **Infrastructure:** Bicep, Azure Developer CLI (azd)
-- **CI/CD:** GitHub Actions with OIDC
+- **CI/CD:** GitHub Actions with OIDC (Functions deploy + SWA deploy + CodeQL)
 - **Video:** YouTube IFrame API
+- **Markdown:** marked.js for rendering, DOMPurify for XSS sanitization
