@@ -347,17 +347,23 @@ section .section-subtitle {
   margin-right: auto;
 }
 
-/* About Section - Center everything */
+/* About Section - Left justified, match video width */
 #about {
-  text-align: center;
+  text-align: left;
+  max-width: 1200px;
+  padding: 64px 48px;
+}
+
+#about .markdown-content {
+  text-align: left;
+}
+
+#about .markdown-content h1 {
+  text-align: left;
 }
 
 #about .feature-card {
-  text-align: center;
-}
-
-#about .feature-card:last-child {
-  grid-column: 1 / -1;
+  text-align: left;
 }
 
 /* Features Grid */
