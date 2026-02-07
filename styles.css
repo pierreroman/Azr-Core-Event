@@ -350,7 +350,7 @@ section .section-subtitle {
 /* About Section - Left justified, match video width */
 #about {
   text-align: left;
-  max-width: 1400px;
+  max-width: 1200px;
   padding: 64px 48px;
 }
 
