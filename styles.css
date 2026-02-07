@@ -368,6 +368,14 @@ section .section-subtitle {
   text-align: left;
 }
 
+#about .markdown-content h2 {
+  text-align: center;
+}
+
+#about .markdown-content h3 {
+  text-align: left;
+}
+
 #about .feature-card {
   text-align: left;
 }
