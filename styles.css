@@ -333,11 +333,17 @@ section {
 
 section h2 {
   font-size: 36px;
-  text-align: left;
+  text-align: center;
   margin-bottom: 16px;
   color: var(--text);
 }
 
+section h3 {
+  font-size: 36px;
+  text-align: left;
+  margin-bottom: 16px;
+  color: var(--text);
+}
 section .section-subtitle {
   text-align: center;
   color: var(--muted);
