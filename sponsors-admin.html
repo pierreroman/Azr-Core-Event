@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sponsors Admin - Azure Core Underground</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Markdown parser for description editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js" integrity="sha384-QsSpx6a0USazT7nK7w8qXDgpSAPhFsb2XtpoLFQ5+X2yFN6hvCKnwEzN8M5FWaJb" crossorigin="anonymous"></script>
+    <!-- HTML sanitizer to prevent XSS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>🤝 Sponsors Management</h1>
+            <div class="header-actions">
+                <a href="admin.html" class="btn btn-secondary">← Admin Dashboard</a>
+                <button class="btn btn-primary" onclick="openAddModal()">+ Add Sponsor</button>
+            </div>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <div class="stats-bar">
+            <div class="stat">
+                <div class="stat-value" id="totalSponsors">0</div>
+                <div class="stat-label">Total Sponsors</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="enabledSponsors">0</div>
+                <div class="stat-label">Enabled</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="withLogos">0</div>
+                <div class="stat-label">With Logos</div>
+            </div>
+        </div>
+
+        <!-- Logo Upload Section -->
+        <details class="logo-upload-section">
+            <summary class="btn btn-secondary" style="display: inline-block; cursor: pointer; margin-bottom: 16px;">📤 Upload Sponsor Logos</summary>
+            <div class="upload-section" style="margin-bottom: 24px;">
+                <p class="text-muted mb-20">
+                    Upload logo images to the sponsorlogos blob storage container. Recommended: PNG or SVG, transparent background.
+                </p>
+                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📤</div>
+                    <p><strong>Click to select files</strong> or drag and drop</p>
+                    <p class="text-small mt-10">Supports JPG, PNG, WebP, SVG (max 10MB each)</p>
+                    <input type="file" id="fileInput" multiple accept="image/jpeg,image/png,image/webp,image/svg+xml" style="display: none;">
+                </div>
+                <div class="upload-progress" id="uploadProgress"></div>
+                <div class="existing-headshots" style="margin-top: 16px;">
+                    <h4>📁 Existing Logos</h4>
+                    <div class="headshots-grid" id="logosGrid">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <div id="sponsorsContainer" class="sponsors-admin-grid">
+            <div class="loading">Loading sponsors...</div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Sponsor Modal -->
+    <div id="sponsorModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Sponsor</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="sponsorForm" onsubmit="saveSponsor(event)">
+                <input type="hidden" id="sponsorId">
+
+                <div class="form-group">
+                    <label for="name">Sponsor Name *</label>
+                    <input type="text" id="name" required placeholder="e.g., Microsoft">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tier">Tier</label>
+                        <select id="tier">
+                            <option value="platinum">🏆 Platinum</option>
+                            <option value="gold">🥇 Gold</option>
+                            <option value="silver" selected>🥈 Silver</option>
+                            <option value="bronze">🥉 Bronze</option>
+                            <option value="community">🌐 Community</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="sortOrder">Sort Order</label>
+                        <input type="number" id="sortOrder" value="999" min="0" placeholder="Lower = first">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="website">Website URL</label>
+                    <input type="url" id="website" placeholder="https://example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="logoFile">Logo Filename</label>
+                    <input type="text" id="logoFile" placeholder="e.g., microsoft-logo.png">
+                    <div class="headshot-hint">
+                        Upload image to blob storage sponsorlogos container. Recommended: PNG or SVG with transparent background.
+                    </div>
+                    <div class="headshot-preview" id="logoPreview">
+                        <span style="color: var(--muted);">No logo</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description / Info (Markdown supported)</label>
+                    <textarea id="description" rows="6" placeholder="Sponsor description, links, and info that will appear in the popup modal..."></textarea>
+                    <div class="description-preview-toggle">
+                        <button type="button" class="btn btn-secondary btn-small" onclick="toggleDescriptionPreview()">👁️ Preview</button>
+                    </div>
+                    <div id="descriptionPreview" class="markdown-preview-inline" style="display: none;">
+                        <div class="markdown-content" id="descriptionPreviewContent"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="enabled" checked>
+                        <span>Enabled (visible on public site)</span>
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Sponsor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const BLOB_STORAGE_URL = 'https://azcorestorage2026.blob.core.windows.net/sponsorlogos';
+        let sponsors = [];
+
+        // Load sponsors on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSponsors();
+            loadExistingLogos();
+            setupUploadHandlers();
+        });
+
+        // Preview logo as user types
+        document.getElementById('logoFile').addEventListener('input', function () {
+            updateLogoPreview(this.value);
+        });
+
+        function updateLogoPreview(filename) {
+            const preview = document.getElementById('logoPreview');
+            if (filename) {
+                preview.innerHTML = `<img src="${BLOB_STORAGE_URL}/${filename}" style="max-height: 80px; max-width: 200px; object-fit: contain;" onerror="this.parentElement.innerHTML='<span style=\\'color: var(--muted);\\'>Image not found</span>'">`;
+            } else {
+                preview.innerHTML = '<span style="color: var(--muted);">No logo</span>';
+            }
+        }
+
+        function toggleDescriptionPreview() {
+            const previewEl = document.getElementById('descriptionPreview');
+            const contentEl = document.getElementById('descriptionPreviewContent');
+            const desc = document.getElementById('description').value;
+
+            if (previewEl.style.display === 'none') {
+                contentEl.innerHTML = parseMarkdown(desc || '*No description yet*');
+                previewEl.style.display = 'block';
+            } else {
+                previewEl.style.display = 'none';
+            }
+        }
+
+        function parseMarkdown(content) {
+            if (typeof marked === 'undefined') return DOMPurify.sanitize(content);
+            try {
+                const html = typeof marked.parse === 'function' ? marked.parse(content) : marked(content);
+                return DOMPurify.sanitize(html);
+            } catch (e) {
+                return DOMPurify.sanitize(content);
+            }
+        }
+
+        async function loadSponsors() {
+            try {
+                const response = await fetch('/api/sponsors');
+                const data = await response.json();
+                sponsors = data.sponsors || [];
+                renderSponsors();
+                updateStats();
+            } catch (error) {
+                console.error('Error loading sponsors:', error);
+                showAlert('Failed to load sponsors', 'error');
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('totalSponsors').textContent = sponsors.length;
+            document.getElementById('enabledSponsors').textContent = sponsors.filter(s => s.enabled).length;
+            document.getElementById('withLogos').textContent = sponsors.filter(s => s.logoFile).length;
+        }
+
+        const tierLabels = {
+            platinum: '🏆 Platinum',
+            gold: '🥇 Gold',
+            silver: '🥈 Silver',
+            bronze: '🥉 Bronze',
+            community: '🌐 Community'
+        };
+
+        function renderSponsors() {
+            const container = document.getElementById('sponsorsContainer');
+
+            if (sponsors.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <h3>No sponsors yet</h3>
+                        <p>Click "Add Sponsor" to add your first sponsor.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = sponsors.map(sponsor => `
+                <div class="sponsor-admin-card ${!sponsor.enabled ? 'sponsor-disabled' : ''}">
+                    <div class="sponsor-card-logo">
+                        ${sponsor.logoFile
+                            ? `<img src="${BLOB_STORAGE_URL}/${sponsor.logoFile}" alt="${escapeHtml(sponsor.name)}" onerror="this.parentElement.innerHTML='🤝'">`
+                            : '🤝'
+                        }
+                    </div>
+                    <div class="sponsor-card-info">
+                        <h3 class="sponsor-card-name">${escapeHtml(sponsor.name)}</h3>
+                        <span class="sponsor-tier-badge tier-${sponsor.tier}">${tierLabels[sponsor.tier] || sponsor.tier}</span>
+                        ${!sponsor.enabled ? '<span class="sponsor-disabled-badge">Disabled</span>' : ''}
+                        ${sponsor.website ? `<a href="${escapeHtml(sponsor.website)}" target="_blank" class="sponsor-website-link" title="Visit website">🔗</a>` : ''}
+                    </div>
+                    <div class="sponsor-card-actions">
+                        <button class="btn btn-secondary btn-small" onclick="editSponsor('${sponsor.id}')">Edit</button>
+                        <button class="btn btn-${sponsor.enabled ? 'warning' : 'success'} btn-small" onclick="toggleSponsor('${sponsor.id}', ${!sponsor.enabled})">${sponsor.enabled ? 'Disable' : 'Enable'}</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteSponsor('${sponsor.id}', '${escapeHtml(sponsor.name)}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Sponsor';
+            document.getElementById('sponsorForm').reset();
+            document.getElementById('sponsorId').value = '';
+            document.getElementById('enabled').checked = true;
+            document.getElementById('tier').value = 'silver';
+            document.getElementById('sortOrder').value = '999';
+            updateLogoPreview('');
+            document.getElementById('descriptionPreview').style.display = 'none';
+            document.getElementById('sponsorModal').classList.add('active');
+        }
+
+        function editSponsor(id) {
+            const sponsor = sponsors.find(s => s.id === id);
+            if (!sponsor) return;
+
+            document.getElementById('modalTitle').textContent = 'Edit Sponsor';
+            document.getElementById('sponsorId').value = sponsor.id;
+            document.getElementById('name').value = sponsor.name;
+            document.getElementById('tier').value = sponsor.tier || 'silver';
+            document.getElementById('sortOrder').value = sponsor.sortOrder || 999;
+            document.getElementById('website').value = sponsor.website || '';
+            document.getElementById('logoFile').value = sponsor.logoFile || '';
+            document.getElementById('description').value = sponsor.description || '';
+            document.getElementById('enabled').checked = sponsor.enabled;
+            updateLogoPreview(sponsor.logoFile);
+            document.getElementById('descriptionPreview').style.display = 'none';
+
+            document.getElementById('sponsorModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('sponsorModal').classList.remove('active');
+        }
+
+        async function saveSponsor(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('sponsorId').value;
+            const sponsorData = {
+                name: document.getElementById('name').value,
+                tier: document.getElementById('tier').value,
+                sortOrder: parseInt(document.getElementById('sortOrder').value) || 999,
+                website: document.getElementById('website').value,
+                logoFile: document.getElementById('logoFile').value,
+                description: document.getElementById('description').value,
+                enabled: document.getElementById('enabled').checked
+            };
+
+            try {
+                let response;
+                if (id) {
+                    response = await fetch(`/api/sponsors/${encodeURIComponent(id)}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sponsorData)
+                    });
+                } else {
+                    response = await fetch('/api/sponsors', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sponsorData)
+                    });
+                }
+
+                if (response.ok) {
+                    showAlert(id ? 'Sponsor updated!' : 'Sponsor created!', 'success');
+                    closeModal();
+                    await loadSponsors();
+                } else {
+                    const error = await response.json();
+                    showAlert(`Error: ${error.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving sponsor:', error);
+                showAlert('Failed to save sponsor', 'error');
+            }
+        }
+
+        async function toggleSponsor(id, enabled) {
+            try {
+                const response = await fetch(`/api/sponsors/${encodeURIComponent(id)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+
+                if (response.ok) {
+                    showAlert(`Sponsor ${enabled ? 'enabled' : 'disabled'}`, 'success');
+                    await loadSponsors();
+                } else {
+                    const error = await response.json();
+                    showAlert(`Error: ${error.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error toggling sponsor:', error);
+                showAlert('Failed to update sponsor', 'error');
+            }
+        }
+
+        async function deleteSponsor(id, name) {
+            if (!confirm(`Delete sponsor "${name}"?`)) return;
+
+            try {
+                const response = await fetch(`/api/sponsors/${encodeURIComponent(id)}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showAlert('Sponsor deleted', 'success');
+                    await loadSponsors();
+                } else {
+                    const error = await response.json();
+                    showAlert(`Error: ${error.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting sponsor:', error);
+                showAlert('Failed to delete sponsor', 'error');
+            }
+        }
+
+        // ==================== LOGO UPLOAD ====================
+
+        function setupUploadHandlers() {
+            const uploadZone = document.getElementById('uploadZone');
+            const fileInput = document.getElementById('fileInput');
+
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('drag-over');
+            });
+
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.classList.remove('drag-over');
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('drag-over');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+            });
+        }
+
+        async function handleFiles(files) {
+            const progressContainer = document.getElementById('uploadProgress');
+            progressContainer.innerHTML = '';
+
+            for (const file of files) {
+                if (!file.type.match(/^image\/(jpeg|png|webp|svg\+xml)$/)) {
+                    addUploadItem(progressContainer, file.name, null, 'Invalid file type', true);
+                    continue;
+                }
+
+                if (file.size > 10 * 1024 * 1024) {
+                    addUploadItem(progressContainer, file.name, null, 'File too large (max 10MB)', true);
+                    continue;
+                }
+
+                const preview = URL.createObjectURL(file);
+                const item = addUploadItem(progressContainer, file.name, preview, 'Uploading...');
+
+                try {
+                    await uploadFile(file);
+                    item.querySelector('.upload-status').textContent = 'Uploaded successfully!';
+                    item.querySelector('.upload-status').classList.add('success');
+                } catch (error) {
+                    item.querySelector('.upload-status').textContent = `Error: ${error.message}`;
+                    item.querySelector('.upload-status').classList.add('error');
+                }
+            }
+
+            setTimeout(loadExistingLogos, 1000);
+        }
+
+        function addUploadItem(container, name, preview, status, isError = false) {
+            const item = document.createElement('div');
+            item.className = 'upload-item';
+            item.innerHTML = `
+                ${preview ? `<img src="${preview}" alt="${name}">` : '<div style="width:50px;height:50px;background:var(--border);border-radius:4px;"></div>'}
+                <div class="upload-info">
+                    <div class="upload-name">${name}</div>
+                    <div class="upload-status ${isError ? 'error' : ''}">${status}</div>
+                </div>
+            `;
+            container.appendChild(item);
+            return item;
+        }
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch('/api/sponsors/logo', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Upload failed');
+            }
+
+            return await response.json();
+        }
+
+        async function loadExistingLogos() {
+            const grid = document.getElementById('logosGrid');
+
+            try {
+                const response = await fetch('/api/sponsors/logos');
+                const data = await response.json();
+
+                if (data.logos && data.logos.length > 0) {
+                    grid.innerHTML = data.logos.map(l => `
+                        <div class="headshot-item">
+                            <img src="${BLOB_STORAGE_URL}/${l.name}" alt="${l.name}" onclick="copyFilename('${l.name}')" style="object-fit: contain;">
+                            <div class="filename">${l.name}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    grid.innerHTML = '<p style="color: var(--muted);">No logos uploaded yet.</p>';
+                }
+            } catch (error) {
+                grid.innerHTML = '<p style="color: var(--danger);">Error loading logos. API endpoint may not be available.</p>';
+            }
+        }
+
+        function copyFilename(filename) {
+            navigator.clipboard.writeText(filename);
+            showAlert(`Copied "${filename}" to clipboard`, 'success');
+        }
+
+        // ==================== HELPERS ====================
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            container.innerHTML = '';
+            container.appendChild(alert);
+
+            if (type !== 'info') {
+                setTimeout(() => alert.remove(), 5000);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modal on outside click
+        document.getElementById('sponsorModal').addEventListener('click', function (e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+</body>
+</html>

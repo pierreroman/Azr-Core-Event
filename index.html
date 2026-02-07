@@ -89,12 +89,26 @@
         <h2>Our Sponsors</h2>
         <p class="section-subtitle">Thank you to our sponsors for making this event possible.</p>
         
-        <div class="sponsors-grid">
-            <div class="sponsor-logo">Microsoft</div>
-            <div class="sponsor-logo">Azure</div>
-            <div class="sponsor-logo">Your Company Here</div>
+        <div id="sponsors-grid" class="sponsors-grid">
+            <p class="loading">Loading sponsors...</p>
         </div>
     </section>
+
+    <!-- Sponsor Detail Modal -->
+    <div id="sponsor-modal" class="modal-overlay">
+        <div class="modal-content sponsor-modal-content">
+            <button class="modal-close" onclick="closeSponsorDetailModal()">&times;</button>
+            <div class="sponsor-modal-header">
+                <div class="sponsor-modal-logo" id="sponsor-modal-logo"></div>
+                <div class="sponsor-modal-info">
+                    <h2 class="modal-title" id="sponsor-modal-name"></h2>
+                    <span class="sponsor-tier-badge" id="sponsor-modal-tier"></span>
+                    <a id="sponsor-modal-website" href="#" target="_blank" rel="noopener" class="sponsor-modal-link" style="display:none;">🔗 Visit Website</a>
+                </div>
+            </div>
+            <div class="sponsor-modal-description markdown-content" id="sponsor-modal-description"></div>
+        </div>
+    </div>
 
     <!-- CTA Section -->
     <section class="cta-section">
@@ -169,6 +183,7 @@
     <script>
         let scheduleData = [];
         let speakersData = [];
+        let sponsorsData = [];
         let youtubePlayer = null;
         let countdownInterval = null;
         
@@ -714,6 +729,7 @@
                 closeModal();
                 closeSpeakerModal();
                 closeCodeOfConduct();
+                closeSponsorDetailModal();
             }
         });
         
@@ -734,12 +750,20 @@
                 closeCodeOfConduct();
             }
         });
+
+        // Close sponsor modal on overlay click
+        document.getElementById('sponsor-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSponsorDetailModal();
+            }
+        });
         
         // Load schedule and speakers when page loads
         document.addEventListener('DOMContentLoaded', function() {
             applyBranding();
             loadSchedule();
             loadSpeakers();
+            loadSponsors();
             loadMarkdownContent();
         });
         
@@ -821,6 +845,130 @@
             }
         }
         
+        // ==================== SPONSORS ====================
+
+        async function loadSponsors() {
+            try {
+                const response = await fetch('/api/sponsors');
+                if (!response.ok) throw new Error('Failed to load sponsors');
+                const data = await response.json();
+                sponsorsData = (data.sponsors || []).filter(s => s.enabled);
+                renderSponsorsSection();
+            } catch (error) {
+                console.error('Error loading sponsors:', error);
+                document.getElementById('sponsors-grid').innerHTML =
+                    '<p>Sponsors information unavailable.</p>';
+            }
+        }
+
+        function renderSponsorsSection() {
+            const grid = document.getElementById('sponsors-grid');
+            const section = document.getElementById('sponsors');
+
+            if (!sponsorsData || sponsorsData.length === 0) {
+                // Hide the entire section if no sponsors
+                section.style.display = 'none';
+                const navLink = document.getElementById('nav-sponsors');
+                if (navLink) navLink.style.display = 'none';
+                return;
+            }
+
+            section.style.display = '';
+            const navLink = document.getElementById('nav-sponsors');
+            if (navLink) navLink.style.display = '';
+
+            const tierOrder = ['platinum', 'gold', 'silver', 'bronze', 'community'];
+            const tierLabels = {
+                platinum: '🏆 Platinum Sponsors',
+                gold: '🥇 Gold Sponsors',
+                silver: '🥈 Silver Sponsors',
+                bronze: '🥉 Bronze Sponsors',
+                community: '🌐 Community Partners'
+            };
+
+            // Group by tier
+            const grouped = {};
+            sponsorsData.forEach(s => {
+                const t = s.tier || 'silver';
+                if (!grouped[t]) grouped[t] = [];
+                grouped[t].push(s);
+            });
+
+            let html = '';
+            tierOrder.forEach(tier => {
+                if (!grouped[tier] || grouped[tier].length === 0) return;
+                html += `<div class="sponsors-tier-group">`;
+                if (Object.keys(grouped).length > 1) {
+                    html += `<h3 class="sponsors-tier-title">${tierLabels[tier]}</h3>`;
+                }
+                html += `<div class="sponsors-tier-logos tier-${tier}">`;
+                grouped[tier].forEach(sponsor => {
+                    const logoUrl = sponsor.logoFile
+                        ? `https://azcorestorage2026.blob.core.windows.net/sponsorlogos/${sponsor.logoFile}`
+                        : '';
+                    html += `
+                        <div class="sponsor-logo" onclick="openSponsorDetailModal('${sponsor.id}')" title="${escapeHtml(sponsor.name)}">
+                            ${logoUrl
+                                ? `<img src="${logoUrl}" alt="${escapeHtml(sponsor.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';"><span style="display:none;">${escapeHtml(sponsor.name)}</span>`
+                                : `<span>${escapeHtml(sponsor.name)}</span>`
+                            }
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            });
+
+            grid.innerHTML = html;
+        }
+
+        function openSponsorDetailModal(sponsorId) {
+            const sponsor = sponsorsData.find(s => s.id === sponsorId);
+            if (!sponsor) return;
+
+            // Logo
+            const logoEl = document.getElementById('sponsor-modal-logo');
+            const logoUrl = sponsor.logoFile
+                ? `https://azcorestorage2026.blob.core.windows.net/sponsorlogos/${sponsor.logoFile}`
+                : '';
+            if (logoUrl) {
+                logoEl.innerHTML = `<img src="${logoUrl}" alt="${escapeHtml(sponsor.name)}">`;
+            } else {
+                logoEl.innerHTML = `<span style="font-size:3rem;">🤝</span>`;
+            }
+
+            // Info
+            document.getElementById('sponsor-modal-name').textContent = sponsor.name;
+            const tierEl = document.getElementById('sponsor-modal-tier');
+            const tierLabels = { platinum: '🏆 Platinum', gold: '🥇 Gold', silver: '🥈 Silver', bronze: '🥉 Bronze', community: '🌐 Community' };
+            tierEl.textContent = tierLabels[sponsor.tier] || sponsor.tier;
+            tierEl.className = `sponsor-tier-badge tier-${sponsor.tier}`;
+
+            // Website
+            const websiteEl = document.getElementById('sponsor-modal-website');
+            if (sponsor.website) {
+                websiteEl.href = sponsor.website;
+                websiteEl.style.display = 'inline-block';
+            } else {
+                websiteEl.style.display = 'none';
+            }
+
+            // Description (markdown)
+            const descEl = document.getElementById('sponsor-modal-description');
+            if (sponsor.description) {
+                descEl.innerHTML = formatDescription(sponsor.description);
+            } else {
+                descEl.innerHTML = '';
+            }
+
+            document.getElementById('sponsor-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSponsorDetailModal() {
+            document.getElementById('sponsor-modal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
         // Apply branding from localStorage
         function applyBranding() {
             const stored = localStorage.getItem('acu-branding');
