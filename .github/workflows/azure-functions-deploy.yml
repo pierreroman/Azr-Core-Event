@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'api/**'
+      - '.github/workflows/azure-functions-deploy.yml'
   workflow_dispatch:
 
 permissions:
@@ -14,6 +15,7 @@ permissions:
 
 env:
   AZURE_FUNCTIONAPP_NAME: 'azcoreunderground-api'
+  AZURE_RESOURCE_GROUP: 'rg-AzureCoreUnderground'
   AZURE_FUNCTIONAPP_PACKAGE_PATH: 'api'
   NODE_VERSION: '20.x'
 
@@ -46,7 +48,7 @@ jobs:
         uses: azure/cli@v2
         with:
           inlineScript: |
-            az functionapp restart --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group rg-AzureCoreUnderground
+            az functionapp restart --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
 
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1

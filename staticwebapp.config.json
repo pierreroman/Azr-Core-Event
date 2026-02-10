@@ -70,6 +70,16 @@
       "route": "/api/sponsors/*",
       "methods": ["GET"],
       "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/api/content/*",
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/api/content/*",
+      "methods": ["PUT", "DELETE"],
+      "allowedRoles": ["authenticated"]
     }
   ],
   "responseOverrides": {

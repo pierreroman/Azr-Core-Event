@@ -51,7 +51,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // ============================================================================
-// Storage Account (for Function App and Table Storage)
+// Storage Account (Tables, Blobs, and Function App runtime)
 // ============================================================================
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: 'azst${resourceToken}'
@@ -63,7 +63,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   kind: 'StorageV2'
   properties: {
     accessTier: 'Hot'
-    allowBlobPublicAccess: true  // Required for speaker headshots public access
+    allowBlobPublicAccess: true  // Required for speaker headshots and sponsor logos public access
     allowSharedKeyAccess: false
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
@@ -90,6 +90,15 @@ resource sponsorLogosContainer 'Microsoft.Storage/storageAccounts/blobServices/c
   name: 'sponsorlogos'
   properties: {
     publicAccess: 'Blob'
+  }
+}
+
+// Create sitecontent container for markdown content (about, code-of-conduct)
+resource siteContentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'sitecontent'
+  properties: {
+    publicAccess: 'None'
   }
 }
 

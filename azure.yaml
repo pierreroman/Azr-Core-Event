@@ -4,7 +4,7 @@
 name: azurecoreunderground
 
 metadata:
-  template: azurecoreunderground@0.0.1-beta
+  template: azurecoreunderground@0.0.2
 
 services:
   web:
@@ -29,3 +29,13 @@ hooks:
         --resource-group $env:AZURE_RESOURCE_GROUP `
         --backend-resource-id $env:AZURE_FUNCTION_APP_ID `
         --backend-region $env:AZURE_LOCATION
+
+      # Ensure sitecontent blob container exists
+      Write-Host "Verifying sitecontent blob container..."
+      az storage container create `
+        --name sitecontent `
+        --account-name $env:AZURE_STORAGE_ACCOUNT_NAME `
+        --auth-mode login `
+        --public-access off 2>$null
+
+      Write-Host "Post-provision complete."

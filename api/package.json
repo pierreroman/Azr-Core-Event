@@ -1,7 +1,7 @@
 {
   "name": "azurecoreunderground-api",
   "version": "1.0.0",
-  "description": "API for Azure Core Underground schedule management",
+  "description": "API for Azure Core Underground - schedule, speakers, sponsors, and content management",
   "main": "src/functions/*.js",
   "scripts": {
     "start": "func start",
