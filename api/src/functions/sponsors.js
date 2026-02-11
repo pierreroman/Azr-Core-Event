@@ -97,6 +97,12 @@ async function getSponsor(request, context) {
     try {
         const id = request.params.id;
 
+        // Guard against sub-route names that should be handled by their own endpoints
+        const reservedRoutes = ['logos', 'logo'];
+        if (reservedRoutes.includes(id)) {
+            return { status: 404, jsonBody: { error: "Sponsor not found" } };
+        }
+
         // Check cache first
         const cacheKey = `sponsors:${id}`;
         const cached = cache.get(cacheKey);
@@ -402,6 +408,21 @@ app.http("getSponsors", {
     handler: getSponsors
 });
 
+// Specific sub-routes MUST be registered before the parameterized {id} route
+app.http("listSponsorLogos", {
+    methods: ["GET"],
+    authLevel: "anonymous",
+    route: "sponsors/logos",
+    handler: listLogos
+});
+
+app.http("uploadSponsorLogo", {
+    methods: ["POST"],
+    authLevel: "anonymous",
+    route: "sponsors/logo",
+    handler: uploadLogo
+});
+
 app.http("getSponsor", {
     methods: ["GET"],
     authLevel: "anonymous",
@@ -428,20 +449,6 @@ app.http("deleteSponsor", {
     authLevel: "anonymous",
     route: "sponsors/{id}",
     handler: deleteSponsor
-});
-
-app.http("uploadSponsorLogo", {
-    methods: ["POST"],
-    authLevel: "anonymous",
-    route: "sponsors/logo",
-    handler: uploadLogo
-});
-
-app.http("listSponsorLogos", {
-    methods: ["GET"],
-    authLevel: "anonymous",
-    route: "sponsors/logos",
-    handler: listLogos
 });
 
 module.exports = {

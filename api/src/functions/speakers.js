@@ -91,6 +91,12 @@ async function getSpeaker(request, context) {
     try {
         const id = request.params.id;
 
+        // Guard against sub-route names that should be handled by their own endpoints
+        const reservedRoutes = ['headshots', 'headshot', 'extract'];
+        if (reservedRoutes.includes(id)) {
+            return { status: 404, jsonBody: { error: "Speaker not found" } };
+        }
+
         // Check cache first
         const cacheKey = `speakers:${id}`;
         const cached = cache.get(cacheKey);
@@ -520,6 +526,28 @@ app.http("getSpeakers", {
     handler: getSpeakers
 });
 
+// Specific sub-routes MUST be registered before the parameterized {id} route
+app.http("extractSpeakers", {
+    methods: ["POST"],
+    authLevel: "anonymous",
+    route: "speakers/extract",
+    handler: extractSpeakers
+});
+
+app.http("listHeadshots", {
+    methods: ["GET"],
+    authLevel: "anonymous",
+    route: "speakers/headshots",
+    handler: listHeadshots
+});
+
+app.http("uploadHeadshot", {
+    methods: ["POST"],
+    authLevel: "anonymous",
+    route: "speakers/headshot",
+    handler: uploadHeadshot
+});
+
 app.http("getSpeaker", {
     methods: ["GET"],
     authLevel: "anonymous",
@@ -546,27 +574,6 @@ app.http("deleteSpeaker", {
     authLevel: "anonymous",
     route: "speakers/{id}",
     handler: deleteSpeaker
-});
-
-app.http("extractSpeakers", {
-    methods: ["POST"],
-    authLevel: "anonymous",
-    route: "speakers/extract",
-    handler: extractSpeakers
-});
-
-app.http("listHeadshots", {
-    methods: ["GET"],
-    authLevel: "anonymous",
-    route: "speakers/headshots",
-    handler: listHeadshots
-});
-
-app.http("uploadHeadshot", {
-    methods: ["POST"],
-    authLevel: "anonymous",
-    route: "speakers/headshot",
-    handler: uploadHeadshot
 });
 
 module.exports = {
