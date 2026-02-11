@@ -71,13 +71,36 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="headshotFile">Headshot Filename</label>
-                    <input type="text" id="headshotFile" placeholder="e.g., rick-claus.jpg">
-                    <div class="headshot-hint">
-                        Upload image to blob storage speakerheadshots container. Recommended: 400x400px, JPG/PNG/WebP
-                    </div>
-                    <div class="headshot-preview" id="headshotPreview">
-                        <span style="color: var(--muted);">No image</span>
+                    <label>Headshot</label>
+                    <input type="hidden" id="headshotFile">
+                    <div class="headshot-manager">
+                        <div class="headshot-manager-preview">
+                            <div class="headshot-preview" id="headshotPreview">
+                                <span style="color: var(--muted);">No image</span>
+                            </div>
+                            <div class="headshot-selected-name" id="headshotSelectedName">No headshot selected</div>
+                            <button type="button" class="btn btn-danger btn-small" id="headshotClearBtn" onclick="clearHeadshot()" style="display:none;">Remove</button>
+                        </div>
+                        <div class="headshot-upload-area">
+                            <div class="headshot-dropzone" id="headshotDropzone">
+                                <input type="file" id="headshotFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleHeadshotFile(this.files[0])">
+                                <div class="dropzone-content">
+                                    <span class="dropzone-icon">📷</span>
+                                    <span class="dropzone-text">Drag &amp; drop or <a href="#" onclick="event.preventDefault(); document.getElementById('headshotFileInput').click();">browse</a></span>
+                                    <span class="dropzone-hint">JPG, PNG, WebP &bull; Max 10MB &bull; 400&times;400px recommended</span>
+                                </div>
+                                <div class="dropzone-uploading" id="dropzoneUploading" style="display:none;">
+                                    <div class="upload-spinner"></div>
+                                    <span>Uploading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="headshot-gallery-toggle">
+                            <button type="button" class="btn btn-secondary btn-small" onclick="toggleHeadshotGallery()">📁 Choose from existing headshots</button>
+                        </div>
+                        <div class="headshot-gallery" id="headshotGallery" style="display:none;">
+                            <div class="headshot-gallery-loading">Loading headshots...</div>
+                        </div>
                     </div>
                 </div>
                 
@@ -106,17 +129,122 @@
         // Load speakers on page load
         document.addEventListener('DOMContentLoaded', loadSpeakers);
         
-        // Preview headshot as user types
-        document.getElementById('headshotFile').addEventListener('input', function() {
-            updateHeadshotPreview(this.value);
-        });
-        
+        const STORAGE_BASE = 'https://azcorestorage2026.blob.core.windows.net/speakerheadshots';
+        let galleryLoaded = false;
+
         function updateHeadshotPreview(filename) {
             const preview = document.getElementById('headshotPreview');
+            const nameEl = document.getElementById('headshotSelectedName');
+            const clearBtn = document.getElementById('headshotClearBtn');
             if (filename) {
-                preview.innerHTML = `<img src="https://azcorestorage2026.blob.core.windows.net/speakerheadshots/${filename}" onerror="this.parentElement.innerHTML='<span style=\\'color: var(--muted);\\'>Image not found</span>'"">`;
+                preview.innerHTML = `<img src="${STORAGE_BASE}/${filename}" onerror="this.parentElement.innerHTML='<span style=\'color: var(--muted);\'>Image not found</span>'">`;
+                nameEl.textContent = filename;
+                clearBtn.style.display = '';
             } else {
                 preview.innerHTML = '<span style="color: var(--muted);">No image</span>';
+                nameEl.textContent = 'No headshot selected';
+                clearBtn.style.display = 'none';
+            }
+        }
+
+        function clearHeadshot() {
+            document.getElementById('headshotFile').value = '';
+            updateHeadshotPreview('');
+            highlightGallerySelection('');
+        }
+
+        function selectHeadshot(filename) {
+            document.getElementById('headshotFile').value = filename;
+            updateHeadshotPreview(filename);
+            highlightGallerySelection(filename);
+        }
+
+        function highlightGallerySelection(filename) {
+            document.querySelectorAll('.headshot-gallery-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.filename === filename);
+            });
+        }
+
+        // Drag & drop
+        (function initDropzone() {
+            const dz = document.getElementById('headshotDropzone');
+            ['dragenter', 'dragover'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.add('drag-over'); }));
+            ['dragleave', 'drop'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.remove('drag-over'); }));
+            dz.addEventListener('drop', e => {
+                const file = e.dataTransfer.files[0];
+                if (file) handleHeadshotFile(file);
+            });
+        })();
+
+        async function handleHeadshotFile(file) {
+            if (!file) return;
+            const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!allowed.includes(file.type)) { showAlert('Invalid file type. Use JPG, PNG, or WebP.', 'error'); return; }
+            if (file.size > 10 * 1024 * 1024) { showAlert('File too large. Max 10MB.', 'error'); return; }
+
+            const dz = document.getElementById('headshotDropzone');
+            const uploading = document.getElementById('dropzoneUploading');
+            const content = dz.querySelector('.dropzone-content');
+            content.style.display = 'none';
+            uploading.style.display = '';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const resp = await fetch('/api/speakers/headshot', { method: 'POST', body: formData });
+                const result = await resp.json();
+                if (resp.ok) {
+                    selectHeadshot(result.filename);
+                    showAlert('Headshot uploaded!', 'success');
+                    // Refresh gallery if open
+                    if (document.getElementById('headshotGallery').style.display !== 'none') {
+                        galleryLoaded = false;
+                        await loadHeadshotGallery();
+                    }
+                } else {
+                    showAlert(`Upload failed: ${result.error}`, 'error');
+                }
+            } catch (err) {
+                console.error('Upload error:', err);
+                showAlert('Failed to upload headshot', 'error');
+            } finally {
+                content.style.display = '';
+                uploading.style.display = 'none';
+            }
+        }
+
+        async function toggleHeadshotGallery() {
+            const gallery = document.getElementById('headshotGallery');
+            if (gallery.style.display === 'none') {
+                gallery.style.display = '';
+                if (!galleryLoaded) await loadHeadshotGallery();
+            } else {
+                gallery.style.display = 'none';
+            }
+        }
+
+        async function loadHeadshotGallery() {
+            const gallery = document.getElementById('headshotGallery');
+            gallery.innerHTML = '<div class="headshot-gallery-loading">Loading headshots...</div>';
+            try {
+                const resp = await fetch('/api/speakers/headshots');
+                const data = await resp.json();
+                const headshots = data.headshots || [];
+                const currentFile = document.getElementById('headshotFile').value;
+                if (headshots.length === 0) {
+                    gallery.innerHTML = '<div class="headshot-gallery-empty">No headshots uploaded yet.</div>';
+                    return;
+                }
+                gallery.innerHTML = headshots.map(h => `
+                    <div class="headshot-gallery-item${h.name === currentFile ? ' selected' : ''}" data-filename="${escapeHtml(h.name)}" onclick="selectHeadshot('${escapeHtml(h.name)}')">
+                        <img src="${STORAGE_BASE}/${h.name}" alt="${escapeHtml(h.name)}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2220%22>❌</text></svg>'">
+                        <span class="gallery-item-name">${escapeHtml(h.name)}</span>
+                    </div>
+                `).join('');
+                galleryLoaded = true;
+            } catch (err) {
+                console.error('Error loading gallery:', err);
+                gallery.innerHTML = '<div class="headshot-gallery-empty">Failed to load headshots.</div>';
             }
         }
         
@@ -184,6 +312,9 @@
             document.getElementById('modalTitle').textContent = 'Add Speaker';
             document.getElementById('speakerForm').reset();
             document.getElementById('speakerId').value = '';
+            document.getElementById('headshotFile').value = '';
+            galleryLoaded = false;
+            document.getElementById('headshotGallery').style.display = 'none';
             updateHeadshotPreview('');
             document.getElementById('speakerModal').classList.add('active');
         }
@@ -201,6 +332,8 @@
             document.getElementById('headshotFile').value = speaker.headshotFile || '';
             document.getElementById('linkedin').value = speaker.linkedin || '';
             document.getElementById('twitter').value = speaker.twitter || '';
+            galleryLoaded = false;
+            document.getElementById('headshotGallery').style.display = 'none';
             updateHeadshotPreview(speaker.headshotFile);
             
             document.getElementById('speakerModal').classList.add('active');
