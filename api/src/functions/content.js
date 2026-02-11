@@ -24,7 +24,7 @@ const validContentTypes = ['code-of-conduct', 'about'];
 const defaultContent = {
     'code-of-conduct': `# Code of Conduct
 
-Azure Core Underground is dedicated to providing a harassment-free conference experience for everyone.
+This event is dedicated to providing a harassment-free conference experience for everyone.
 
 ## Expected Behavior
 
@@ -47,9 +47,9 @@ If you experience or witness unacceptable behavior, please report it to the even
 
 **Thank you for helping make this a welcoming event for all!**`,
 
-    'about': `# About Azure Core Underground
+    'about': `# About This Event
 
-Azure Core Underground is a **free, community-driven virtual conference** for Azure infrastructure professionals.
+This is a **free, community-driven virtual event** bringing together passionate professionals.
 
 ## What to Expect
 

@@ -182,11 +182,11 @@ Central dashboard with navigation to all admin functions:
 | Resource | Type | Purpose |
 |----------|------|---------|
 | `lemon-beach-0a645ad0f` | Azure Static Web App (Standard) | Hosts frontend HTML/CSS/JS |
-| `azcoreunderground-api` | Azure Function App (Node.js 20) | REST API backend |
+| `community-event-api` | Azure Function App (Node.js 20) | REST API backend |
 | `azcorestorage2026` | Azure Storage Account | Table Storage + Blob Storage |
 | User-Assigned Managed Identity | Managed Identity | RBAC access from Function App to Storage |
 | Application Insights + Log Analytics | Monitoring | Logging and diagnostics |
-| `rg-AzureCoreUnderground` | Resource Group | Contains all resources |
+| `rg-CommunityOnlineEvent` | Resource Group | Contains all resources |
 
 ### Data Storage (Azure Table Storage)
 

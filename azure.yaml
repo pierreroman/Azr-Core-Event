@@ -1,10 +1,10 @@
 # Azure Developer CLI (azd) project configuration
 # Run 'azd up' to provision infrastructure and deploy
 
-name: azurecoreunderground
+name: community-online-event
 
 metadata:
-  template: azurecoreunderground@0.0.2
+  template: community-online-event@0.0.2
 
 services:
   web:

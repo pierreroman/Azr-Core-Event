@@ -1,6 +1,6 @@
 # Security Improvements Documentation
 
-This document details three critical security improvements implemented in the Azure Core Underground 2026 project.
+This document details three critical security improvements implemented in the Community Online Event Website project.
 
 ## Overview
 
@@ -170,7 +170,7 @@ Added a comprehensive CSP header to `staticwebapp.config.json`:
 
 ## Summary
 
-These three security improvements significantly enhance the security posture of the Azure Core Underground 2026 application:
+These three security improvements significantly enhance the security posture of the Community Online Event Website application:
 
 1. **XSS Protection**: Prevents malicious script injection through user content
 2. **Authentication**: Ensures only authorized users can modify sensitive data

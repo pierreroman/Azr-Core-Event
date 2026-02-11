@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Azure Core Underground</title>
+    <title>Admin Dashboard - Community Online Event</title>
     <link rel="stylesheet" href="styles.css">
     <!-- Markdown parser for content editors -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js" integrity="sha384-QsSpx6a0USazT7nK7w8qXDgpSAPhFsb2XtpoLFQ5+X2yFN6hvCKnwEzN8M5FWaJb" crossorigin="anonymous"></script>
@@ -20,7 +20,7 @@
         
         <div class="dashboard-header">
             <h1>⚙️ Admin Dashboard</h1>
-            <p>Manage your Azure Core Underground event</p>
+            <p>Manage your community event</p>
         </div>
         
         <nav class="admin-nav">
@@ -97,7 +97,7 @@
                 
                 <div class="form-group">
                     <label for="eventName" class="label-bold">Event Name</label>
-                    <input type="text" id="eventName" placeholder="Azure Core Underground" class="form-input">
+                    <input type="text" id="eventName" placeholder="Community Online Event" class="form-input">
                     <small>Displayed in the header and page titles</small>
                 </div>
                 
@@ -178,7 +178,7 @@
                 <div class="color-preview">
                     <h4>Preview</h4>
                     <div id="brandingPreview" class="branding-preview">
-                        <div class="event-name" id="previewEventName">Azure Core Underground</div>
+                        <div class="event-name" id="previewEventName">Community Online Event</div>
                         <div class="btn-row">
                             <button id="previewPrimaryBtn" class="preview-btn">Primary Button</button>
                             <button id="previewSecondaryBtn" class="preview-btn">Secondary Button</button>
@@ -318,7 +318,7 @@
         const defaultMarkdownContent = {
             'code-of-conduct': `# Code of Conduct
 
-Azure Core Underground is dedicated to providing a harassment-free conference experience for everyone.
+This event is dedicated to providing a harassment-free conference experience for everyone.
 
 ## Expected Behavior
 
@@ -341,9 +341,9 @@ If you experience or witness unacceptable behavior, please report it to the even
 
 **Thank you for helping make this a welcoming event for all!**`,
 
-            'about': `# About Azure Core Underground
+            'about': `# About This Event
 
-Azure Core Underground is a **free, community-driven virtual conference** for Azure infrastructure professionals.
+This is a **free, community-driven virtual event** bringing together passionate professionals.
 
 ## What to Expect
 
@@ -708,7 +708,7 @@ Azure Core Underground is a **free, community-driven virtual conference** for Az
         // ==================== BRANDING ====================
         
         const defaultBranding = {
-            eventName: 'Azure Core Underground',
+            eventName: 'Community Online Event',
             logo: '/assets/acu-logo.png',
             primaryColor: '#0078D4',
             secondaryColor: '#50E6FF',

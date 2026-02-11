@@ -1,8 +1,8 @@
-# About Azure Core Underground
+# About This Event
 
-Azure Core Underground is a **free, community-driven virtual conference** for Azure infrastructure professionals. Join us for deep technical sessions, expert insights, and networking opportunities.
+This is a **free, community-driven virtual event** bringing together passionate professionals. Join us for deep technical sessions, expert insights, and networking opportunities.
 
-![Azure Core Underground Logo](/assets/acu-logo.png)
+![Event Logo](/assets/acu-logo.png)
 
 ## What to Expect
 
@@ -33,9 +33,9 @@ All sessions are delivered virtually via live stream. You can:
 
 ## Stay Connected
 
-- **Website:** [azurecoreunderground.com](https://azurecoreunderground.com)
-- **Twitter:** [@AzureCoreUG](https://twitter.com/AzureCoreUG)
-- **LinkedIn:** [Azure Core Underground](https://linkedin.com/company/azure-core-underground)
+- **Website:** [your-event-site.com](https://your-event-site.com)
+- **Twitter:** [@YourEvent](https://twitter.com/YourEvent)
+- **LinkedIn:** [Community Online Event](https://linkedin.com/company/your-event)
 
 ---
 

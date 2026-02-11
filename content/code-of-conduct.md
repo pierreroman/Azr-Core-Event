@@ -1,6 +1,6 @@
 # Code of Conduct
 
-Azure Core Underground is dedicated to providing a harassment-free conference experience for everyone, regardless of gender, gender identity and expression, age, sexual orientation, disability, physical appearance, body size, race, ethnicity, religion, or technology choices.
+This event is dedicated to providing a harassment-free conference experience for everyone, regardless of gender, gender identity and expression, age, sexual orientation, disability, physical appearance, body size, race, ethnicity, religion, or technology choices.
 
 ## Expected Behavior
 
@@ -24,7 +24,7 @@ The following behaviors are considered harassment and are unacceptable:
 
 If you experience or witness unacceptable behavior, please report it to the event organizers immediately. All reports will be handled with discretion.
 
-**Contact:** [organizers@azurecoreunderground.com](mailto:organizers@azurecoreunderground.com)
+**Contact:** [organizers@your-event-site.com](mailto:organizers@your-event-site.com)
 
 ---
 
