@@ -91,7 +91,7 @@
                     <label class="label-bold">Event Logo</label>
                     <div class="logo-upload-area">
                         <div id="currentLogo" class="current-logo">
-                            <img id="logoPreview" src="/assets/acu-logo.png" alt="Current Logo" class="logo-preview">
+                            <img id="logoPreview" src="/assets/event-logo.png" alt="Current Logo" class="logo-preview">
                         </div>
                         <div class="flex-row flex-wrap gap-10">
                             <button class="btn btn-secondary" onclick="document.getElementById('logoInput').click()">📤 Upload New Logo</button>
@@ -539,7 +539,7 @@ This is a **free, community-driven virtual event** bringing together passionate 
         
         const defaultBranding = {
             eventName: 'Community Online Event',
-            logo: '/assets/acu-logo.png',
+            logo: '/assets/event-logo.png',
             primaryColor: '#0078D4',
             secondaryColor: '#50E6FF',
             accentColor: '#FFB900',
@@ -578,7 +578,7 @@ This is a **free, community-driven virtual event** bringing together passionate 
         }
         
         function loadBranding() {
-            const stored = localStorage.getItem('acu-branding');
+            const stored = localStorage.getItem('event-branding');
             const branding = stored ? JSON.parse(stored) : defaultBranding;
             
             document.getElementById('eventName').value = branding.eventName || defaultBranding.eventName;
@@ -612,13 +612,13 @@ This is a **free, community-driven virtual event** bringing together passionate 
                 hideSponsors: document.getElementById('hideSponsors').checked
             };
             
-            localStorage.setItem('acu-branding', JSON.stringify(branding));
+            localStorage.setItem('event-branding', JSON.stringify(branding));
             showAlert('Branding saved! Changes will appear on the main site.', 'success');
         }
         
         function resetBranding() {
             if (confirm('Reset all branding to default values?')) {
-                localStorage.removeItem('acu-branding');
+                localStorage.removeItem('event-branding');
                 loadBranding();
                 document.getElementById('logoPreview').src = defaultBranding.logo;
                 showAlert('Branding reset to default', 'success');

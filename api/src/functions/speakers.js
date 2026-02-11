@@ -5,7 +5,7 @@ const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const cache = require("../shared/cache");
 
-const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
+const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME;
 const clientId = process.env.AZURE_CLIENT_ID;
 const tableName = "Speakers";
 const headshotsContainer = "speakerheadshots";
@@ -69,7 +69,10 @@ async function getSpeakers(request, context) {
         // Sort by name
         speakers.sort((a, b) => a.name.localeCompare(b.name));
 
-        const body = { speakers };
+        const body = {
+            speakers,
+            storageBaseUrl: `https://${storageAccountName}.blob.core.windows.net/speakerheadshots`
+        };
         cache.set('speakers:all', body);
         
         return {

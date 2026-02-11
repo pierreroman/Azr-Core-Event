@@ -13,7 +13,7 @@
 <body>
     <!-- Hero Section -->
     <section class="hero">
-        <img src="assets/acu-logo.png" alt="Event Logo" class="hero-logo" id="site-logo">
+        <img src="assets/event-logo.png" alt="Event Logo" class="hero-logo" id="site-logo">
         <h1 id="site-title">Community Online Event</h1>
         <p class="tagline" id="site-tagline">A community-driven online event bringing people together.</p>
         
@@ -184,6 +184,8 @@
         let scheduleData = [];
         let speakersData = [];
         let sponsorsData = [];
+        let speakerStorageBaseUrl = '';
+        let sponsorStorageBaseUrl = '';
         let youtubePlayer = null;
         let countdownInterval = null;
         
@@ -198,6 +200,7 @@
                 if (!response.ok) throw new Error('Failed to load speakers');
                 const data = await response.json();
                 speakersData = data.speakers || [];
+                speakerStorageBaseUrl = data.storageBaseUrl || '';
                 renderSpeakers();
             } catch (error) {
                 console.error('Error loading speakers:', error);
@@ -220,7 +223,7 @@
             );
             
             grid.innerHTML = sortedSpeakers.map(speaker => {
-                const headshotUrl = speaker.headshotFile ? `https://azcorestorage2026.blob.core.windows.net/speakerheadshots/${speaker.headshotFile}` : '';
+                const headshotUrl = speaker.headshotFile && speakerStorageBaseUrl ? `${speakerStorageBaseUrl}/${speaker.headshotFile}` : '';
                 const avatarStyle = headshotUrl 
                     ? `background-image: url('${headshotUrl}')`
                     : '';
@@ -260,7 +263,7 @@
             
             // Set avatar
             const avatarEl = document.getElementById('speaker-modal-avatar');
-            const headshotUrl = speaker.headshotFile ? `https://azcorestorage2026.blob.core.windows.net/speakerheadshots/${speaker.headshotFile}` : '';
+            const headshotUrl = speaker.headshotFile && speakerStorageBaseUrl ? `${speakerStorageBaseUrl}/${speaker.headshotFile}` : '';
             if (headshotUrl) {
                 avatarEl.style.backgroundImage = `url('${headshotUrl}')`;
                 avatarEl.textContent = '';
@@ -853,6 +856,7 @@
                 if (!response.ok) throw new Error('Failed to load sponsors');
                 const data = await response.json();
                 sponsorsData = (data.sponsors || []).filter(s => s.enabled);
+                sponsorStorageBaseUrl = data.storageBaseUrl || '';
                 renderSponsorsSection();
             } catch (error) {
                 console.error('Error loading sponsors:', error);
@@ -903,8 +907,8 @@
                 }
                 html += `<div class="sponsors-tier-logos tier-${tier}">`;
                 grouped[tier].forEach(sponsor => {
-                    const logoUrl = sponsor.logoFile
-                        ? `https://azcorestorage2026.blob.core.windows.net/sponsorlogos/${sponsor.logoFile}`
+                    const logoUrl = sponsor.logoFile && sponsorStorageBaseUrl
+                        ? `${sponsorStorageBaseUrl}/${sponsor.logoFile}`
                         : '';
                     html += `
                         <div class="sponsor-logo" onclick="openSponsorDetailModal('${sponsor.id}')" title="${escapeHtml(sponsor.name)}">
@@ -927,8 +931,8 @@
 
             // Logo
             const logoEl = document.getElementById('sponsor-modal-logo');
-            const logoUrl = sponsor.logoFile
-                ? `https://azcorestorage2026.blob.core.windows.net/sponsorlogos/${sponsor.logoFile}`
+            const logoUrl = sponsor.logoFile && sponsorStorageBaseUrl
+                ? `${sponsorStorageBaseUrl}/${sponsor.logoFile}`
                 : '';
             if (logoUrl) {
                 logoEl.innerHTML = `<img src="${logoUrl}" alt="${escapeHtml(sponsor.name)}">`;
@@ -971,7 +975,7 @@
 
         // Apply branding from localStorage
         function applyBranding() {
-            const stored = localStorage.getItem('acu-branding');
+            const stored = localStorage.getItem('event-branding');
             if (!stored) return;
             
             try {
@@ -987,7 +991,7 @@
                 }
                 
                 // Apply logo
-                if (branding.logo && branding.logo !== '/assets/acu-logo.png') {
+                if (branding.logo && branding.logo !== '/assets/event-logo.png') {
                     document.getElementById('site-logo').src = branding.logo;
                 }
                 

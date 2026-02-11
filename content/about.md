@@ -2,7 +2,7 @@
 
 This is a **free, community-driven virtual event** bringing together passionate professionals. Join us for deep technical sessions, expert insights, and networking opportunities.
 
-![Event Logo](/assets/acu-logo.png)
+![Event Logo](/assets/event-logo.png)
 
 ## What to Expect
 

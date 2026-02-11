@@ -140,7 +140,8 @@
     </div>
 
     <script>
-        const BLOB_STORAGE_URL = 'https://azcorestorage2026.blob.core.windows.net/sponsorlogos';
+        const BLOB_STORAGE_URL = ''; // Will be set dynamically from API
+        let sponsorStorageBase = '';
         let sponsors = [];
         let logoGalleryLoaded = false;
 
@@ -154,7 +155,7 @@
             const nameEl = document.getElementById('logoSelectedName');
             const clearBtn = document.getElementById('logoClearBtn');
             if (filename) {
-                preview.innerHTML = `<img src="${BLOB_STORAGE_URL}/${filename}" style="max-height: 80px; max-width: 200px; object-fit: contain;" onerror="this.parentElement.innerHTML='<span style=\'color: var(--muted);\'>Image not found</span>'">`;
+                preview.innerHTML = `<img src="${sponsorStorageBase}/${filename}" style="max-height: 80px; max-width: 200px; object-fit: contain;" onerror="this.parentElement.innerHTML='<span style=\'color: var(--muted);\'>Image not found</span>'">`;
                 nameEl.textContent = filename;
                 clearBtn.style.display = '';
             } else {
@@ -252,7 +253,7 @@
                 }
                 gallery.innerHTML = logos.map(l => `
                     <div class="headshot-gallery-item${l.name === currentFile ? ' selected' : ''}" data-filename="${escapeHtml(l.name)}" onclick="selectLogo('${escapeHtml(l.name)}')">
-                        <img src="${BLOB_STORAGE_URL}/${l.name}" alt="${escapeHtml(l.name)}" style="object-fit: contain;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2220%22>❌</text></svg>'">
+                        <img src="${sponsorStorageBase}/${l.name}" alt="${escapeHtml(l.name)}" style="object-fit: contain;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2220%22>❌</text></svg>'">
                         <span class="gallery-item-name">${escapeHtml(l.name)}</span>
                     </div>
                 `).join('');
@@ -291,6 +292,7 @@
                 const response = await fetch('/api/sponsors', { cache: 'no-cache' });
                 const data = await response.json();
                 sponsors = data.sponsors || [];
+                sponsorStorageBase = data.storageBaseUrl || sponsorStorageBase;
                 renderSponsors();
                 updateStats();
             } catch (error) {
@@ -330,7 +332,7 @@
                 <div class="sponsor-admin-card ${!sponsor.enabled ? 'sponsor-disabled' : ''}">
                     <div class="sponsor-card-logo">
                         ${sponsor.logoFile
-                            ? `<img src="${BLOB_STORAGE_URL}/${sponsor.logoFile}" alt="${escapeHtml(sponsor.name)}" onerror="this.parentElement.innerHTML='🤝'">`
+                            ? `<img src="${sponsorStorageBase}/${sponsor.logoFile}" alt="${escapeHtml(sponsor.name)}" onerror="this.parentElement.innerHTML='🤝'">`
                             : '🤝'
                         }
                     </div>

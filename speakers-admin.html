@@ -129,7 +129,8 @@
         // Load speakers on page load
         document.addEventListener('DOMContentLoaded', loadSpeakers);
         
-        const STORAGE_BASE = 'https://azcorestorage2026.blob.core.windows.net/speakerheadshots';
+        const STORAGE_BASE = ''; // Will be set dynamically from API
+        let storageBase = '';
         let galleryLoaded = false;
 
         function updateHeadshotPreview(filename) {
@@ -137,7 +138,7 @@
             const nameEl = document.getElementById('headshotSelectedName');
             const clearBtn = document.getElementById('headshotClearBtn');
             if (filename) {
-                preview.innerHTML = `<img src="${STORAGE_BASE}/${filename}" onerror="this.parentElement.innerHTML='<span style=\'color: var(--muted);\'>Image not found</span>'">`;
+                preview.innerHTML = `<img src="${storageBase}/${filename}" onerror="this.parentElement.innerHTML='<span style=\'color: var(--muted);\'>Image not found</span>'">`;
                 nameEl.textContent = filename;
                 clearBtn.style.display = '';
             } else {
@@ -237,7 +238,7 @@
                 }
                 gallery.innerHTML = headshots.map(h => `
                     <div class="headshot-gallery-item${h.name === currentFile ? ' selected' : ''}" data-filename="${escapeHtml(h.name)}" onclick="selectHeadshot('${escapeHtml(h.name)}')">
-                        <img src="${STORAGE_BASE}/${h.name}" alt="${escapeHtml(h.name)}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2220%22>❌</text></svg>'">
+                        <img src="${storageBase}/${h.name}" alt="${escapeHtml(h.name)}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2220%22>❌</text></svg>'">
                         <span class="gallery-item-name">${escapeHtml(h.name)}</span>
                     </div>
                 `).join('');
@@ -253,6 +254,7 @@
                 const response = await fetch('/api/speakers', { cache: 'no-cache' });
                 const data = await response.json();
                 speakers = data.speakers || [];
+                storageBase = data.storageBaseUrl || storageBase;
                 renderSpeakers();
                 updateStats();
             } catch (error) {
@@ -286,7 +288,7 @@
                     <div class="speaker-card-header">
                         <div class="speaker-headshot">
                             ${speaker.headshotFile 
-                                ? `<img src="https://azcorestorage2026.blob.core.windows.net/speakerheadshots/${speaker.headshotFile}" onerror="this.parentElement.innerHTML='👤'" alt="${speaker.name}">`
+                                ? `<img src="${storageBase}/${speaker.headshotFile}" onerror="this.parentElement.innerHTML='👤'" alt="${speaker.name}">`
                                 : '👤'
                             }
                         </div>

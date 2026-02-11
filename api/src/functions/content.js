@@ -3,7 +3,7 @@ const { ManagedIdentityCredential } = require("@azure/identity");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const cache = require("../shared/cache");
 
-const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
+const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME;
 const clientId = process.env.AZURE_CLIENT_ID;
 const contentContainer = "sitecontent";
 

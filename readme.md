@@ -181,12 +181,12 @@ Central dashboard with navigation to all admin functions:
 
 | Resource | Type | Purpose |
 |----------|------|---------|
-| `lemon-beach-0a645ad0f` | Azure Static Web App (Standard) | Hosts frontend HTML/CSS/JS |
-| `community-event-api` | Azure Function App (Node.js 20) | REST API backend |
-| `azcorestorage2026` | Azure Storage Account | Table Storage + Blob Storage |
+| Static Web App | Azure Static Web App (Standard) | Hosts frontend HTML/CSS/JS |
+| Function App | Azure Function App (Node.js 20) | REST API backend |
+| Storage Account | Azure Storage Account | Table Storage + Blob Storage |
 | User-Assigned Managed Identity | Managed Identity | RBAC access from Function App to Storage |
 | Application Insights + Log Analytics | Monitoring | Logging and diagnostics |
-| `rg-CommunityOnlineEvent` | Resource Group | Contains all resources |
+| Resource Group | Resource Group | Contains all resources |
 
 ### Data Storage (Azure Table Storage)
 
@@ -329,7 +329,7 @@ Central dashboard with navigation to all admin functions:
 5. Restart Function App (clears disk space)
 6. Deploy to Azure Functions
 
-#### Static Web App Deploy (`.github/workflows/azure-static-web-apps-lemon-beach-0a645ad0f.yml`)
+#### Static Web App Deploy (`.github/workflows/azure-static-web-apps.yml`)
 
 **Trigger:** Push to `main` branch, or pull request on `main`
 
@@ -371,8 +371,8 @@ func start
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `AZURE_STORAGE_ACCOUNT` | Azure Storage account name | `azcorestorage2026` |
-| `STORAGE_ACCOUNT_NAME` | Alternative storage account name (fallback) | `azcorestorage2026` |
+| `AZURE_STORAGE_ACCOUNT` | Azure Storage account name | _(required)_ |
+| `STORAGE_ACCOUNT_NAME` | Alternative storage account name (fallback) | _(required)_ |
 | `AZURE_CLIENT_ID` | Client ID for user-assigned managed identity | _(none — uses default credential)_ |
 | `YOUTUBE_API_KEY` | YouTube Data API v3 key for playlist imports | _(optional)_ |
 
@@ -403,8 +403,8 @@ This project includes an Azure Developer CLI (azd) template for deploying the co
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/pierreroman/Azr-Core-Event.git
-cd Azr-Core-Event
+git clone <your-repo-url>
+cd <your-repo-name>
 
 # 2. Initialize azd (first time only)
 azd init
@@ -489,13 +489,13 @@ azd monitor --logs
 │   ├── resources.bicep        # All Azure resources with RBAC
 │   └── main.parameters.json   # Deployment parameters
 ├── assets/
-│   ├── acu-logo.png           # Conference logo
+│   ├── event-logo.png           # Conference logo
 │   └── Loading-Schedule.png   # Placeholder image
 ├── images/
 │   └── speakers/              # Speaker headshot images (legacy/local)
 └── .github/workflows/
     ├── azure-functions-deploy.yml                  # Function App CI/CD
-    ├── azure-static-web-apps-lemon-beach-0a645ad0f.yml  # SWA CI/CD
+    ├── azure-static-web-apps.yml                   # SWA CI/CD
     └── codeql.yml                                  # Security scanning
 ```
 

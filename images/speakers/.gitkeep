@@ -1,10 +1,10 @@
 # Speaker Headshots
 
-Speaker headshot images are now stored in Azure Blob Storage.
+Speaker headshot images are stored in Azure Blob Storage.
 Container: speakerheadshots
-Storage Account: azcorestorage2026
+Storage Account: Configured via AZURE_STORAGE_ACCOUNT environment variable
 
-URL pattern: https://azcorestorage2026.blob.core.windows.net/speakerheadshots/{filename}
+URL pattern: https://{storage-account}.blob.core.windows.net/speakerheadshots/{filename}
 
 Naming convention: {speakerId}.jpg (or .png, .webp)
 Example: rick-claus-a1b2.jpg

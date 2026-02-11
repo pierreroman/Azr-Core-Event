@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 env:
-  AZURE_FUNCTIONAPP_NAME: 'azcoreunderground-api'
-  AZURE_RESOURCE_GROUP: 'rg-AzureCoreUnderground'
+  AZURE_FUNCTIONAPP_NAME: ${{ vars.AZURE_FUNCTIONAPP_NAME }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
   AZURE_FUNCTIONAPP_PACKAGE_PATH: 'api'
   NODE_VERSION: '20.x'
 
@@ -40,9 +40,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: 1763d265-f877-4d9f-9366-1d344d4a941e
-          tenant-id: eebf5abf-4444-4193-992e-c2f812a4ef4f
-          subscription-id: 9cba8386-943e-4adf-b359-1d21a0d14857
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Restart Function App (clear disk space)
         uses: azure/cli@v2
