@@ -3,6 +3,7 @@ const { TableClient } = require("@azure/data-tables");
 const { ManagedIdentityCredential } = require("@azure/identity");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
+const cache = require("../shared/cache");
 
 const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
 const clientId = process.env.AZURE_CLIENT_ID;
@@ -38,6 +39,16 @@ function generateSpeakerId(name) {
 // GET /api/speakers - Get all speakers
 async function getSpeakers(request, context) {
     try {
+        // Check cache first
+        const cached = cache.get('speakers:all');
+        if (cached) {
+            return {
+                status: 200,
+                headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+                jsonBody: cached
+            };
+        }
+
         const client = getTableClient();
         const speakers = [];
         
@@ -57,10 +68,14 @@ async function getSpeakers(request, context) {
         
         // Sort by name
         speakers.sort((a, b) => a.name.localeCompare(b.name));
+
+        const body = { speakers };
+        cache.set('speakers:all', body);
         
         return {
             status: 200,
-            jsonBody: { speakers }
+            headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+            jsonBody: body
         };
     } catch (error) {
         context.log("Error fetching speakers:", error);
@@ -75,23 +90,38 @@ async function getSpeakers(request, context) {
 async function getSpeaker(request, context) {
     try {
         const id = request.params.id;
+
+        // Check cache first
+        const cacheKey = `speakers:${id}`;
+        const cached = cache.get(cacheKey);
+        if (cached) {
+            return {
+                status: 200,
+                headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+                jsonBody: cached
+            };
+        }
+
         const client = getTableClient();
         
         for await (const entity of client.listEntities()) {
             if (entity.rowKey === id) {
+                const body = {
+                    id: entity.rowKey,
+                    name: entity.name,
+                    title: entity.title || '',
+                    company: entity.company || '',
+                    bio: entity.bio || '',
+                    headshotFile: entity.headshotFile || '',
+                    linkedin: entity.linkedin || '',
+                    twitter: entity.twitter || '',
+                    sessionIds: entity.sessionIds ? JSON.parse(entity.sessionIds) : []
+                };
+                cache.set(cacheKey, body);
                 return {
                     status: 200,
-                    jsonBody: {
-                        id: entity.rowKey,
-                        name: entity.name,
-                        title: entity.title || '',
-                        company: entity.company || '',
-                        bio: entity.bio || '',
-                        headshotFile: entity.headshotFile || '',
-                        linkedin: entity.linkedin || '',
-                        twitter: entity.twitter || '',
-                        sessionIds: entity.sessionIds ? JSON.parse(entity.sessionIds) : []
-                    }
+                    headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+                    jsonBody: body
                 };
             }
         }
@@ -131,6 +161,7 @@ async function addSpeaker(request, context) {
         };
         
         await client.createEntity(entity);
+        cache.invalidate('speakers');
         
         return {
             status: 201,
@@ -193,6 +224,7 @@ async function updateSpeaker(request, context) {
         };
         
         await client.updateEntity(updatedEntity, "Replace");
+        cache.invalidate('speakers');
         
         return {
             status: 200,
@@ -227,6 +259,7 @@ async function deleteSpeaker(request, context) {
         for await (const entity of client.listEntities()) {
             if (entity.rowKey === id) {
                 await client.deleteEntity(entity.partitionKey, entity.rowKey);
+                cache.invalidate('speakers');
                 return {
                     status: 200,
                     jsonBody: { message: "Speaker deleted", id: id }
@@ -344,6 +377,8 @@ async function extractSpeakers(request, context) {
             }
         }
         
+        cache.invalidate('speakers');
+
         return {
             status: 200,
             jsonBody: {

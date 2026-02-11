@@ -3,6 +3,7 @@ const { TableClient } = require("@azure/data-tables");
 const { ManagedIdentityCredential } = require("@azure/identity");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
+const cache = require("../shared/cache");
 
 const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
 const clientId = process.env.AZURE_CLIENT_ID;
@@ -38,6 +39,16 @@ function generateSponsorId(name) {
 // GET /api/sponsors - Get all sponsors
 async function getSponsors(request, context) {
     try {
+        // Check cache first
+        const cached = cache.get('sponsors:all');
+        if (cached) {
+            return {
+                status: 200,
+                headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+                jsonBody: cached
+            };
+        }
+
         const client = getTableClient();
         const sponsors = [];
 
@@ -64,9 +75,13 @@ async function getSponsors(request, context) {
             return a.name.localeCompare(b.name);
         });
 
+        const body = { sponsors };
+        cache.set('sponsors:all', body);
+
         return {
             status: 200,
-            jsonBody: { sponsors }
+            headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+            jsonBody: body
         };
     } catch (error) {
         context.log("Error fetching sponsors:", error);
@@ -81,22 +96,37 @@ async function getSponsors(request, context) {
 async function getSponsor(request, context) {
     try {
         const id = request.params.id;
+
+        // Check cache first
+        const cacheKey = `sponsors:${id}`;
+        const cached = cache.get(cacheKey);
+        if (cached) {
+            return {
+                status: 200,
+                headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+                jsonBody: cached
+            };
+        }
+
         const client = getTableClient();
 
         for await (const entity of client.listEntities()) {
             if (entity.rowKey === id) {
+                const body = {
+                    id: entity.rowKey,
+                    name: entity.name,
+                    logoFile: entity.logoFile || '',
+                    tier: entity.tier || 'silver',
+                    website: entity.website || '',
+                    description: entity.description || '',
+                    sortOrder: entity.sortOrder ? parseInt(entity.sortOrder) : 999,
+                    enabled: entity.enabled !== false && entity.enabled !== 'false'
+                };
+                cache.set(cacheKey, body);
                 return {
                     status: 200,
-                    jsonBody: {
-                        id: entity.rowKey,
-                        name: entity.name,
-                        logoFile: entity.logoFile || '',
-                        tier: entity.tier || 'silver',
-                        website: entity.website || '',
-                        description: entity.description || '',
-                        sortOrder: entity.sortOrder ? parseInt(entity.sortOrder) : 999,
-                        enabled: entity.enabled !== false && entity.enabled !== 'false'
-                    }
+                    headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+                    jsonBody: body
                 };
             }
         }
@@ -135,6 +165,7 @@ async function addSponsor(request, context) {
         };
 
         await client.createEntity(entity);
+        cache.invalidate('sponsors');
 
         return {
             status: 201,
@@ -195,6 +226,7 @@ async function updateSponsor(request, context) {
         };
 
         await client.updateEntity(updatedEntity, "Replace");
+        cache.invalidate('sponsors');
 
         return {
             status: 200,
@@ -228,6 +260,7 @@ async function deleteSponsor(request, context) {
         for await (const entity of client.listEntities()) {
             if (entity.rowKey === id) {
                 await client.deleteEntity(entity.partitionKey, entity.rowKey);
+                cache.invalidate('sponsors');
                 return {
                     status: 200,
                     jsonBody: { message: "Sponsor deleted", id: id }

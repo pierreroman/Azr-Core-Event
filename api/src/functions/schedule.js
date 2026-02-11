@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const { TableClient } = require("@azure/data-tables");
 const { ManagedIdentityCredential } = require("@azure/identity");
 const crypto = require("crypto");
+const cache = require("../shared/cache");
 
 const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
 const clientId = process.env.AZURE_CLIENT_ID;
@@ -28,6 +29,16 @@ function generateSessionId() {
 // GET /api/schedule - Get all schedule items
 async function getSchedule(request, context) {
     try {
+        // Check cache first
+        const cached = cache.get('schedule:all');
+        if (cached) {
+            return {
+                status: 200,
+                headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+                jsonBody: cached
+            };
+        }
+
         const client = getTableClient();
         const entities = [];
         
@@ -46,13 +57,17 @@ async function getSchedule(request, context) {
         
         // Sort by startTime
         entities.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+        const body = {
+            timezone: "America/New_York",
+            schedule: entities
+        };
+        cache.set('schedule:all', body);
         
         return {
             status: 200,
-            jsonBody: {
-                timezone: "America/New_York",
-                schedule: entities
-            }
+            headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+            jsonBody: body
         };
     } catch (error) {
         context.log("Error fetching schedule:", error);
@@ -86,6 +101,7 @@ async function addScheduleItem(request, context) {
         };
         
         await client.createEntity(entity);
+        cache.invalidate('schedule');
         
         context.log("Created schedule item with sessionId:", sessionId);
         
@@ -144,6 +160,7 @@ async function updateScheduleItem(request, context) {
         };
         
         await client.updateEntity(updatedEntity, "Replace");
+        cache.invalidate('schedule');
         
         return {
             status: 200,
@@ -181,6 +198,7 @@ async function deleteScheduleItem(request, context) {
         }
         
         await client.deleteEntity(existingEntity.partitionKey, id);
+        cache.invalidate('schedule');
         
         return {
             status: 200,
@@ -422,6 +440,8 @@ async function importScheduleFromCsv(request, context) {
             }
         }
         
+        cache.invalidate('schedule');
+
         return {
             status: 200,
             jsonBody: {
@@ -602,6 +622,8 @@ async function importPlaylist(request, context) {
             }
         }
         
+        cache.invalidate('schedule');
+
         return {
             status: 200,
             jsonBody: {

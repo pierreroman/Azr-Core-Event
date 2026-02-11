@@ -58,7 +58,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   location: location
   tags: commonTags
   sku: {
-    name: 'Standard_LRS'
+    name: 'Standard_ZRS'
   }
   kind: 'StorageV2'
   properties: {
@@ -198,7 +198,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   }
   kind: 'elastic'
   properties: {
-    maximumElasticWorkerCount: 20
+    maximumElasticWorkerCount: 30
     reserved: false
   }
 }

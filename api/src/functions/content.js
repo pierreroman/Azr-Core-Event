@@ -1,6 +1,7 @@
 const { app } = require("@azure/functions");
 const { ManagedIdentityCredential } = require("@azure/identity");
 const { BlobServiceClient } = require("@azure/storage-blob");
+const cache = require("../shared/cache");
 
 const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT || process.env.STORAGE_ACCOUNT_NAME || "azcorestorage2026";
 const clientId = process.env.AZURE_CLIENT_ID;
@@ -79,6 +80,17 @@ async function getContent(request, context) {
             jsonBody: { error: `Invalid content type. Valid types: ${validContentTypes.join(', ')}` }
         };
     }
+
+    // Check cache first
+    const cacheKey = `content:${contentType}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+        return {
+            status: 200,
+            headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+            jsonBody: cached
+        };
+    }
     
     try {
         const blobServiceClient = getBlobServiceClient();
@@ -92,14 +104,17 @@ async function getContent(request, context) {
         if (!exists) {
             // Return default content
             context.log(`Content blob ${blobName} not found, returning default`);
+            const body = {
+                type: contentType,
+                content: defaultContent[contentType],
+                isDefault: true,
+                lastModified: null
+            };
+            cache.set(cacheKey, body);
             return {
                 status: 200,
-                jsonBody: {
-                    type: contentType,
-                    content: defaultContent[contentType],
-                    isDefault: true,
-                    lastModified: null
-                }
+                headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+                jsonBody: body
             };
         }
         
@@ -107,29 +122,36 @@ async function getContent(request, context) {
         const downloadResponse = await blobClient.download();
         const content = await streamToString(downloadResponse.readableStreamBody);
         const properties = await blobClient.getProperties();
+
+        const body = {
+            type: contentType,
+            content: content,
+            isDefault: false,
+            lastModified: properties.lastModified?.toISOString() || null
+        };
+        cache.set(cacheKey, body);
         
         return {
             status: 200,
-            jsonBody: {
-                type: contentType,
-                content: content,
-                isDefault: false,
-                lastModified: properties.lastModified?.toISOString() || null
-            }
+            headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+            jsonBody: body
         };
     } catch (error) {
         context.log(`Error fetching content ${contentType}:`, error);
         
         // If container doesn't exist, return default
         if (error.statusCode === 404) {
+            const body = {
+                type: contentType,
+                content: defaultContent[contentType],
+                isDefault: true,
+                lastModified: null
+            };
+            cache.set(cacheKey, body);
             return {
                 status: 200,
-                jsonBody: {
-                    type: contentType,
-                    content: defaultContent[contentType],
-                    isDefault: true,
-                    lastModified: null
-                }
+                headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+                jsonBody: body
             };
         }
         
@@ -180,6 +202,7 @@ async function saveContent(request, context) {
             overwrite: true
         });
         
+        cache.invalidate('content');
         context.log(`Content ${contentType} saved successfully`);
         
         return {
@@ -219,6 +242,7 @@ async function resetContent(request, context) {
         
         // Delete if exists
         await blobClient.deleteIfExists();
+        cache.invalidate('content');
         
         context.log(`Content ${contentType} reset to default`);
         
