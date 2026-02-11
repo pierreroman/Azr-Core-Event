@@ -1,8 +1,8 @@
-# Azure Core Underground 2026
+# Online event website
 
-A community conference website for Azure infrastructure professionals, featuring dynamic schedule management, YouTube video integration, speaker profiles, and sponsor management — all backed by Azure Functions, Table Storage, and Blob Storage with managed identity.
+A community conference website communities, featuring dynamic schedule management, YouTube video integration, speaker profiles, and sponsor management — all backed by Azure Functions, Table Storage, and Blob Storage with managed identity.
 
-**Live Site:** <https://www.azurecoreunderground.com/>
+**Live Site:** <https://www.azureinfrasummit.com/>
 
 ## Features
 
