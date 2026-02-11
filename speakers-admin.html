@@ -227,7 +227,7 @@
             const gallery = document.getElementById('headshotGallery');
             gallery.innerHTML = '<div class="headshot-gallery-loading">Loading headshots...</div>';
             try {
-                const resp = await fetch('/api/speakers/headshots');
+                const resp = await fetch('/api/speakers/headshots', { cache: 'no-cache' });
                 const data = await resp.json();
                 const headshots = data.headshots || [];
                 const currentFile = document.getElementById('headshotFile').value;
@@ -250,7 +250,7 @@
         
         async function loadSpeakers() {
             try {
-                const response = await fetch('/api/speakers');
+                const response = await fetch('/api/speakers', { cache: 'no-cache' });
                 const data = await response.json();
                 speakers = data.speakers || [];
                 renderSpeakers();

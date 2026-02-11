@@ -257,7 +257,7 @@
         // Load schedule
         async function loadSchedule() {
             try {
-                const response = await fetch('/api/schedule');
+                const response = await fetch('/api/schedule', { cache: 'no-cache' });
                 const data = await response.json();
                 console.log('Loaded schedule data:', data);
                 console.log('First item ID:', data.schedule?.[0]?.id);

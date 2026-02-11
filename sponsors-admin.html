@@ -242,7 +242,7 @@
             const gallery = document.getElementById('logoGallery');
             gallery.innerHTML = '<div class="headshot-gallery-loading">Loading logos...</div>';
             try {
-                const resp = await fetch('/api/sponsors/logos');
+                const resp = await fetch('/api/sponsors/logos', { cache: 'no-cache' });
                 const data = await resp.json();
                 const logos = data.logos || [];
                 const currentFile = document.getElementById('logoFile').value;
@@ -288,7 +288,7 @@
 
         async function loadSponsors() {
             try {
-                const response = await fetch('/api/sponsors');
+                const response = await fetch('/api/sponsors', { cache: 'no-cache' });
                 const data = await response.json();
                 sponsors = data.sponsors || [];
                 renderSponsors();
