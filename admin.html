@@ -23,13 +23,6 @@
             <p>Manage your community event</p>
         </div>
         
-        <nav class="admin-nav">
-            <a href="#" onclick="showSection('dashboard')" id="nav-dashboard" class="nav-active">🏠 Dashboard</a>
-            <a href="#" onclick="showSection('branding')" id="nav-branding">🎨 Branding</a>
-            <a href="#" onclick="showSection('coc')" id="nav-coc">📜 Code of Conduct</a>
-            <a href="#" onclick="showSection('about')" id="nav-about">ℹ️ About</a>
-        </nav>
-        
         <div id="alertContainer"></div>
         
         <!-- Dashboard Section -->
@@ -82,6 +75,7 @@
         <!-- Branding Section -->
         <section id="section-branding" class="section-hidden">
             <div class="content-editor">
+                <a href="#" onclick="showSection('dashboard')" class="btn btn-secondary btn-sm" style="margin-bottom: 16px;">← Back to Dashboard</a>
                 <h3>🎨 Event Branding</h3>
                 <p class="text-muted mb-20">
                     Customize the event name, logo, and color scheme. Changes are saved to browser storage.
@@ -189,6 +183,7 @@
         <!-- Code of Conduct Section -->
         <section id="section-coc" class="section-hidden">
             <div class="content-editor">
+                <a href="#" onclick="showSection('dashboard')" class="btn btn-secondary btn-sm" style="margin-bottom: 16px;">← Back to Dashboard</a>
                 <h3>📜 Code of Conduct</h3>
                 <p class="text-muted mb-15">
                     Edit the Code of Conduct using Markdown. Changes are saved to Azure Blob Storage and shared across all users.
@@ -234,6 +229,7 @@
         <!-- About Section -->
         <section id="section-about" class="section-hidden">
             <div class="content-editor">
+                <a href="#" onclick="showSection('dashboard')" class="btn btn-secondary btn-sm" style="margin-bottom: 16px;">← Back to Dashboard</a>
                 <h3>ℹ️ About This Event</h3>
                 <p class="text-muted mb-15">
                     Edit the About section using Markdown. Changes are saved to Azure Blob Storage and shared across all users.
@@ -516,14 +512,11 @@ This is a **free, community-driven virtual event** bringing together passionate 
                 s.classList.add('section-hidden');
             });
             
-            // Remove active class from all nav items
-            document.querySelectorAll('.admin-nav a').forEach(a => {
-                a.classList.remove('nav-active');
-            });
-            
             // Show selected section
             document.getElementById(`section-${section}`).classList.remove('section-hidden');
-            document.getElementById(`nav-${section}`).classList.add('nav-active');
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
             
             return false;
         }
