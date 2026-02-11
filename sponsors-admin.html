@@ -37,29 +37,6 @@
             </div>
         </div>
 
-        <!-- Logo Upload Section -->
-        <details class="logo-upload-section">
-            <summary class="btn btn-secondary" style="display: inline-block; cursor: pointer; margin-bottom: 16px;">📤 Upload Sponsor Logos</summary>
-            <div class="upload-section" style="margin-bottom: 24px;">
-                <p class="text-muted mb-20">
-                    Upload logo images to the sponsorlogos blob storage container. Recommended: PNG or SVG, transparent background.
-                </p>
-                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-                    <div class="upload-icon">📤</div>
-                    <p><strong>Click to select files</strong> or drag and drop</p>
-                    <p class="text-small mt-10">Supports JPG, PNG, WebP, SVG (max 10MB each)</p>
-                    <input type="file" id="fileInput" multiple accept="image/jpeg,image/png,image/webp,image/svg+xml" style="display: none;">
-                </div>
-                <div class="upload-progress" id="uploadProgress"></div>
-                <div class="existing-headshots" style="margin-top: 16px;">
-                    <h4>📁 Existing Logos</h4>
-                    <div class="headshots-grid" id="logosGrid">
-                        <div class="loading">Loading...</div>
-                    </div>
-                </div>
-            </div>
-        </details>
-
         <div id="sponsorsContainer" class="sponsors-admin-grid">
             <div class="loading">Loading sponsors...</div>
         </div>
@@ -103,13 +80,36 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="logoFile">Logo Filename</label>
-                    <input type="text" id="logoFile" placeholder="e.g., microsoft-logo.png">
-                    <div class="headshot-hint">
-                        Upload image to blob storage sponsorlogos container. Recommended: PNG or SVG with transparent background.
-                    </div>
-                    <div class="headshot-preview" id="logoPreview">
-                        <span style="color: var(--muted);">No logo</span>
+                    <label>Logo</label>
+                    <input type="hidden" id="logoFile">
+                    <div class="headshot-manager">
+                        <div class="headshot-manager-preview">
+                            <div class="headshot-preview" id="logoPreview" style="border-radius: 8px; width: 120px; height: 80px;">
+                                <span style="color: var(--muted);">No logo</span>
+                            </div>
+                            <div class="headshot-selected-name" id="logoSelectedName">No logo selected</div>
+                            <button type="button" class="btn btn-danger btn-small" id="logoClearBtn" onclick="clearLogo()" style="display:none;">Remove</button>
+                        </div>
+                        <div class="headshot-upload-area">
+                            <div class="headshot-dropzone" id="logoDropzone">
+                                <input type="file" id="logoFileInput" accept="image/jpeg,image/png,image/webp,image/svg+xml" style="display:none;" onchange="handleLogoFile(this.files[0])">
+                                <div class="dropzone-content">
+                                    <span class="dropzone-icon">🖼️</span>
+                                    <span class="dropzone-text">Drag &amp; drop or <a href="#" onclick="event.preventDefault(); document.getElementById('logoFileInput').click();">browse</a></span>
+                                    <span class="dropzone-hint">PNG, SVG, JPG, WebP &bull; Max 10MB &bull; Transparent background recommended</span>
+                                </div>
+                                <div class="dropzone-uploading" id="logoDropzoneUploading" style="display:none;">
+                                    <div class="upload-spinner"></div>
+                                    <span>Uploading...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="headshot-gallery-toggle">
+                            <button type="button" class="btn btn-secondary btn-small" onclick="toggleLogoGallery()">📁 Choose from existing logos</button>
+                        </div>
+                        <div class="headshot-gallery" id="logoGallery" style="display:none;">
+                            <div class="headshot-gallery-loading">Loading logos...</div>
+                        </div>
                     </div>
                 </div>
 
@@ -142,25 +142,124 @@
     <script>
         const BLOB_STORAGE_URL = 'https://azcorestorage2026.blob.core.windows.net/sponsorlogos';
         let sponsors = [];
+        let logoGalleryLoaded = false;
 
         // Load sponsors on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadSponsors();
-            loadExistingLogos();
-            setupUploadHandlers();
-        });
-
-        // Preview logo as user types
-        document.getElementById('logoFile').addEventListener('input', function () {
-            updateLogoPreview(this.value);
         });
 
         function updateLogoPreview(filename) {
             const preview = document.getElementById('logoPreview');
+            const nameEl = document.getElementById('logoSelectedName');
+            const clearBtn = document.getElementById('logoClearBtn');
             if (filename) {
-                preview.innerHTML = `<img src="${BLOB_STORAGE_URL}/${filename}" style="max-height: 80px; max-width: 200px; object-fit: contain;" onerror="this.parentElement.innerHTML='<span style=\\'color: var(--muted);\\'>Image not found</span>'">`;
+                preview.innerHTML = `<img src="${BLOB_STORAGE_URL}/${filename}" style="max-height: 80px; max-width: 200px; object-fit: contain;" onerror="this.parentElement.innerHTML='<span style=\'color: var(--muted);\'>Image not found</span>'">`;
+                nameEl.textContent = filename;
+                clearBtn.style.display = '';
             } else {
                 preview.innerHTML = '<span style="color: var(--muted);">No logo</span>';
+                nameEl.textContent = 'No logo selected';
+                clearBtn.style.display = 'none';
+            }
+        }
+
+        function clearLogo() {
+            document.getElementById('logoFile').value = '';
+            updateLogoPreview('');
+            highlightLogoGallerySelection('');
+        }
+
+        function selectLogo(filename) {
+            document.getElementById('logoFile').value = filename;
+            updateLogoPreview(filename);
+            highlightLogoGallerySelection(filename);
+        }
+
+        function highlightLogoGallerySelection(filename) {
+            document.querySelectorAll('#logoGallery .headshot-gallery-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.filename === filename);
+            });
+        }
+
+        // Drag & drop for logo
+        (function initLogoDropzone() {
+            const dz = document.getElementById('logoDropzone');
+            ['dragenter', 'dragover'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.add('drag-over'); }));
+            ['dragleave', 'drop'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.remove('drag-over'); }));
+            dz.addEventListener('drop', e => {
+                const file = e.dataTransfer.files[0];
+                if (file) handleLogoFile(file);
+            });
+        })();
+
+        async function handleLogoFile(file) {
+            if (!file) return;
+            const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+            if (!allowed.includes(file.type)) { showAlert('Invalid file type. Use PNG, SVG, JPG, or WebP.', 'error'); return; }
+            if (file.size > 10 * 1024 * 1024) { showAlert('File too large. Max 10MB.', 'error'); return; }
+
+            const uploading = document.getElementById('logoDropzoneUploading');
+            const content = document.getElementById('logoDropzone').querySelector('.dropzone-content');
+            content.style.display = 'none';
+            uploading.style.display = '';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const resp = await fetch('/api/sponsors/logo', { method: 'POST', body: formData });
+                const result = await resp.json();
+                if (resp.ok) {
+                    selectLogo(result.filename);
+                    showAlert('Logo uploaded!', 'success');
+                    if (document.getElementById('logoGallery').style.display !== 'none') {
+                        logoGalleryLoaded = false;
+                        await loadLogoGallery();
+                    }
+                } else {
+                    showAlert(`Upload failed: ${result.error}`, 'error');
+                }
+            } catch (err) {
+                console.error('Upload error:', err);
+                showAlert('Failed to upload logo', 'error');
+            } finally {
+                content.style.display = '';
+                uploading.style.display = 'none';
+            }
+        }
+
+        async function toggleLogoGallery() {
+            const gallery = document.getElementById('logoGallery');
+            if (gallery.style.display === 'none') {
+                gallery.style.display = '';
+                if (!logoGalleryLoaded) await loadLogoGallery();
+            } else {
+                gallery.style.display = 'none';
+            }
+        }
+
+        async function loadLogoGallery() {
+            const gallery = document.getElementById('logoGallery');
+            gallery.innerHTML = '<div class="headshot-gallery-loading">Loading logos...</div>';
+            try {
+                const resp = await fetch('/api/sponsors/logos');
+                const data = await resp.json();
+                const logos = data.logos || [];
+                const currentFile = document.getElementById('logoFile').value;
+                if (logos.length === 0) {
+                    gallery.innerHTML = '<div class="headshot-gallery-empty">No logos uploaded yet.</div>';
+                    return;
+                }
+                gallery.innerHTML = logos.map(l => `
+                    <div class="headshot-gallery-item${l.name === currentFile ? ' selected' : ''}" data-filename="${escapeHtml(l.name)}" onclick="selectLogo('${escapeHtml(l.name)}')">
+                        <img src="${BLOB_STORAGE_URL}/${l.name}" alt="${escapeHtml(l.name)}" style="object-fit: contain;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2220%22>❌</text></svg>'">
+                        <span class="gallery-item-name">${escapeHtml(l.name)}</span>
+                    </div>
+                `).join('');
+                logoGalleryLoaded = true;
+            } catch (err) {
+                console.error('Error loading logo gallery:', err);
+                gallery.innerHTML = '<div class="headshot-gallery-empty">Failed to load logos.</div>';
             }
         }
 
@@ -257,6 +356,9 @@
             document.getElementById('enabled').checked = true;
             document.getElementById('tier').value = 'silver';
             document.getElementById('sortOrder').value = '999';
+            document.getElementById('logoFile').value = '';
+            logoGalleryLoaded = false;
+            document.getElementById('logoGallery').style.display = 'none';
             updateLogoPreview('');
             document.getElementById('descriptionPreview').style.display = 'none';
             document.getElementById('sponsorModal').classList.add('active');
@@ -275,6 +377,8 @@
             document.getElementById('logoFile').value = sponsor.logoFile || '';
             document.getElementById('description').value = sponsor.description || '';
             document.getElementById('enabled').checked = sponsor.enabled;
+            logoGalleryLoaded = false;
+            document.getElementById('logoGallery').style.display = 'none';
             updateLogoPreview(sponsor.logoFile);
             document.getElementById('descriptionPreview').style.display = 'none';
 
@@ -369,139 +473,6 @@
                 console.error('Error deleting sponsor:', error);
                 showAlert('Failed to delete sponsor', 'error');
             }
-        }
-
-        // ==================== LOGO UPLOAD ====================
-
-        function setupUploadHandlers() {
-            const uploadZone = document.getElementById('uploadZone');
-            const fileInput = document.getElementById('fileInput');
-
-            uploadZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadZone.classList.add('drag-over');
-            });
-
-            uploadZone.addEventListener('dragleave', () => {
-                uploadZone.classList.remove('drag-over');
-            });
-
-            uploadZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadZone.classList.remove('drag-over');
-                handleFiles(e.dataTransfer.files);
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files);
-            });
-        }
-
-        async function handleFiles(files) {
-            const progressContainer = document.getElementById('uploadProgress');
-            progressContainer.innerHTML = '';
-
-            for (const file of files) {
-                if (!file.type.match(/^image\/(jpeg|png|webp|svg\+xml)$/)) {
-                    addUploadItem(progressContainer, file.name, null, 'Invalid file type', true);
-                    continue;
-                }
-
-                if (file.size > 10 * 1024 * 1024) {
-                    addUploadItem(progressContainer, file.name, null, 'File too large (max 10MB)', true);
-                    continue;
-                }
-
-                const preview = URL.createObjectURL(file);
-                const item = addUploadItem(progressContainer, file.name, preview, 'Uploading...');
-
-                try {
-                    const result = await uploadFile(file);
-                    item.querySelector('.upload-status').textContent = `Uploaded as: ${result.filename}`;
-                    item.querySelector('.upload-status').classList.add('success');
-                    // Show a button to use this filename
-                    const useBtn = document.createElement('button');
-                    useBtn.className = 'btn btn-primary btn-small';
-                    useBtn.textContent = 'Use this logo';
-                    useBtn.style.marginTop = '4px';
-                    useBtn.onclick = () => {
-                        document.getElementById('logoFile').value = result.filename;
-                        updateLogoPreview(result.filename);
-                        showAlert(`Logo filename set to "${result.filename}"`, 'success');
-                    };
-                    item.querySelector('.upload-info').appendChild(useBtn);
-                } catch (error) {
-                    item.querySelector('.upload-status').textContent = `Error: ${error.message}`;
-                    item.querySelector('.upload-status').classList.add('error');
-                }
-            }
-
-            setTimeout(loadExistingLogos, 1000);
-        }
-
-        function addUploadItem(container, name, preview, status, isError = false) {
-            const item = document.createElement('div');
-            item.className = 'upload-item';
-            item.innerHTML = `
-                ${preview ? `<img src="${preview}" alt="${name}">` : '<div style="width:50px;height:50px;background:var(--border);border-radius:4px;"></div>'}
-                <div class="upload-info">
-                    <div class="upload-name">${name}</div>
-                    <div class="upload-status ${isError ? 'error' : ''}">${status}</div>
-                </div>
-            `;
-            container.appendChild(item);
-            return item;
-        }
-
-        async function uploadFile(file) {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const response = await fetch('/api/sponsors/logo', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Upload failed');
-            }
-
-            return await response.json();
-        }
-
-        async function loadExistingLogos() {
-            const grid = document.getElementById('logosGrid');
-
-            try {
-                const response = await fetch('/api/sponsors/logos');
-                const data = await response.json();
-
-                if (data.logos && data.logos.length > 0) {
-                    grid.innerHTML = data.logos.map(l => `
-                        <div class="headshot-item">
-                            <img src="${BLOB_STORAGE_URL}/${l.name}" alt="${l.name}" onclick="useLogoFilename('${l.name}')" title="Click to use this filename" style="object-fit: contain; cursor: pointer;">
-                            <div class="filename">${l.name}</div>
-                        </div>
-                    `).join('');
-                } else {
-                    grid.innerHTML = '<p style="color: var(--muted);">No logos uploaded yet.</p>';
-                }
-            } catch (error) {
-                grid.innerHTML = '<p style="color: var(--danger);">Error loading logos. API endpoint may not be available.</p>';
-            }
-        }
-
-        function copyFilename(filename) {
-            navigator.clipboard.writeText(filename);
-            showAlert(`Copied "${filename}" to clipboard`, 'success');
-        }
-
-        function useLogoFilename(filename) {
-            document.getElementById('logoFile').value = filename;
-            updateLogoPreview(filename);
-            navigator.clipboard.writeText(filename);
-            showAlert(`Logo filename set to "${filename}" and copied to clipboard`, 'success');
         }
 
         // ==================== HELPERS ====================

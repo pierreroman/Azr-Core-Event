@@ -26,7 +26,6 @@
         <nav class="admin-nav">
             <a href="#" onclick="showSection('dashboard')" id="nav-dashboard" class="nav-active">🏠 Dashboard</a>
             <a href="#" onclick="showSection('branding')" id="nav-branding">🎨 Branding</a>
-            <a href="#" onclick="showSection('headshots')" id="nav-headshots">📷 Headshots</a>
             <a href="#" onclick="showSection('coc')" id="nav-coc">📜 Code of Conduct</a>
             <a href="#" onclick="showSection('about')" id="nav-about">ℹ️ About</a>
         </nav>
@@ -65,14 +64,7 @@
                 </div>
                 
                 <div class="dashboard-card">
-                    <div class="card-icon">📷</div>
-                    <h3>Speaker Headshots</h3>
-                    <p>Upload and manage speaker headshot images stored in blob storage.</p>
-                    <a href="#" onclick="showSection('headshots')" class="btn btn-primary">Upload Headshots</a>
-                </div>
-                
-                <div class="dashboard-card">
-                    <div class="card-icon">📜</div>
+                    <div class="card-icon"></div>
                     <h3>Code of Conduct</h3>
                     <p>Edit the community guidelines and code of conduct content.</p>
                     <a href="#" onclick="showSection('coc')" class="btn btn-primary">Edit Content</a>
@@ -194,32 +186,6 @@
             </div>
         </section>
         
-        <!-- Headshots Upload Section -->
-        <section id="section-headshots" class="section-hidden">
-            <div class="upload-section">
-                <h3>📷 Upload Speaker Headshots</h3>
-                <p class="text-muted mb-20">
-                    Upload images to the speakerheadshots blob storage container. Recommended: 400x400px, JPG/PNG/WebP format.
-                </p>
-                
-                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-                    <div class="upload-icon">📤</div>
-                    <p><strong>Click to select files</strong> or drag and drop</p>
-                    <p class="text-small mt-10">Supports JPG, PNG, WebP (max 10MB each)</p>
-                    <input type="file" id="fileInput" multiple accept="image/jpeg,image/png,image/webp">
-                </div>
-                
-                <div class="upload-progress" id="uploadProgress"></div>
-                
-                <div class="existing-headshots">
-                    <h4>📁 Existing Headshots</h4>
-                    <div class="headshots-grid" id="headshotsGrid">
-                        <div class="loading">Loading...</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        
         <!-- Code of Conduct Section -->
         <section id="section-coc" class="section-hidden">
             <div class="content-editor">
@@ -312,8 +278,6 @@
     </div>
 
     <script>
-        const BLOB_STORAGE_URL = 'https://azcorestorage2026.blob.core.windows.net/speakerheadshots';
-        
         // Default markdown content (fallback)
         const defaultMarkdownContent = {
             'code-of-conduct': `# Code of Conduct
@@ -370,10 +334,8 @@ This is a **free, community-driven virtual event** bringing together passionate 
             loadMarkdownContent('code-of-conduct', 'cocContent', 'cocPreview');
             loadMarkdownContent('about', 'aboutContent', 'aboutPreview');
             loadBranding();
-            setupUploadHandlers();
             setupBrandingHandlers();
             setupMarkdownEditors();
-            loadExistingHeadshots();
         });
         
         // Setup live preview for markdown editors
@@ -563,132 +525,7 @@ This is a **free, community-driven virtual event** bringing together passionate 
             document.getElementById(`section-${section}`).classList.remove('section-hidden');
             document.getElementById(`nav-${section}`).classList.add('nav-active');
             
-            // Load headshots if switching to that section
-            if (section === 'headshots') {
-                loadExistingHeadshots();
-            }
-            
             return false;
-        }
-        
-        // Upload handling
-        function setupUploadHandlers() {
-            const uploadZone = document.getElementById('uploadZone');
-            const fileInput = document.getElementById('fileInput');
-            
-            // Drag and drop
-            uploadZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadZone.classList.add('drag-over');
-            });
-            
-            uploadZone.addEventListener('dragleave', () => {
-                uploadZone.classList.remove('drag-over');
-            });
-            
-            uploadZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadZone.classList.remove('drag-over');
-                handleFiles(e.dataTransfer.files);
-            });
-            
-            // File input change
-            fileInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files);
-            });
-        }
-        
-        async function handleFiles(files) {
-            const progressContainer = document.getElementById('uploadProgress');
-            progressContainer.innerHTML = '';
-            
-            for (const file of files) {
-                // Validate file
-                if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
-                    addUploadItem(progressContainer, file.name, null, 'Invalid file type', true);
-                    continue;
-                }
-                
-                if (file.size > 10 * 1024 * 1024) {
-                    addUploadItem(progressContainer, file.name, null, 'File too large (max 10MB)', true);
-                    continue;
-                }
-                
-                // Create preview
-                const preview = URL.createObjectURL(file);
-                const item = addUploadItem(progressContainer, file.name, preview, 'Uploading...');
-                
-                try {
-                    await uploadFile(file);
-                    item.querySelector('.upload-status').textContent = 'Uploaded successfully!';
-                    item.querySelector('.upload-status').classList.add('success');
-                } catch (error) {
-                    item.querySelector('.upload-status').textContent = `Error: ${error.message}`;
-                    item.querySelector('.upload-status').classList.add('error');
-                }
-            }
-            
-            // Refresh headshots list
-            setTimeout(loadExistingHeadshots, 1000);
-        }
-        
-        function addUploadItem(container, name, preview, status, isError = false) {
-            const item = document.createElement('div');
-            item.className = 'upload-item';
-            item.innerHTML = `
-                ${preview ? `<img src="${preview}" alt="${name}">` : '<div style="width:50px;height:50px;background:var(--border);border-radius:4px;"></div>'}
-                <div class="upload-info">
-                    <div class="upload-name">${name}</div>
-                    <div class="upload-status ${isError ? 'error' : ''}">${status}</div>
-                </div>
-            `;
-            container.appendChild(item);
-            return item;
-        }
-        
-        async function uploadFile(file) {
-            // Upload via API endpoint that uses managed identity
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            const response = await fetch('/api/speakers/headshot', {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Upload failed');
-            }
-            
-            return await response.json();
-        }
-        
-        async function loadExistingHeadshots() {
-            const grid = document.getElementById('headshotsGrid');
-            
-            try {
-                const response = await fetch('/api/speakers/headshots');
-                const data = await response.json();
-                
-                if (data.headshots && data.headshots.length > 0) {
-                    grid.innerHTML = data.headshots.map(h => `
-                        <div class="headshot-item">
-                            <img src="${BLOB_STORAGE_URL}/${h.name}" alt="${h.name}" onclick="copyFilename('${h.name}')">
-                            <div class="filename">${h.name}</div>
-                        </div>
-                    `).join('');
-                } else {
-                    grid.innerHTML = '<p style="color: var(--muted);">No headshots uploaded yet.</p>';
-                }
-            } catch (error) {
-                grid.innerHTML = '<p style="color: var(--danger);">Error loading headshots. API endpoint may not be available.</p>';
-            }
-        }
-        
-        function copyFilename(filename) {
-            navigator.clipboard.writeText(filename);
-            showAlert(`Copied "${filename}" to clipboard`, 'success');
         }
         
         // Alert helper
