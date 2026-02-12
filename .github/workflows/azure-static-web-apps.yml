@@ -39,6 +39,7 @@ jobs:
           app_location: "/"
           # api_location: "api" # Disabled - using linked Azure Function App with Managed Identity
           output_location: ""
+          skip_app_build: true
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
