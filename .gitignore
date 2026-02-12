@@ -37,3 +37,14 @@ blob-report/
 __pycache__/
 *.pyc
 .env
+
+# Editor settings
+.vscode/
+
+# Dev/debug files
+simple-request.http
+
+# Speaker images (served from Azure Blob Storage)
+images/speakers/*.jpg
+images/speakers/*.png
+images/speakers/*.psd
