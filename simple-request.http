@@ -1,4 +1,0 @@
-@baseUrl = https://www.azureinfrasummit.com
-
-GET {{baseUrl}}/
-Content-Type: application/json
