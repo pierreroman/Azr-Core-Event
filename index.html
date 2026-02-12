@@ -555,6 +555,23 @@
                                     if (overlay) overlay.style.opacity = '0';
                                 }, 5000);
                             },
+                            onStateChange: function(event) {
+                                // When video ends, show BRB placeholder instead of YouTube recommendations
+                                if (event.data === YT.PlayerState.ENDED) {
+                                    console.log('Video ended, showing BRB placeholder');
+                                    // Destroy the player to remove YouTube end screen
+                                    if (youtubePlayer) {
+                                        youtubePlayer.destroy();
+                                        youtubePlayer = null;
+                                    }
+                                    // Show the BRB image
+                                    const container = document.getElementById('video-container');
+                                    container.innerHTML = '<img src="assets/BRB.jpg" alt="We\'ll be right back">';
+                                    hideLiveChatButton();
+                                    // Re-check schedule shortly in case the next session is about to start
+                                    setTimeout(() => updateVideoPlayer(), 5000);
+                                }
+                            },
                             onError: function(event) {
                                 // Video can't be played - show link to watch on YouTube
                                 container.innerHTML = `
