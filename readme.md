@@ -1,8 +1,8 @@
-# Online event website
+# Community Online Event
 
-A community conference website communities, featuring dynamic schedule management, YouTube video integration, speaker profiles, and sponsor management — all backed by Azure Functions, Table Storage, and Blob Storage with managed identity.
+A reusable community conference website featuring dynamic schedule management, YouTube video integration, speaker profiles, and sponsor management — all backed by Azure Functions, Table Storage, and Blob Storage with managed identity.
 
-**Live Site:** <https://www.azureinfrasummit.com/>
+Deploy your own instance using Azure Developer CLI (`azd up`) or GitHub Actions CI/CD.
 
 ## Features
 
@@ -10,8 +10,8 @@ A community conference website communities, featuring dynamic schedule managemen
 
 #### Hero & Navigation
 
-- **ACU Logo** — Conference logo displayed prominently above the title
-- Conference branding and tagline
+- **Event Logo** — Customizable conference logo displayed prominently above the title
+- Configurable branding and tagline via Admin Dashboard
 - Quick navigation to About, Schedule, Speakers, and Sponsors sections
 
 #### Video Player Section
@@ -314,6 +314,41 @@ Central dashboard with navigation to all admin functions:
 
 ## CI/CD
 
+### GitHub Repository Configuration
+
+Before the CI/CD workflows can run, you must configure the following in your GitHub repository:
+
+**Settings → Secrets and variables → Actions**
+
+#### Required Secrets
+
+| Secret | Description | How to Get It |
+|--------|-------------|---------------|
+| `AZURE_CLIENT_ID` | Service principal or managed identity client ID | Azure Portal → App Registrations → Your app → Application (client) ID |
+| `AZURE_TENANT_ID` | Microsoft Entra ID tenant ID | Azure Portal → Microsoft Entra ID → Tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | Azure Portal → Subscriptions → Your subscription → Subscription ID |
+| `AZURE_STATIC_WEB_APPS_API_TOKEN` | SWA deployment token | Azure Portal → Static Web App → Manage deployment token |
+
+#### Required Variables
+
+| Variable | Description | Example |
+|----------|-------------|--------|
+| `AZURE_FUNCTIONAPP_NAME` | Name of the deployed Azure Function App | `my-event-api` |
+| `AZURE_RESOURCE_GROUP` | Resource group containing the Function App | `rg-my-event` |
+
+#### OIDC Federation Setup (for Function App deploy)
+
+The Function App workflow uses OIDC (OpenID Connect) federated credentials instead of secrets. To set this up:
+
+1. **Create an App Registration** in Microsoft Entra ID
+2. **Add a Federated Credential** with:
+   - Issuer: `https://token.actions.githubusercontent.com`
+   - Subject: `repo:<owner>/<repo>:ref:refs/heads/main`
+   - Audience: `api://AzureADTokenExchange`
+3. **Assign RBAC roles** to the app registration on your resource group:
+   - `Contributor` (for Function App deployment)
+4. Copy the **Application (client) ID** to the `AZURE_CLIENT_ID` secret
+
 ### GitHub Actions Workflows
 
 #### Azure Functions Deploy (`.github/workflows/azure-functions-deploy.yml`)
@@ -356,25 +391,32 @@ Central dashboard with navigation to all admin functions:
 ### Prerequisites
 
 - Node.js 20.x
-- Azure CLI (logged in)
-- Azure Functions Core Tools
+- Azure CLI (logged in with `az login`)
+- [Azure Functions Core Tools](https://learn.microsoft.com/azure/azure-functions/functions-run-local) v4
 
 ### Running the API Locally
 
 ```bash
 cd api
 npm install
+
+# Set your storage account in local.settings.json
+# Then start the Functions host
 func start
 ```
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AZURE_STORAGE_ACCOUNT` | Azure Storage account name | _(required)_ |
-| `STORAGE_ACCOUNT_NAME` | Alternative storage account name (fallback) | _(required)_ |
-| `AZURE_CLIENT_ID` | Client ID for user-assigned managed identity | _(none — uses default credential)_ |
-| `YOUTUBE_API_KEY` | YouTube Data API v3 key for playlist imports | _(optional)_ |
+Configure these in `api/local.settings.json` for local development, or as App Settings in Azure for production:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `AZURE_STORAGE_ACCOUNT` | Azure Storage account name | **Yes** |
+| `STORAGE_ACCOUNT_NAME` | Alternative storage account name (fallback) | No (use `AZURE_STORAGE_ACCOUNT`) |
+| `AZURE_CLIENT_ID` | Client ID for user-assigned managed identity | No (uses default credential locally) |
+| `YOUTUBE_API_KEY` | YouTube Data API v3 key for playlist imports | No (only needed for playlist import) |
+
+> **Important:** The `AZURE_STORAGE_ACCOUNT` environment variable is required. The API will not start correctly without a valid storage account name configured.
 
 ---
 
@@ -423,12 +465,14 @@ The `azd up` command will:
 
 ### Post-Deployment Configuration
 
-After deployment, configure the following:
+After `azd up` completes, configure the following:
 
-1. **Custom Domain** (optional) — Add custom domain in Azure Portal for the Static Web App
-2. **Admin Access** — Configure Microsoft Entra ID authentication for admin pages
-3. **Speaker Headshots** — Upload images via the Speakers Admin page
-4. **Sponsor Logos** — Upload images via the Sponsors Admin page
+1. **GitHub CI/CD** — Set up GitHub Actions secrets and variables (see [CI/CD section](#cicd) above)
+2. **Custom Domain** (optional) — Add custom domain in Azure Portal for the Static Web App
+3. **Admin Access** — Microsoft Entra ID authentication is pre-configured in `staticwebapp.config.json`
+4. **Speaker Headshots** — Upload images via the Speakers Admin page (`/speakers-admin.html`)
+5. **Sponsor Logos** — Upload images via the Sponsors Admin page (`/sponsors-admin.html`)
+6. **Branding** — Customize event name, logo, and colors via the Admin Dashboard (`/admin.html`)
 
 ### Infrastructure Files
 
