@@ -1,0 +1,64 @@
+###############################################################################
+# Azure Load Testing — Configuration
+# ---------------------------------------------------------------------------
+# 10,000 concurrent users across 3 geographic regions:
+#   70% North America  (7,000 users) — East US 2
+#   20% Europe         (2,000 users) — West Europe
+#   10% Asia-Pacific   (1,000 users) — Southeast Asia
+#
+# How to use:
+#   1. Create an Azure Load Testing resource in the Azure Portal
+#   2. Upload this file + locustfile.py
+#   3. Or use: az load test create --load-test-config-file load-test-config.yaml
+#
+# Docs: https://learn.microsoft.com/azure/load-testing/
+###############################################################################
+
+version: v0.1
+testId: azureinfrasummit-load-test-10k
+displayName: "Azure Infra Summit — 10K User Load Test"
+description: >
+  Load test simulating 10,000 concurrent users across North America (70%),
+  Europe (20%), and Asia-Pacific (10%) browsing azureinfrasummit.com.
+
+testPlan: locustfile.py
+testType: Locust
+
+engineInstances: 10        # Each engine handles ~1,000 users
+
+configurationOverrides:
+  locust:
+    users: 10000           # Total concurrent users
+    spawnRate: 500          # Users spawned per second (ramp-up)
+    runTime: 600           # Test duration in seconds (10 min)
+    host: https://www.azureinfrasummit.com
+
+# ── Geographic Distribution ─────────────────────────────────────────────────
+# Distribute engine instances across regions to simulate real-world traffic.
+#
+#   Region             | Engines | Users  | % of Traffic
+#   -------------------|---------|--------|-------------
+#   East US 2          |    7    | 7,000  | 70%
+#   West Europe        |    2    | 2,000  | 20%
+#   Southeast Asia     |    1    | 1,000  | 10%
+#
+regionalLoadTestConfig:
+  - region: eastus2
+    engineInstances: 7
+  - region: westeurope
+    engineInstances: 2
+  - region: southeastasia
+    engineInstances: 1
+
+# ── Failure Criteria ────────────────────────────────────────────────────────
+# Automatically flag the test as failed if these thresholds are breached.
+failureCriteria:
+  - avg(response_time_ms) > 3000                # Avg response > 3s
+  - percentage(error) > 5                        # Error rate > 5%
+  - p99(response_time_ms) > 10000               # P99 latency > 10s
+
+# ── Auto-Stop ───────────────────────────────────────────────────────────────
+# Stop test early if error rate is extreme (protects both your site and costs).
+autoStop:
+  errorPercentage: 80
+  timeWindow: 60           # seconds

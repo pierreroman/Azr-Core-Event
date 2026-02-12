@@ -1,0 +1,29 @@
+{
+  "name": "azr-core-event",
+  "version": "1.0.0",
+  "description": "A reusable community conference website featuring dynamic schedule management, YouTube video integration, speaker profiles, and sponsor management — all backed by Azure Functions, Table Storage, and Blob Storage with managed identity.",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:ui": "npx playwright test --ui",
+    "test:headed": "npx playwright test --headed",
+    "test:chromium": "npx playwright test --project=chromium",
+    "test:api": "npx playwright test tests/api.spec.js",
+    "test:report": "npx playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pierreroman/Azr-Core-Event.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/pierreroman/Azr-Core-Event/issues"
+  },
+  "homepage": "https://github.com/pierreroman/Azr-Core-Event#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

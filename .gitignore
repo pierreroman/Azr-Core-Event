@@ -26,3 +26,14 @@ infra/*.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# Playwright test artifacts
+test-results/
+playwright-report/
+blob-report/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.env
