@@ -2,29 +2,29 @@
   "routes": [
     {
       "route": "/admin.html",
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/schedule-admin.html",
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/speakers-admin.html",
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/sponsors-admin.html",
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/api/schedule",
       "methods": ["POST"],
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/api/schedule/*",
       "methods": ["PUT", "DELETE"],
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/api/schedule",
@@ -34,12 +34,12 @@
     {
       "route": "/api/speakers",
       "methods": ["POST"],
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/api/speakers/*",
       "methods": ["PUT", "DELETE", "POST"],
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/api/speakers",
@@ -54,12 +54,12 @@
     {
       "route": "/api/sponsors",
       "methods": ["POST"],
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/api/sponsors/*",
       "methods": ["PUT", "DELETE", "POST"],
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/api/sponsors",
@@ -79,13 +79,13 @@
     {
       "route": "/api/content/*",
       "methods": ["PUT", "DELETE"],
-      "allowedRoles": ["authenticated"]
+      "allowedRoles": ["administrator"]
     }
   ],
   "responseOverrides": {
     "401": {
       "statusCode": 302,
-      "redirect": "/.auth/login/aad"
+      "redirect": "/.auth/login/aad?post_login_redirect_uri=/admin.html"
     }
   },
   "navigationFallback": {

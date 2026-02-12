@@ -38,4 +38,33 @@ hooks:
         --auth-mode login `
         --public-access off 2>$null
 
+      # ── Invite administrators to the Static Web App ──────────────
+      # Add or remove email addresses in the list below to manage
+      # who has access to the admin pages and write APIs.
+      # Each admin gets the 'administrator' role via SWA invitation.
+      $admins = @(
+        "pierrer@microsoft.com"
+        # Add more admins here, one per line:
+        # "admin2@contoso.com"
+        # "admin3@contoso.com"
+      )
+
+      Write-Host "Inviting administrators to Static Web App..."
+      foreach ($admin in $admins) {
+        Write-Host "  Inviting $admin..."
+        az staticwebapp users invite `
+          --name $env:AZURE_STATICWEBAPP_NAME `
+          --resource-group $env:AZURE_RESOURCE_GROUP `
+          --authentication-provider aad `
+          --user-details $admin `
+          --role administrator `
+          --domain www.azureinfrasummit.com `
+          --invitation-expiration-in-hours 168 2>$null
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host "    ✓ Invitation sent to $admin"
+        } else {
+          Write-Host "    ⚠ Could not invite $admin (may already be invited)"
+        }
+      }
+
       Write-Host "Post-provision complete."
