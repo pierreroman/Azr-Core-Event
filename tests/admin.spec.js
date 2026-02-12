@@ -49,10 +49,10 @@ test.describe('Admin Dashboard — Authenticated', () => {
   test('admin page should redirect to login when not authenticated', async ({ page }) => {
     await page.goto('/admin.html');
     // Live SWA redirects to Microsoft login
-    const url = page.url();
-    const isLoginRedirect = url.includes('login.microsoftonline.com') ||
-                            url.includes('.auth/login') ||
-                            url.includes('admin.html');
+    const url = new URL(page.url());
+    const isLoginRedirect = url.hostname.endsWith('login.microsoftonline.com') ||
+                            url.pathname.includes('/.auth/login') ||
+                            url.pathname.endsWith('/admin.html');
     expect(isLoginRedirect).toBe(true);
   });
 
