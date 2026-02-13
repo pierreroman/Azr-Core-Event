@@ -1,0 +1,8 @@
+# Ignore files for Azure Functions deployment
+local.settings.json
+.vscode/
+*.md
+test/
+tests/
+.git/
+.gitignore

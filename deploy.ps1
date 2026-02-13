@@ -129,6 +129,36 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "========================================" -ForegroundColor Green
     Write-Host "  Deployment completed successfully!"    -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Green
+
+    # ── Surface admin invitation details ──────────────────────────────────────
+    # Read the SWA hostname from the azd environment so we can display the
+    # invitation acceptance URL and remind the deployer to complete the step.
+    $swaHostname = azd env get-value AZURE_STATICWEBAPP_HOSTNAME 2>$null
+    if ($swaHostname) {
+        $inviteUrl = "https://$swaHostname/.auth/invitations"
+        Write-Host ""
+        Write-Host "────────────────────────────────────────────────────" -ForegroundColor Yellow
+        Write-Host "  IMPORTANT: Accept your admin invitation"           -ForegroundColor Yellow
+        Write-Host "────────────────────────────────────────────────────" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "  Admin invitations were sent during provisioning."
+        Write-Host "  Each invited admin must open the link below in"
+        Write-Host "  their browser to accept the 'administrator' role:"
+        Write-Host ""
+        Write-Host "    $inviteUrl" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "  After accepting, log out and log back in so the"
+        Write-Host "  new role takes effect."
+        Write-Host "────────────────────────────────────────────────────" -ForegroundColor Yellow
+        Write-Host ""
+
+        $openNow = Read-Host "Open the invitation URL in your browser now? (Y/n)"
+        if (-not $openNow -or $openNow -in @('y', 'Y', 'yes', 'Yes', '')) {
+            Start-Process $inviteUrl
+            Write-Host "  Browser opened. Accept the invitation, then log out" -ForegroundColor Green
+            Write-Host "  and log back in to the admin page." -ForegroundColor Green
+        }
+    }
 } else {
     Write-Host ""
     Write-Host "Deployment finished with errors (exit code $LASTEXITCODE)." -ForegroundColor Red
