@@ -71,7 +71,7 @@ async function getSpeakers(request, context) {
 
         const body = {
             speakers,
-            storageBaseUrl: `https://${storageAccountName}.blob.core.windows.net/speakerheadshots`
+            storageBaseUrl: `/api/speakers/image`
         };
         cache.set('speakers:all', body);
         
@@ -500,7 +500,7 @@ async function uploadHeadshot(request, context) {
             }
         });
         
-        const url = `https://${storageAccountName}.blob.core.windows.net/${headshotsContainer}/${safeName}`;
+        const url = `/api/speakers/image/${safeName}`;
         
         return {
             status: 201,
@@ -518,6 +518,37 @@ async function uploadHeadshot(request, context) {
             status: 500,
             jsonBody: { error: "Failed to upload headshot", details: error.message }
         };
+    }
+}
+
+// GET /api/speakers/image/{filename} - Proxy speaker headshot from private blob storage
+async function proxyImage(request, context) {
+    try {
+        const filename = request.params.filename;
+        if (!filename) {
+            return { status: 400, jsonBody: { error: "Filename is required" } };
+        }
+
+        const blobServiceClient = getBlobServiceClient();
+        const containerClient = blobServiceClient.getContainerClient(headshotsContainer);
+        const blobClient = containerClient.getBlobClient(filename);
+
+        const downloadResponse = await blobClient.download(0);
+
+        return {
+            status: 200,
+            headers: {
+                'Content-Type': downloadResponse.contentType || 'image/jpeg',
+                'Cache-Control': 'public, max-age=86400',
+            },
+            body: downloadResponse.readableStreamBody
+        };
+    } catch (error) {
+        if (error.statusCode === 404) {
+            return { status: 404, jsonBody: { error: "Image not found" } };
+        }
+        context.log("Error proxying headshot:", error);
+        return { status: 500, jsonBody: { error: "Failed to load image" } };
     }
 }
 
@@ -542,6 +573,13 @@ app.http("listHeadshots", {
     authLevel: "anonymous",
     route: "speakers/headshots",
     handler: listHeadshots
+});
+
+app.http("proxyHeadshot", {
+    methods: ["GET"],
+    authLevel: "anonymous",
+    route: "speakers/image/{filename}",
+    handler: proxyImage
 });
 
 app.http("uploadHeadshot", {
@@ -587,5 +625,6 @@ module.exports = {
     deleteSpeaker,
     extractSpeakers,
     listHeadshots,
-    uploadHeadshot
+    uploadHeadshot,
+    proxyImage
 };

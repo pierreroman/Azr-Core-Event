@@ -77,7 +77,7 @@ async function getSponsors(request, context) {
 
         const body = {
             sponsors,
-            storageBaseUrl: `https://${storageAccountName}.blob.core.windows.net/sponsorlogos`
+            storageBaseUrl: `/api/sponsors/image`
         };
         cache.set('sponsors:all', body);
 
@@ -351,7 +351,7 @@ async function uploadLogo(request, context) {
             }
         });
 
-        const url = `https://${storageAccountName}.blob.core.windows.net/${logosContainer}/${safeName}`;
+        const url = `/api/sponsors/image/${safeName}`;
 
         return {
             status: 201,
@@ -403,6 +403,37 @@ async function listLogos(request, context) {
     }
 }
 
+// GET /api/sponsors/image/{filename} - Proxy sponsor logo from private blob storage
+async function proxyImage(request, context) {
+    try {
+        const filename = request.params.filename;
+        if (!filename) {
+            return { status: 400, jsonBody: { error: "Filename is required" } };
+        }
+
+        const blobServiceClient = getBlobServiceClient();
+        const containerClient = blobServiceClient.getContainerClient(logosContainer);
+        const blobClient = containerClient.getBlobClient(filename);
+
+        const downloadResponse = await blobClient.download(0);
+
+        return {
+            status: 200,
+            headers: {
+                'Content-Type': downloadResponse.contentType || 'image/png',
+                'Cache-Control': 'public, max-age=86400',
+            },
+            body: downloadResponse.readableStreamBody
+        };
+    } catch (error) {
+        if (error.statusCode === 404) {
+            return { status: 404, jsonBody: { error: "Image not found" } };
+        }
+        context.log("Error proxying logo:", error);
+        return { status: 500, jsonBody: { error: "Failed to load image" } };
+    }
+}
+
 // Register routes
 app.http("getSponsors", {
     methods: ["GET"],
@@ -417,6 +448,13 @@ app.http("listSponsorLogos", {
     authLevel: "anonymous",
     route: "sponsors/logos",
     handler: listLogos
+});
+
+app.http("proxySponsorLogo", {
+    methods: ["GET"],
+    authLevel: "anonymous",
+    route: "sponsors/image/{filename}",
+    handler: proxyImage
 });
 
 app.http("uploadSponsorLogo", {
@@ -461,5 +499,6 @@ module.exports = {
     updateSponsor,
     deleteSponsor,
     uploadLogo,
-    listLogos
+    listLogos,
+    proxyImage
 };

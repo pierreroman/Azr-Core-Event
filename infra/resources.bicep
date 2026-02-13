@@ -63,33 +63,34 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   kind: 'StorageV2'
   properties: {
     accessTier: 'Hot'
-    allowBlobPublicAccess: true  // Required for speaker headshots and sponsor logos public access
+    allowBlobPublicAccess: false
     allowSharedKeyAccess: false
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
   }
 }
 
-// Create speakerheadshots container with public blob access
+// Blob service
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
 }
 
+// Create speakerheadshots container (private — served via API proxy)
 resource speakerHeadshotsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   parent: blobService
   name: 'speakerheadshots'
   properties: {
-    publicAccess: 'Blob'
+    publicAccess: 'None'
   }
 }
 
-// Create sponsorlogos container with public blob access
+// Create sponsorlogos container (private — served via API proxy)
 resource sponsorLogosContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   parent: blobService
   name: 'sponsorlogos'
   properties: {
-    publicAccess: 'Blob'
+    publicAccess: 'None'
   }
 }
 
@@ -97,6 +98,15 @@ resource sponsorLogosContainer 'Microsoft.Storage/storageAccounts/blobServices/c
 resource siteContentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   parent: blobService
   name: 'sitecontent'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// Create deployments container for Flex Consumption function app
+resource deploymentsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'deployments'
   properties: {
     publicAccess: 'None'
   }
@@ -186,30 +196,28 @@ resource storageAccountContributorRole 'Microsoft.Authorization/roleAssignments@
 }
 
 // ============================================================================
-// App Service Plan (Elastic Premium for Function App)
+// App Service Plan (Flex Consumption for Function App)
 // ============================================================================
-resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: 'azasp${resourceToken}'
   location: location
   sku: {
-    name: 'EP1'
-    tier: 'ElasticPremium'
-    family: 'EP'
+    name: 'FC1'
+    tier: 'FlexConsumption'
   }
-  kind: 'elastic'
+  kind: 'functionapp'
   properties: {
-    maximumElasticWorkerCount: 30
-    reserved: false
+    reserved: true
   }
 }
 
 // ============================================================================
-// Function App
+// Function App (Flex Consumption)
 // ============================================================================
-resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
+resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   name: 'azfn${resourceToken}'
   location: location
-  kind: 'functionapp'
+  kind: 'functionapp,linux'
   tags: {
     'azd-service-name': 'api'
   }
@@ -222,6 +230,32 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
+    functionAppConfig: {
+      deployment: {
+        storage: {
+          type: 'blobContainer'
+          value: '${storageAccount.properties.primaryEndpoints.blob}deployments'
+          authentication: {
+            type: 'UserAssignedIdentity'
+            userAssignedIdentityResourceId: userAssignedIdentity.id
+          }
+        }
+      }
+      scaleAndConcurrency: {
+        alwaysReady: [
+          {
+            name: 'http'
+            instanceCount: 1
+          }
+        ]
+        maximumInstanceCount: 100
+        instanceMemoryMB: 2048
+      }
+      runtime: {
+        name: 'node'
+        version: '20'
+      }
+    }
     siteConfig: {
       appSettings: [
         {
@@ -253,25 +287,12 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
           value: '~4'
         }
         {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'node'
-        }
-        {
-          name: 'WEBSITE_NODE_DEFAULT_VERSION'
-          value: '~20'
-        }
-        {
-          name: 'WEBSITE_RUN_FROM_PACKAGE'
-          value: '0'
-        }
-        {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
           value: appInsights.properties.ConnectionString
         }
       ]
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
-      nodeVersion: '~20'
       cors: {
         allowedOrigins: [
           'https://portal.azure.com'
@@ -279,6 +300,9 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
       }
     }
   }
+  dependsOn: [
+    deploymentsContainer
+  ]
 }
 
 // Function App diagnostic settings
