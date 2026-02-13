@@ -8,7 +8,7 @@ metadata:
 
 services:
   web:
-    project: .
+    project: ./src/web
     dist: .
     language: js
     host: staticwebapp
@@ -22,6 +22,9 @@ hooks:
   postprovision:
     shell: pwsh
     run: |
+      # Ensure az CLI targets the same subscription azd provisioned into
+      az account set --subscription $env:AZURE_SUBSCRIPTION_ID
+
       # Link Function App backend to Static Web App
       Write-Host "Linking Function App to Static Web App..."
       az staticwebapp backends link `
@@ -68,3 +71,4 @@ hooks:
       }
 
       Write-Host "Post-provision complete."
+      exit 0
