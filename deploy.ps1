@@ -17,39 +17,21 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # ── 1. Environment name ──────────────────────────────────────────────────────
-$envName = Read-Host "Environment name (e.g. dev, staging, prod)"
-if ([string]::IsNullOrWhiteSpace($envName)) {
-    Write-Host "Environment name is required." -ForegroundColor Red
-    exit 1
-}
+do {
+    $envName = Read-Host "Environment name (e.g. dev, staging, prod)"
+    if ([string]::IsNullOrWhiteSpace($envName)) {
+        Write-Host "  Environment name is required, please try again." -ForegroundColor Red
+    }
+} while ([string]::IsNullOrWhiteSpace($envName))
 
 # ── 2. Tenant ID ─────────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "Fetching available tenants..." -ForegroundColor DarkGray
-$tenants = az account tenant list --query "[].{id:tenantId, name:displayName}" -o json 2>$null | ConvertFrom-Json
-
-if ($tenants -and $tenants.Count -gt 0) {
-    Write-Host ""
-    Write-Host "Available tenants:" -ForegroundColor Yellow
-    for ($i = 0; $i -lt $tenants.Count; $i++) {
-        $t = $tenants[$i]
-        Write-Host "  [$($i + 1)] $($t.name)  ($($t.id))"
-    }
-    Write-Host ""
-    $tenantChoice = Read-Host "Select a tenant by number, or paste a Tenant ID"
-    if ($tenantChoice -match '^\d+$' -and [int]$tenantChoice -ge 1 -and [int]$tenantChoice -le $tenants.Count) {
-        $tenantId = $tenants[[int]$tenantChoice - 1].id
-    } else {
-        $tenantId = $tenantChoice
-    }
-} else {
+do {
     $tenantId = Read-Host "Tenant ID (GUID)"
-}
-
-if ([string]::IsNullOrWhiteSpace($tenantId)) {
-    Write-Host "Tenant ID is required." -ForegroundColor Red
-    exit 1
-}
+    if ([string]::IsNullOrWhiteSpace($tenantId)) {
+        Write-Host "  Tenant ID is required, please try again." -ForegroundColor Red
+    }
+} while ([string]::IsNullOrWhiteSpace($tenantId))
 
 # ── 3. Authenticate to the tenant ────────────────────────────────────────────
 Write-Host ""
@@ -61,36 +43,42 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Also ensure az CLI is logged in to the same tenant (needed by post-provision hooks)
-az login --tenant $tenantId --output none 2>$null
+Write-Host "Logging in to az CLI ..." -ForegroundColor DarkGray
+az login --tenant $tenantId --output none
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "az login failed." -ForegroundColor Red
+    exit 1
+}
 
 # ── 4. Subscription ──────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "Fetching subscriptions for tenant $tenantId ..." -ForegroundColor DarkGray
+Write-Host "Fetching subscriptions..." -ForegroundColor DarkGray
 $subs = az account list --query "[?tenantId=='$tenantId'].{id:id, name:name, isDefault:isDefault}" -o json 2>$null | ConvertFrom-Json
 
-if ($subs -and $subs.Count -gt 0) {
-    Write-Host ""
-    Write-Host "Available subscriptions:" -ForegroundColor Yellow
-    for ($i = 0; $i -lt $subs.Count; $i++) {
-        $s = $subs[$i]
-        $default = if ($s.isDefault) { " (current default)" } else { "" }
-        Write-Host "  [$($i + 1)] $($s.name)  ($($s.id))$default"
-    }
-    Write-Host ""
-    $subChoice = Read-Host "Select a subscription by number, or paste a Subscription ID"
-    if ($subChoice -match '^\d+$' -and [int]$subChoice -ge 1 -and [int]$subChoice -le $subs.Count) {
-        $subscriptionId = $subs[[int]$subChoice - 1].id
+$subscriptionId = $null
+do {
+    if ($subs -and $subs.Count -gt 0) {
+        Write-Host ""
+        Write-Host "Available subscriptions:" -ForegroundColor Yellow
+        for ($i = 0; $i -lt $subs.Count; $i++) {
+            $s = $subs[$i]
+            $default = if ($s.isDefault) { " (current default)" } else { "" }
+            Write-Host "  [$($i + 1)] $($s.name)  ($($s.id))$default"
+        }
+        Write-Host ""
+        $subChoice = Read-Host "Select a subscription by number, or paste a Subscription ID"
+        if ($subChoice -match '^\d+$' -and [int]$subChoice -ge 1 -and [int]$subChoice -le $subs.Count) {
+            $subscriptionId = $subs[[int]$subChoice - 1].id
+        } else {
+            $subscriptionId = $subChoice
+        }
     } else {
-        $subscriptionId = $subChoice
+        $subscriptionId = Read-Host "Subscription ID (GUID)"
     }
-} else {
-    $subscriptionId = Read-Host "Subscription ID (GUID)"
-}
-
-if ([string]::IsNullOrWhiteSpace($subscriptionId)) {
-    Write-Host "Subscription ID is required." -ForegroundColor Red
-    exit 1
-}
+    if ([string]::IsNullOrWhiteSpace($subscriptionId)) {
+        Write-Host "  Subscription ID is required, please try again." -ForegroundColor Red
+    }
+} while ([string]::IsNullOrWhiteSpace($subscriptionId))
 
 # ── 5. Region ────────────────────────────────────────────────────────────────
 Write-Host ""
@@ -118,7 +106,14 @@ if ($confirm -and $confirm -notin @('y', 'Y', 'yes', 'Yes', '')) {
 Write-Host ""
 Write-Host "Initialising azd environment '$envName' ..." -ForegroundColor Green
 
-azd env new $envName 2>$null   # no-op if it already exists
+# Create the environment if it doesn't already exist, then select it
+$existingEnvs = azd env list -o json 2>$null | ConvertFrom-Json
+$envExists = $existingEnvs | Where-Object { $_.Name -eq $envName }
+if (-not $envExists) {
+    azd env new $envName
+} else {
+    Write-Host "Environment '$envName' already exists, reusing it." -ForegroundColor DarkGray
+}
 azd env select $envName
 
 azd env set AZURE_SUBSCRIPTION_ID $subscriptionId

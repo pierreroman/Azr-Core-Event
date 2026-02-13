@@ -2,7 +2,7 @@
 
 A reusable community conference website featuring dynamic schedule management, YouTube video integration, speaker profiles, and sponsor management — all backed by Azure Functions, Table Storage, and Blob Storage with managed identity.
 
-Deploy your own instance using Azure Developer CLI (`azd up`) or GitHub Actions CI/CD.
+Deploy your own instance using Azure Developer CLI (`azd up`) or the interactive `deploy.ps1` script.
 
 ## Features
 
@@ -314,75 +314,15 @@ Central dashboard with navigation to all admin functions:
 
 ## CI/CD
 
-### GitHub Repository Configuration
-
-Before the CI/CD workflows can run, you must configure the following in your GitHub repository:
-
-**Settings → Secrets and variables → Actions**
-
-#### Required Secrets
-
-| Secret | Description | How to Get It |
-|--------|-------------|---------------|
-| `AZURE_CLIENT_ID` | Service principal or managed identity client ID | Azure Portal → App Registrations → Your app → Application (client) ID |
-| `AZURE_TENANT_ID` | Microsoft Entra ID tenant ID | Azure Portal → Microsoft Entra ID → Tenant ID |
-| `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | Azure Portal → Subscriptions → Your subscription → Subscription ID |
-| `AZURE_STATIC_WEB_APPS_API_TOKEN` | SWA deployment token | Azure Portal → Static Web App → Manage deployment token |
-
-#### Required Variables
-
-| Variable | Description | Example |
-|----------|-------------|--------|
-| `AZURE_FUNCTIONAPP_NAME` | Name of the deployed Azure Function App | `my-event-api` |
-| `AZURE_RESOURCE_GROUP` | Resource group containing the Function App | `rg-my-event` |
-
-#### OIDC Federation Setup (for Function App deploy)
-
-The Function App workflow uses OIDC (OpenID Connect) federated credentials instead of secrets. To set this up:
-
-1. **Create an App Registration** in Microsoft Entra ID
-2. **Add a Federated Credential** with:
-   - Issuer: `https://token.actions.githubusercontent.com`
-   - Subject: `repo:<owner>/<repo>:ref:refs/heads/main`
-   - Audience: `api://AzureADTokenExchange`
-3. **Assign RBAC roles** to the app registration on your resource group:
-   - `Contributor` (for Function App deployment)
-4. Copy the **Application (client) ID** to the `AZURE_CLIENT_ID` secret
-
-### GitHub Actions Workflows
-
-#### Azure Functions Deploy (`.github/workflows/azure-functions-deploy.yml`)
-
-**Trigger:** Push to `main` branch (paths: `api/**`) or manual dispatch
-
-**Steps:**
-
-1. Checkout repository
-2. Setup Node.js 20.x
-3. Install production dependencies only (`npm install --omit=dev`)
-4. Login to Azure via OIDC (federated credentials)
-5. Restart Function App (clears disk space)
-6. Deploy to Azure Functions
-
-#### Static Web App Deploy (`.github/workflows/azure-static-web-apps.yml`)
-
-**Trigger:** Push to `main` branch, or pull request on `main`
-
-**Steps:**
-
-1. Checkout repository
-2. Build and deploy via `Azure/static-web-apps-deploy@v1`
-3. Closes staging environments on PR close
-
-> **Note:** The SWA workflow does _not_ deploy the `api/` folder — the Function App is linked as a separate backend via managed identity.
-
-#### CodeQL Security Analysis (`.github/workflows/codeql.yml`)
+### CodeQL Security Analysis (`.github/workflows/codeql.yml`)
 
 **Trigger:** Push to `main`, pull requests on `main`, weekly schedule (Monday at midnight UTC)
 
 - Automated JavaScript/TypeScript code scanning
 - Security vulnerability detection
 - Results reported to GitHub Security tab
+
+> **Note:** Deployment is handled entirely by `azd` (see [Deployment](#deployment) above). No GitHub Actions deployment workflows are needed.
 
 ---
 
@@ -420,14 +360,15 @@ Configure these in `api/local.settings.json` for local development, or as App Se
 
 ---
 
-## Full Deployment with Azure Developer CLI (azd)
+## Deployment
 
-This project includes an Azure Developer CLI (azd) template for deploying the complete infrastructure.
+This project deploys entirely via Azure Developer CLI (`azd`). No GitHub Actions workflows are required.
 
 ### Prerequisites
 
-- [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli) installed and logged in
+- [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli) installed
 - [Azure Developer CLI (azd)](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) installed
+- PowerShell 7+ (for the interactive script)
 - Azure subscription with Contributor access
 
 ### What Gets Deployed
@@ -435,62 +376,85 @@ This project includes an Azure Developer CLI (azd) template for deploying the co
 | Resource | SKU | Description |
 |----------|-----|-------------|
 | Static Web App | Standard | Frontend hosting with custom domains and built-in CDN |
-| Function App | EP1 (Elastic Premium) | API backend with managed identity, scales to 30 instances |
+| Function App | Flex Consumption (FC1) | API backend with managed identity, scales to 100 instances |
 | Storage Account | Standard_ZRS | Zone-redundant Tables + Blob Storage (no shared keys) |
 | User-Assigned Managed Identity | — | RBAC access to storage |
 | Application Insights | — | Monitoring and logging |
 | Log Analytics Workspace | PerGB2018 | Centralized logs |
 
-### Deployment Steps
+### Option A: Interactive Deploy Script (Recommended)
+
+The `deploy.ps1` script walks you through the full deployment interactively:
+
+```powershell
+./deploy.ps1
+```
+
+It will prompt for:
+
+1. **Environment name** (e.g. `dev`, `staging`, `prod`)
+2. **Tenant ID** (your Microsoft Entra ID tenant GUID)
+3. **Authentication** — logs into both `azd` and `az` CLI for the chosen tenant
+4. **Subscription** — lists available subscriptions and lets you pick by number
+5. **Region** — defaults to `eastus2`, type to override
+6. **Confirmation** — displays a summary before proceeding
+7. **Deployment** — runs `azd up` (provision + deploy)
+
+If you skip a required field, the script re-asks instead of exiting.
+
+### Option B: Manual azd Commands
 
 ```bash
 # 1. Clone the repository
 git clone <your-repo-url>
 cd <your-repo-name>
 
-# 2. Initialize azd (first time only)
-azd init
+# 2. Log in
+azd auth login --tenant-id <your-tenant-id>
+az login --tenant <your-tenant-id>
 
-# 3. Deploy everything (provision + deploy)
+# 3. Create or select an environment
+azd env new <env-name>
+azd env set AZURE_SUBSCRIPTION_ID <subscription-id>
+azd env set AZURE_LOCATION eastus2
+
+# 4. Deploy everything (provision + deploy)
 azd up
 ```
 
 The `azd up` command will:
-1. Prompt for environment name and Azure location
-2. Create a new resource group: `rg-{environment-name}`
-3. Provision all Azure resources using Bicep
-4. Deploy the Static Web App frontend
-5. Deploy the Function App backend
-6. Link the Function App to the Static Web App
+
+1. Create a new resource group: `rg-{environment-name}`
+2. Provision all Azure resources using Bicep
+3. Deploy the Static Web App frontend (from `src/web/`)
+4. Deploy the Function App backend (from `api/`)
+5. Link the Function App to the Static Web App (postprovision hook)
+6. Invite administrators to the Static Web App (postprovision hook)
 
 ### Post-Deployment Configuration
 
-After `azd up` completes, configure the following:
+After deployment completes:
 
-1. **GitHub CI/CD** — Set up GitHub Actions secrets and variables (see [CI/CD section](#cicd) above)
-2. **Custom Domain** (optional) — Add custom domain in Azure Portal for the Static Web App
-3. **Admin Access** — Microsoft Entra ID authentication is pre-configured in `staticwebapp.config.json`
-4. **Speaker Headshots** — Upload images via the Speakers Admin page (`/speakers-admin.html`)
-5. **Sponsor Logos** — Upload images via the Sponsors Admin page (`/sponsors-admin.html`)
-6. **Branding** — Customize event name, logo, and colors via the Admin Dashboard (`/admin.html`)
+1. **Custom Domain** (optional) — Add custom domain in Azure Portal for the Static Web App
+2. **Admin Access** — Microsoft Entra ID authentication is pre-configured in `staticwebapp.config.json`
+3. **Speaker Headshots** — Upload images via the Speakers Admin page (`/speakers-admin.html`)
+4. **Sponsor Logos** — Upload images via the Sponsors Admin page (`/sponsors-admin.html`)
+5. **Branding** — Customize event name, logo, and colors via the Admin Dashboard (`/admin.html`)
 
-### Infrastructure Files
-
-| File | Description |
-|------|-------------|
-| `azure.yaml` | AZD project definition with services and hooks |
-| `infra/main.bicep` | Main template (subscription scope) |
-| `infra/resources.bicep` | All Azure resources with RBAC |
-| `infra/main.parameters.json` | Parameter values |
-
-### Other azd Commands
+### Redeployment & Other azd Commands
 
 ```bash
-# View deployment outputs
-azd env get-values
-
 # Redeploy code only (no infra changes)
 azd deploy
+
+# Deploy just the frontend
+azd deploy web
+
+# Deploy just the API
+azd deploy api
+
+# View deployment outputs
+azd env get-values
 
 # Tear down all resources
 azd down
@@ -498,6 +462,16 @@ azd down
 # View logs
 azd monitor --logs
 ```
+
+### Infrastructure Files
+
+| File | Description |
+|------|-------------|
+| `deploy.ps1` | Interactive deployment script (prompts for all inputs) |
+| `azure.yaml` | AZD project definition with services and hooks |
+| `infra/main.bicep` | Main template (subscription scope) |
+| `infra/resources.bicep` | All Azure resources with RBAC |
+| `infra/main.parameters.json` | Parameter values |
 
 ---
 
@@ -623,26 +597,24 @@ Or upload `locustfile.py` + `load-test-config.yaml` through the **Azure Portal �
 ## File Structure
 
 ```
-├── index.html                 # Main public website
-├── admin.html                 # Admin dashboard (navigation hub)
-├── schedule-admin.html        # Schedule management
-├── speakers-admin.html        # Speakers management
-├── sponsors-admin.html        # Sponsors management
-├── styles.css                 # All CSS styles (consolidated)
-├── staticwebapp.config.json   # SWA routing, auth, and security headers
-├── azure.yaml                 # AZD project definition
-├── SECURITY_IMPROVEMENTS.md   # Security fixes documentation
+├── deploy.ps1                 # Interactive deployment script
+├── azure.yaml                 # AZD project definition with services and hooks
 ├── readme.md                  # This file
 ├── playwright.config.js       # Playwright test configuration
 ├── locustfile.py              # Locust load test script
 ├── load-test-config.yaml      # Azure Load Testing config (10K users, 3 regions)
-├── tests/
-│   ├── fixtures.js            # Shared mock data & test fixtures
-│   ├── homepage.spec.js       # Homepage rendering tests
-│   ├── navigation.spec.js     # Navigation & modal interaction tests
-│   ├── api.spec.js            # API endpoint tests
-│   ├── admin.spec.js          # Admin authentication tests
-│   └── accessibility.spec.js  # Accessibility tests
+├── src/
+│   └── web/                   # Static Web App frontend
+│       ├── index.html         # Main public website
+│       ├── admin.html         # Admin dashboard (navigation hub)
+│       ├── schedule-admin.html# Schedule management
+│       ├── speakers-admin.html# Speakers management
+│       ├── sponsors-admin.html# Sponsors management
+│       ├── styles.css         # All CSS styles (consolidated)
+│       ├── staticwebapp.config.json # SWA routing, auth, and security headers
+│       ├── assets/            # Event logo and placeholder images
+│       ├── content/           # Default markdown content (about, code-of-conduct)
+│       └── images/speakers/   # Speaker headshot images (legacy/local)
 ├── api/
 │   ├── package.json           # Node.js dependencies
 │   ├── host.json              # Functions host config
@@ -654,22 +626,19 @@ Or upload `locustfile.py` + `load-test-config.yaml` through the **Azure Portal �
 │           ├── speakers.js    # Speakers CRUD + extract + headshot upload
 │           ├── sponsors.js    # Sponsors CRUD + logo upload
 │           └── content.js     # About/CoC content management (Blob Storage)
-├── content/
-│   ├── about.md               # Default about page content
-│   └── code-of-conduct.md     # Default code of conduct content
+├── tests/
+│   ├── fixtures.js            # Shared mock data & test fixtures
+│   ├── homepage.spec.js       # Homepage rendering tests
+│   ├── navigation.spec.js     # Navigation & modal interaction tests
+│   ├── api.spec.js            # API endpoint tests
+│   ├── admin.spec.js          # Admin authentication tests
+│   └── accessibility.spec.js  # Accessibility tests
 ├── infra/
 │   ├── main.bicep             # Main Bicep template (subscription scope)
 │   ├── resources.bicep        # All Azure resources with RBAC
 │   └── main.parameters.json   # Deployment parameters
-├── assets/
-│   ├── event-logo.png           # Conference logo
-│   └── Loading-Schedule.png   # Placeholder image
-├── images/
-│   └── speakers/              # Speaker headshot images (legacy/local)
 └── .github/workflows/
-    ├── azure-functions-deploy.yml                  # Function App CI/CD
-    ├── azure-static-web-apps.yml                   # SWA CI/CD
-    └── codeql.yml                                  # Security scanning
+    └── codeql.yml             # Security scanning
 ```
 
 ---
@@ -686,6 +655,6 @@ Or upload `locustfile.py` + `load-test-config.yaml` through the **Azure Portal �
 - **Caching:** In-memory TTL cache with automatic invalidation on writes
 - **Testing:** Playwright (functional/E2E), Locust + Azure Load Testing (performance)
 - **Infrastructure:** Bicep, Azure Developer CLI (azd)
-- **CI/CD:** GitHub Actions with OIDC (Functions deploy + SWA deploy + CodeQL)
+- **CI/CD:** Azure Developer CLI (azd) for deployment, GitHub Actions for CodeQL scanning
 - **Video:** YouTube IFrame API
 - **Markdown:** marked.js for rendering, DOMPurify for XSS sanitization
