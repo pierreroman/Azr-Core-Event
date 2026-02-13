@@ -61,10 +61,11 @@ hooks:
           --authentication-provider aad `
           --user-details $admin `
           --role administrator `
-          --domain www.azureinfrasummit.com `
+          --domain $env:AZURE_STATICWEBAPP_HOSTNAME `
           --invitation-expiration-in-hours 168 2>$null
         if ($LASTEXITCODE -eq 0) {
           Write-Host "    ✓ Invitation sent to $admin"
+          Write-Host "    → Accept at: https://$env:AZURE_STATICWEBAPP_HOSTNAME/.auth/invitations"
         } else {
           Write-Host "    ⚠ Could not invite $admin (may already be invited)"
         }
