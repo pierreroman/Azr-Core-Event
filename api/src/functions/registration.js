@@ -92,17 +92,23 @@ async function saveRegistration(request, context) {
             enabled: !!body.enabled,
             registrationUrl: (body.registrationUrl || "").trim(),
             title: (body.title || defaultConfig.title).trim(),
-            description: (body.description || defaultConfig.description).trim(),
+            description: (body.description !== undefined && body.description !== null ? body.description : defaultConfig.description).trim(),
             buttonText: (body.buttonText || defaultConfig.buttonText).trim()
         };
 
         const blobServiceClient = getBlobServiceClient();
         const containerClient = blobServiceClient.getContainerClient(contentContainer);
-        await containerClient.createIfNotExists({ access: "blob" });
+        
+        try {
+            await containerClient.createIfNotExists();
+        } catch (containerErr) {
+            context.log("Container may already exist:", containerErr.message);
+        }
 
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
         const content = JSON.stringify(config, null, 2);
-        await blockBlobClient.upload(content, Buffer.byteLength(content), {
+        const contentBuffer = Buffer.from(content, "utf-8");
+        await blockBlobClient.uploadData(contentBuffer, {
             blobHTTPHeaders: { blobContentType: "application/json; charset=utf-8" },
             overwrite: true
         });
@@ -115,7 +121,8 @@ async function saveRegistration(request, context) {
             jsonBody: { success: true, message: "Registration config saved", ...config }
         };
     } catch (error) {
-        context.log("Error saving registration config:", error);
+        context.log("Error saving registration config:", error.message);
+        context.log("Error details:", error.stack);
         return {
             status: 500,
             jsonBody: { error: "Failed to save registration config", details: error.message }

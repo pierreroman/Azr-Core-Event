@@ -83,13 +83,13 @@
     },
     {
       "route": "/api/registration",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous"]
+      "methods": ["PUT"],
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/api/registration",
-      "methods": ["PUT"],
-      "allowedRoles": ["administrator"]
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous"]
     }
   ],
   "responseOverrides": {
