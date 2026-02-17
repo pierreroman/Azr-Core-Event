@@ -42,9 +42,11 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Also ensure az CLI is logged in to the same tenant (needed by post-provision hooks)
+# Also ensure az CLI is logged in to the same tenant (needed by post-provision hooks).
+# Capture output as JSON to suppress the interactive subscription picker and
+# reuse the returned list for our own subscription selection below.
 Write-Host "Logging in to az CLI ..." -ForegroundColor DarkGray
-az login --tenant $tenantId --output none
+$loginJson = az login --tenant $tenantId -o json 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "az login failed." -ForegroundColor Red
     exit 1
@@ -52,8 +54,9 @@ if ($LASTEXITCODE -ne 0) {
 
 # ── 4. Subscription ──────────────────────────────────────────────────────────
 Write-Host ""
-Write-Host "Fetching subscriptions..." -ForegroundColor DarkGray
-$subs = az account list --query "[?tenantId=='$tenantId'].{id:id, name:name, isDefault:isDefault}" -o json 2>$null | ConvertFrom-Json
+$subs = $loginJson | ConvertFrom-Json |
+    Where-Object { $_.tenantId -eq $tenantId } |
+    Select-Object @{N='id';E={$_.id}}, @{N='name';E={$_.name}}, @{N='isDefault';E={$_.isDefault}}
 
 $subscriptionId = $null
 do {
@@ -79,6 +82,9 @@ do {
         Write-Host "  Subscription ID is required, please try again." -ForegroundColor Red
     }
 } while ([string]::IsNullOrWhiteSpace($subscriptionId))
+
+# Set az CLI to the selected subscription
+az account set --subscription $subscriptionId
 
 # ── 5. Region ────────────────────────────────────────────────────────────────
 Write-Host ""
