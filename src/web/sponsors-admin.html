@@ -37,6 +37,16 @@
             </div>
         </div>
 
+        <div class="form-group" style="margin: 20px 0; padding: 16px; background: var(--card); border-radius: 8px;">
+            <div class="checkbox-group">
+                <label class="checkbox-label" style="font-weight: 600;">
+                    <input type="checkbox" id="hideSponsors" onchange="toggleSponsorsVisibility()">
+                    <span>Hide Sponsors Section on Main Site</span>
+                </label>
+                <small class="text-muted">When checked, the sponsors section and nav link will be hidden from visitors</small>
+            </div>
+        </div>
+
         <div id="sponsorsContainer" class="sponsors-admin-grid">
             <div class="loading">Loading sponsors...</div>
         </div>
@@ -148,7 +158,32 @@
         // Load sponsors on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadSponsors();
+            loadSponsorsVisibility();
         });
+
+        // ==================== SPONSORS VISIBILITY ====================
+
+        function loadSponsorsVisibility() {
+            const stored = localStorage.getItem('event-branding');
+            if (stored) {
+                try {
+                    const branding = JSON.parse(stored);
+                    document.getElementById('hideSponsors').checked = branding.hideSponsors || false;
+                } catch(e) {}
+            }
+        }
+
+        function toggleSponsorsVisibility() {
+            const hidden = document.getElementById('hideSponsors').checked;
+            const stored = localStorage.getItem('event-branding');
+            let branding = {};
+            if (stored) {
+                try { branding = JSON.parse(stored); } catch(e) {}
+            }
+            branding.hideSponsors = hidden;
+            localStorage.setItem('event-branding', JSON.stringify(branding));
+            showAlert(hidden ? 'Sponsors section hidden on main site' : 'Sponsors section visible on main site', 'success');
+        }
 
         function updateLogoPreview(filename) {
             const preview = document.getElementById('logoPreview');
