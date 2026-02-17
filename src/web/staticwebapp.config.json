@@ -80,6 +80,16 @@
       "route": "/api/content/*",
       "methods": ["PUT", "DELETE"],
       "allowedRoles": ["administrator"]
+    },
+    {
+      "route": "/api/registration",
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/api/registration",
+      "methods": ["PUT"],
+      "allowedRoles": ["administrator"]
     }
   ],
   "responseOverrides": {

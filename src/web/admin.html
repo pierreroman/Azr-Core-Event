@@ -50,6 +50,13 @@
                 </div>
                 
                 <div class="dashboard-card">
+                    <div class="card-icon">🎟️</div>
+                    <h3>Registration</h3>
+                    <p>Enable or disable the registration button and manage the registration link.</p>
+                    <a href="#" onclick="showSection('registration')" class="btn btn-primary">Manage Registration</a>
+                </div>
+                
+                <div class="dashboard-card">
                     <div class="card-icon">🎨</div>
                     <h3>Branding</h3>
                     <p>Customize event name, logo, and color scheme for the site.</p>
@@ -226,6 +233,67 @@
             </div>
         </section>
         
+        <!-- Registration Section -->
+        <section id="section-registration" class="section-hidden">
+            <div class="content-editor">
+                <a href="#" onclick="showSection('dashboard')" class="btn btn-secondary btn-sm" style="margin-bottom: 16px;">← Back to Dashboard</a>
+                <h3>🎟️ Registration Management</h3>
+                <p class="text-muted mb-20">
+                    Enable or disable the Register button on the main site and set the registration link.
+                </p>
+                
+                <div class="form-group">
+                    <label class="label-bold">Registration Status</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="registrationEnabled">
+                            <span>Enable Registration Button</span>
+                        </label>
+                        <small class="text-muted">When enabled, a "Register" button appears in the main site navigation</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registrationUrl" class="label-bold">Registration URL *</label>
+                    <input type="url" id="registrationUrl" placeholder="https://your-registration-link.com" class="form-input">
+                    <small>The link where attendees can register (e.g., Eventbrite, Microsoft Forms, etc.)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registrationButtonText" class="label-bold">Button Text</label>
+                    <input type="text" id="registrationButtonText" placeholder="Register" class="form-input">
+                    <small>Text shown on the nav button (default: "Register")</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registrationTitle" class="label-bold">Modal Title</label>
+                    <input type="text" id="registrationTitle" placeholder="Register Now" class="form-input">
+                    <small>Heading shown in the registration popup</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registrationDescription" class="label-bold">Modal Description</label>
+                    <textarea id="registrationDescription" rows="3" class="form-input" placeholder="Join us for this community event! Click the link below to register."></textarea>
+                    <small>Description text shown in the registration popup</small>
+                </div>
+                
+                <div id="registrationPreview" class="registration-preview" style="display:none;">
+                    <h4>Preview</h4>
+                    <div class="registration-preview-card">
+                        <div class="registration-preview-icon">🎟️</div>
+                        <h3 id="registrationPreviewTitle">Register Now</h3>
+                        <p id="registrationPreviewDescription">Join us for this community event!</p>
+                        <span class="btn btn-primary" id="registrationPreviewBtn">Register Now</span>
+                    </div>
+                </div>
+                
+                <div class="editor-actions">
+                    <button class="btn btn-primary" onclick="saveRegistrationConfig()">💾 Save Registration Settings</button>
+                    <span id="registration-status" class="text-muted text-small"></span>
+                </div>
+            </div>
+        </section>
+        
         <!-- About Section -->
         <section id="section-about" class="section-hidden">
             <div class="content-editor">
@@ -332,6 +400,8 @@ This is a **free, community-driven virtual event** bringing together passionate 
             loadBranding();
             setupBrandingHandlers();
             setupMarkdownEditors();
+            loadRegistrationConfig();
+            setupRegistrationPreview();
         });
         
         // Setup live preview for markdown editors
@@ -695,6 +765,92 @@ This is a **free, community-driven virtual event** bringing together passionate 
             document.getElementById('previewSecondaryBtn').style.background = secondary;
             document.getElementById('previewAccent').style.color = accent;
             document.getElementById('previewAccent').style.background = `${accent}22`;
+        }
+        
+        // ==================== REGISTRATION ====================
+        
+        async function loadRegistrationConfig() {
+            const statusEl = document.getElementById('registration-status');
+            try {
+                statusEl.textContent = 'Loading...';
+                const response = await fetch('/api/registration');
+                if (!response.ok) throw new Error('API error');
+                const config = await response.json();
+                
+                document.getElementById('registrationEnabled').checked = config.enabled || false;
+                document.getElementById('registrationUrl').value = config.registrationUrl || '';
+                document.getElementById('registrationButtonText').value = config.buttonText || 'Register';
+                document.getElementById('registrationTitle').value = config.title || 'Register Now';
+                document.getElementById('registrationDescription').value = config.description || '';
+                
+                updateRegistrationPreview();
+                statusEl.textContent = config.isDefault ? 'Using defaults' : 'Loaded from cloud';
+            } catch (error) {
+                console.log('Registration config load error:', error);
+                statusEl.textContent = 'API unavailable';
+            }
+        }
+        
+        function setupRegistrationPreview() {
+            ['registrationEnabled', 'registrationUrl', 'registrationButtonText', 'registrationTitle', 'registrationDescription'].forEach(id => {
+                const el = document.getElementById(id);
+                el.addEventListener('input', updateRegistrationPreview);
+                el.addEventListener('change', updateRegistrationPreview);
+            });
+        }
+        
+        function updateRegistrationPreview() {
+            const enabled = document.getElementById('registrationEnabled').checked;
+            const url = document.getElementById('registrationUrl').value;
+            const previewDiv = document.getElementById('registrationPreview');
+            
+            if (enabled && url) {
+                previewDiv.style.display = 'block';
+                document.getElementById('registrationPreviewTitle').textContent = document.getElementById('registrationTitle').value || 'Register Now';
+                document.getElementById('registrationPreviewDescription').textContent = document.getElementById('registrationDescription').value || '';
+                document.getElementById('registrationPreviewBtn').textContent = document.getElementById('registrationButtonText').value || 'Register Now';
+            } else {
+                previewDiv.style.display = 'none';
+            }
+        }
+        
+        async function saveRegistrationConfig() {
+            const statusEl = document.getElementById('registration-status');
+            const enabled = document.getElementById('registrationEnabled').checked;
+            const registrationUrl = document.getElementById('registrationUrl').value.trim();
+            
+            if (enabled && !registrationUrl) {
+                showAlert('Please enter a registration URL when registration is enabled.', 'danger');
+                return;
+            }
+            
+            try {
+                statusEl.textContent = 'Saving...';
+                const response = await fetch('/api/registration', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        enabled: enabled,
+                        registrationUrl: registrationUrl,
+                        buttonText: document.getElementById('registrationButtonText').value.trim() || 'Register',
+                        title: document.getElementById('registrationTitle').value.trim() || 'Register Now',
+                        description: document.getElementById('registrationDescription').value.trim()
+                    })
+                });
+                
+                if (response.ok) {
+                    showAlert('Registration settings saved!', 'success');
+                    statusEl.textContent = `Saved: ${new Date().toLocaleString()}`;
+                } else {
+                    const error = await response.json();
+                    showAlert(`Failed to save: ${error.error}`, 'danger');
+                    statusEl.textContent = 'Save failed';
+                }
+            } catch (error) {
+                console.error('Error saving registration config:', error);
+                showAlert('Failed to save registration settings.', 'danger');
+                statusEl.textContent = 'Save failed';
+            }
         }
     </script>
 </body>

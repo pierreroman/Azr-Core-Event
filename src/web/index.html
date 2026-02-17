@@ -22,6 +22,7 @@
             <a href="#schedule" class="cta">Schedule</a>
             <a href="#speakers" class="cta">Speakers</a>
             <a href="#sponsors" class="cta" id="nav-sponsors">Sponsors</a>
+            <a href="#" class="cta cta-register" id="nav-register" onclick="openRegistrationModal(); return false;" style="display:none;">Register</a>
         </div>
     </section>
 
@@ -130,6 +131,19 @@
         </div>
         <p class="copyright">© 2026 Community Online Event. All rights reserved.</p>
     </footer>
+
+    <!-- Registration Modal -->
+    <div id="registration-modal" class="modal-overlay">
+        <div class="modal-content registration-modal-content">
+            <button class="modal-close" onclick="closeRegistrationModal()">&times;</button>
+            <div class="registration-modal-icon">🎟️</div>
+            <h2 class="modal-title" id="registration-modal-title">Register Now</h2>
+            <p class="registration-modal-description" id="registration-modal-description">Join us for this community event! Click the link below to register.</p>
+            <div class="registration-modal-actions">
+                <a id="registration-modal-link" href="#" target="_blank" rel="noopener" class="btn-register-action">Register Now</a>
+            </div>
+        </div>
+    </div>
 
     <!-- Code of Conduct Modal -->
     <div id="coc-modal" class="modal-overlay">
@@ -750,6 +764,7 @@
                 closeSpeakerModal();
                 closeCodeOfConduct();
                 closeSponsorDetailModal();
+                closeRegistrationModal();
             }
         });
         
@@ -778,6 +793,50 @@
             }
         });
         
+        // ==================== REGISTRATION ====================
+
+        let registrationConfig = null;
+
+        async function loadRegistration() {
+            try {
+                const response = await fetch('/api/registration');
+                if (!response.ok) throw new Error('Failed to load registration config');
+                registrationConfig = await response.json();
+
+                const btn = document.getElementById('nav-register');
+                if (registrationConfig.enabled && registrationConfig.registrationUrl) {
+                    btn.style.display = '';
+                    btn.textContent = registrationConfig.buttonText || 'Register';
+                    // Populate modal
+                    document.getElementById('registration-modal-title').textContent = registrationConfig.title || 'Register Now';
+                    document.getElementById('registration-modal-description').textContent = registrationConfig.description || '';
+                    const link = document.getElementById('registration-modal-link');
+                    link.href = registrationConfig.registrationUrl;
+                    link.textContent = registrationConfig.buttonText || 'Register Now';
+                } else {
+                    btn.style.display = 'none';
+                }
+            } catch (error) {
+                console.log('Registration config unavailable:', error.message);
+            }
+        }
+
+        function openRegistrationModal() {
+            if (!registrationConfig || !registrationConfig.enabled) return;
+            document.getElementById('registration-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeRegistrationModal() {
+            document.getElementById('registration-modal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close registration modal on overlay click
+        document.getElementById('registration-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeRegistrationModal();
+        });
+
         // Load schedule and speakers when page loads
         document.addEventListener('DOMContentLoaded', function() {
             applyBranding();
@@ -785,6 +844,7 @@
             loadSpeakers();
             loadSponsors();
             loadMarkdownContent();
+            loadRegistration();
         });
         
         // Load markdown content from API

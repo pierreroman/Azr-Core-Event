@@ -2559,3 +2559,95 @@ footer .copyright {
         max-height: 300px;
     }
 }
+
+/* ==================== REGISTRATION ==================== */
+
+/* Register CTA button - stands out from other nav buttons */
+.cta.cta-register {
+    background: linear-gradient(135deg, #e91e63, #ff5722);
+    animation: register-pulse 2s ease-in-out infinite;
+    font-weight: 700;
+}
+.cta.cta-register:hover {
+    background: linear-gradient(135deg, #c2185b, #e64a19);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(233, 30, 99, 0.4);
+}
+@keyframes register-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(233, 30, 99, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(233, 30, 99, 0); }
+}
+
+/* Registration modal */
+.registration-modal-content {
+    max-width: 500px;
+    text-align: center;
+    padding: 40px 32px;
+}
+.registration-modal-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+}
+.registration-modal-content .modal-title {
+    font-size: 1.6rem;
+    margin-bottom: 12px;
+}
+.registration-modal-description {
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+.registration-modal-actions {
+    display: flex;
+    justify-content: center;
+}
+
+/* Register action button inside modal */
+.btn-register-action {
+    display: inline-block;
+    padding: 14px 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #e91e63, #ff5722);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-register-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(233, 30, 99, 0.4);
+}
+
+/* Admin registration preview */
+.registration-preview {
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+}
+.registration-preview h4 {
+    margin: 0 0 12px;
+    color: var(--muted);
+}
+.registration-preview-card {
+    text-align: center;
+    padding: 24px;
+    background: var(--card);
+    border-radius: 8px;
+}
+.registration-preview-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+.registration-preview-card h3 {
+    margin: 0 0 8px;
+    font-size: 1.2rem;
+}
+.registration-preview-card p {
+    color: var(--muted);
+    margin: 0 0 16px;
+    font-size: 0.95rem;
+}
+
