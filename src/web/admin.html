@@ -261,17 +261,44 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="registrationDescription" class="label-bold">Modal Description</label>
-                    <textarea id="registrationDescription" rows="3" class="form-input" placeholder="Join us for this community event! Click the link below to register."></textarea>
-                    <small>Description text shown in the registration popup</small>
+                    <label class="label-bold">Modal Description (Markdown)</label>
+                    <small class="text-muted mb-10" style="display:block;">Use Markdown to format the description shown in the registration popup</small>
+                    <div class="markdown-editor">
+                        <div class="markdown-editor-pane">
+                            <h4>✏️ Edit (Markdown)</h4>
+                            <textarea id="registrationDescription" placeholder="# Join Us!&#10;&#10;Write your registration description in Markdown..."></textarea>
+                        </div>
+                        <div class="markdown-editor-pane">
+                            <h4>👁️ Live Preview</h4>
+                            <div class="markdown-preview markdown-content" id="registrationDescriptionPreview">
+                                <p class="text-muted">Preview will appear here...</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
+
+                <details class="markdown-cheatsheet">
+                    <summary>📝 Markdown Cheatsheet</summary>
+                    <div class="markdown-cheatsheet-grid">
+                        <div class="markdown-cheatsheet-item"><code># Heading 1</code> - Main title</div>
+                        <div class="markdown-cheatsheet-item"><code>## Heading 2</code> - Section title</div>
+                        <div class="markdown-cheatsheet-item"><code>**bold**</code> - <strong>Bold text</strong></div>
+                        <div class="markdown-cheatsheet-item"><code>*italic*</code> - <em>Italic text</em></div>
+                        <div class="markdown-cheatsheet-item"><code>- item</code> - Bullet list</div>
+                        <div class="markdown-cheatsheet-item"><code>1. item</code> - Numbered list</div>
+                        <div class="markdown-cheatsheet-item"><code>[text](url)</code> - Link</div>
+                        <div class="markdown-cheatsheet-item"><code>![alt](url)</code> - Image</div>
+                        <div class="markdown-cheatsheet-item"><code>---</code> - Horizontal line</div>
+                        <div class="markdown-cheatsheet-item"><code>> quote</code> - Blockquote</div>
+                    </div>
+                </details>
+
                 <div id="registrationPreview" class="registration-preview" style="display:none;">
-                    <h4>Preview</h4>
+                    <h4>Modal Preview</h4>
                     <div class="registration-preview-card">
                         <div class="registration-preview-icon">🎟️</div>
                         <h3 id="registrationPreviewTitle">Register Now</h3>
-                        <p id="registrationPreviewDescription">Join us for this community event!</p>
+                        <div id="registrationPreviewDescription" class="markdown-content">Join us for this community event!</div>
                         <span class="btn btn-primary" id="registrationPreviewBtn">Register Now</span>
                     </div>
                 </div>
@@ -403,6 +430,12 @@ This is a **free, community-driven virtual event** bringing together passionate 
             // About editor
             document.getElementById('aboutContent').addEventListener('input', function() {
                 updateMarkdownPreview(this.value, 'aboutPreview');
+            });
+
+            // Registration description editor
+            document.getElementById('registrationDescription').addEventListener('input', function() {
+                updateMarkdownPreview(this.value, 'registrationDescriptionPreview');
+                updateRegistrationPreview();
             });
         }
         
@@ -777,6 +810,8 @@ This is a **free, community-driven virtual event** bringing together passionate 
                 document.getElementById('registrationTitle').value = config.title || 'Register Now';
                 document.getElementById('registrationDescription').value = config.description || '';
                 
+                // Populate the markdown live preview
+                updateMarkdownPreview(config.description || '', 'registrationDescriptionPreview');
                 updateRegistrationPreview();
                 statusEl.textContent = config.isDefault ? 'Using defaults' : 'Loaded from cloud';
             } catch (error) {
@@ -801,7 +836,8 @@ This is a **free, community-driven virtual event** bringing together passionate 
             if (enabled && url) {
                 previewDiv.style.display = 'block';
                 document.getElementById('registrationPreviewTitle').textContent = document.getElementById('registrationTitle').value || 'Register Now';
-                document.getElementById('registrationPreviewDescription').textContent = document.getElementById('registrationDescription').value || '';
+                const descMarkdown = document.getElementById('registrationDescription').value || '';
+                document.getElementById('registrationPreviewDescription').innerHTML = descMarkdown.trim() ? parseMarkdown(descMarkdown) : '';
                 document.getElementById('registrationPreviewBtn').textContent = document.getElementById('registrationButtonText').value || 'Register Now';
             } else {
                 previewDiv.style.display = 'none';
