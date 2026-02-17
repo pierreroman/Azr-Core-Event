@@ -187,9 +187,11 @@ async function saveContent(request, context) {
         const containerClient = blobServiceClient.getContainerClient(contentContainer);
         
         // Ensure container exists
-        await containerClient.createIfNotExists({
-            access: 'blob' // Public read access for blobs
-        });
+        try {
+            await containerClient.createIfNotExists();
+        } catch (containerErr) {
+            context.log("Container may already exist:", containerErr.message);
+        }
         
         const blobName = `${contentType}.md`;
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);

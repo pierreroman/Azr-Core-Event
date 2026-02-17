@@ -73,13 +73,13 @@
     },
     {
       "route": "/api/content/*",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous"]
+      "methods": ["PUT", "DELETE"],
+      "allowedRoles": ["administrator"]
     },
     {
       "route": "/api/content/*",
-      "methods": ["PUT", "DELETE"],
-      "allowedRoles": ["administrator"]
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous"]
     },
     {
       "route": "/api/registration",
