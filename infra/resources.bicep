@@ -163,6 +163,9 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     allowSharedKeyAccess: false
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
+    // During provisioning, public access must be enabled so Azure services
+    // (Function App deployment, container creation, etc.) can reach storage.
+    // The postprovision hook in azure.yaml sets this to 'Disabled' after deployment.
     publicNetworkAccess: 'Enabled'
     networkAcls: {
       defaultAction: 'Deny'

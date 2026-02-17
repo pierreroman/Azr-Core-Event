@@ -41,6 +41,20 @@ hooks:
         --auth-mode login `
         --public-access off 2>$null
 
+      # Lock down storage: disable public network access now that all
+      # resources are provisioned and using private endpoints.
+      Write-Host "Disabling public network access on storage account..."
+      az storage account update `
+        --name $env:AZURE_STORAGE_ACCOUNT_NAME `
+        --resource-group $env:AZURE_RESOURCE_GROUP `
+        --public-network-access Disabled `
+        --output none
+      if ($LASTEXITCODE -eq 0) {
+        Write-Host "  ✓ Public network access disabled on $env:AZURE_STORAGE_ACCOUNT_NAME"
+      } else {
+        Write-Host "  ⚠ Failed to disable public network access — please disable manually" -ForegroundColor Yellow
+      }
+
       # ── Invite administrators to the Static Web App ──────────────
       # Add or remove email addresses in the list below to manage
       # who has access to the admin pages and write APIs.
