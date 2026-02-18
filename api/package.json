@@ -14,5 +14,6 @@
     "@azure/storage-blob": "^12.17.0"
   },
   "devDependencies": {
+    "azure-functions-core-tools": "^4.x"
   }
 }

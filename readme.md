@@ -1,6 +1,6 @@
 # Community Online Event
 
-A reusable community conference website featuring dynamic schedule management, YouTube video integration, speaker profiles, and sponsor management — all backed by Azure Functions, Table Storage, and Blob Storage with managed identity.
+A reusable community conference website featuring dynamic schedule management, YouTube video integration, speaker profiles, sponsor management, and event registration — all backed by Azure Functions, Table Storage, and Blob Storage with managed identity, secured with VNet integration and private endpoints.
 
 Deploy your own instance using Azure Developer CLI (`azd up`) or the interactive `deploy.ps1` script.
 
@@ -30,6 +30,14 @@ Deploy your own instance using Azure Developer CLI (`azd up`) or the interactive
   - Session time and date
   - Full title and description (with clickable links)
   - Direct YouTube link
+  - **Past sessions:** "Watch Recording" button linking to the YouTube video
+  - **Future sessions:** "Add to Calendar" button that downloads an ICS file with correct start time and duration
+
+#### Registration
+
+- **Register Button** — Appears in the navigation bar when registration is enabled by an admin
+- **Registration Modal** — Opens with configurable title, Markdown-rendered description, and external registration link
+- Configuration managed via the Admin Dashboard (stored in Blob Storage)
 
 #### Featured Speakers Section
 
@@ -57,7 +65,7 @@ Deploy your own instance using Azure Developer CLI (`azd up`) or the interactive
 
 - **About** — Event description loaded from Content API (server-side Markdown stored in Blob Storage)
 - **Code of Conduct** — Modal with community guidelines loaded from Content API
-- **Footer** — Event info and links
+- **Footer** — Privacy Policy (links to Microsoft Privacy Statement), Code of Conduct, Admin link, Powered by Azure
 
 #### Accessibility & UX
 
@@ -78,6 +86,7 @@ Central dashboard with navigation to all admin functions:
 - **Schedule Management** — Link to schedule-admin.html
 - **Speaker Management** — Link to speakers-admin.html
 - **Sponsor Management** — Link to sponsors-admin.html
+- **Registration Management** — Enable/disable registration button, set title, registration URL, and Markdown description with split-pane live preview editor
 - **Branding** — Customize event name, logo, and color scheme
 - **Headshot Upload** — Upload speaker images directly to blob storage
 - **Code of Conduct Editor** — Edit CoC content (saved to Blob Storage via Content API)
@@ -133,7 +142,7 @@ Central dashboard with navigation to all admin functions:
   - Headshot filename (references blob in `speakerheadshots` container)
   - Real-time headshot preview as filename is typed
   - Social links (LinkedIn, Twitter/X)
-  - Session IDs (comma-separated)
+  - **Session Picker** — Dropdown to assign sessions from the schedule; shows assigned sessions as removable tags
 - **Edit Speaker** — Full editing of all fields
 - **Delete Speaker** — With confirmation
 
@@ -163,6 +172,7 @@ Central dashboard with navigation to all admin functions:
 - **Edit Sponsor** — Full editing of all fields
 - **Delete Sponsor** — With confirmation
 - **Enable/Disable** — Quick toggle for public visibility
+- **Hide All Sponsors** — Toggle to hide the entire sponsors section from the public site
 - **Stats Bar** — Total sponsors, enabled count, logos count
 
 #### Logo Upload
@@ -182,8 +192,11 @@ Central dashboard with navigation to all admin functions:
 | Resource | Type | Purpose |
 |----------|------|---------|
 | Static Web App | Azure Static Web App (Standard) | Hosts frontend HTML/CSS/JS |
-| Function App | Azure Function App (Node.js 20) | REST API backend |
-| Storage Account | Azure Storage Account | Table Storage + Blob Storage |
+| Function App | Azure Function App (Flex Consumption, Node.js 20) | REST API backend |
+| Storage Account | Azure Storage Account (Standard_ZRS) | Table Storage + Blob Storage |
+| Virtual Network | Azure VNet (10.0.0.0/16) | Network isolation for Function App and Storage |
+| Private Endpoints | Azure Private Endpoints | Private connectivity to Blob, Table, and Queue storage |
+| Private DNS Zones | Azure Private DNS | DNS resolution for private endpoints |
 | User-Assigned Managed Identity | Managed Identity | RBAC access from Function App to Storage |
 | Application Insights + Log Analytics | Monitoring | Logging and diagnostics |
 | Resource Group | Resource Group | Contains all resources |
@@ -201,7 +214,7 @@ Central dashboard with navigation to all admin functions:
 | description | string | Full description |
 | url | string | YouTube URL |
 | startTime | string | ISO 8601 datetime |
-| duration | number | Duration in minutes |
+| duration | number | Duration in seconds |
 
 #### Speakers Table
 
@@ -236,16 +249,17 @@ Central dashboard with navigation to all admin functions:
 
 | Container | Access | Purpose |
 |-----------|--------|---------|
-| `speakerheadshots` | Public Blob | Speaker headshot images |
-| `sponsorlogos` | Public Blob | Sponsor logo images |
-| `sitecontent` | Private | Markdown content (about, code-of-conduct) |
+| `speakerheadshots` | Private | Speaker headshot images (served via API) |
+| `sponsorlogos` | Private | Sponsor logo images (served via API) |
+| `sitecontent` | Private | Markdown content (about, code-of-conduct, registration config) |
+| `deployments` | Private | Flex Consumption Function App deployment packages |
 
 ### Performance & Scalability
 
 - **In-Memory API Caching** — All GET endpoints use a shared cache module ([`api/src/shared/cache.js`](api/src/shared/cache.js)) with 60-second TTL, reducing Azure Storage calls by ~99% under load
 - **Cache Invalidation** — Write operations (POST/PUT/DELETE) immediately invalidate relevant cache keys so the same instance serves fresh data
 - **HTTP Cache Headers** — All public GET responses include `Cache-Control: public, max-age=60, stale-while-revalidate=300`, enabling browser and CDN-level caching
-- **Elastic Premium Scaling** — Function App scales to 30 instances automatically under load, each handling hundreds of cached requests/second
+- **Elastic Flex Consumption Scaling** — Function App scales to 100 instances automatically under load with 1 always-ready instance
 - **Zone-Redundant Storage (ZRS)** — Storage Account uses Standard_ZRS for cross-zone availability within the region
 - **Static Web App CDN** — All frontend assets served via Azure's built-in global CDN
 - **Designed for 10,000+ concurrent users** — With caching enabled, the architecture comfortably handles large-scale event traffic
@@ -254,12 +268,17 @@ Central dashboard with navigation to all admin functions:
 
 - **User-Assigned Managed Identity** — Function App authenticates to Storage via RBAC (no connection strings or shared keys)
 - **Microsoft Entra ID Authentication** — Admin pages require authenticated users via SWA auth
+- **VNet Integration** — Function App runs inside a VNet subnet; all storage traffic flows through private endpoints
+- **Private Endpoints** — Blob, Table, and Queue storage accessible only via private link (no public storage endpoints)
+- **Storage Lockdown** — `publicNetworkAccess` is disabled post-deployment via `postdeploy` hook; temporarily re-enabled during deployments via `predeploy` hook
+- **`allowSharedKeyAccess: false`** — Storage account disables shared key access, enforcing RBAC-only
+- **`allowBlobPublicAccess: false`** — No anonymous blob access; all content served through authenticated API proxies
+- **Network ACLs** — `defaultAction: Deny` with `bypass: AzureServices` during deployment windows
 - **Role Assignments** — Storage Blob Data Owner, Blob Data Contributor, Table Data Contributor, Queue Data Contributor, Storage Account Contributor
 - **XSS Protection** — DOMPurify sanitization on all user-generated Markdown/HTML content
 - **Content Security Policy** — `X-Content-Type-Options`, `X-Frame-Options`, CSP headers configured in `staticwebapp.config.json`
 - **CodeQL Analysis** — Automated security scanning via GitHub Actions (weekly + on push/PR)
 - **Input Validation** — File type and size validation on uploads, filename sanitization
-- **`allowSharedKeyAccess: false`** — Storage account disables shared key access, enforcing RBAC-only
 
 ---
 
@@ -309,6 +328,13 @@ Central dashboard with navigation to all admin functions:
 | GET | `/api/content/{type}` | Anonymous | Get markdown content (about, code-of-conduct) |
 | PUT | `/api/content/{type}` | Authenticated | Save markdown content to Blob Storage |
 | DELETE | `/api/content/{type}` | Authenticated | Reset content to defaults |
+
+### Registration API (`/api/registration`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/registration` | Anonymous | Get registration config (enabled, title, URL, description) |
+| PUT | `/api/registration` | Authenticated | Save registration config to Blob Storage |
 
 ---
 
@@ -378,6 +404,9 @@ This project deploys entirely via Azure Developer CLI (`azd`). No GitHub Actions
 | Static Web App | Standard | Frontend hosting with custom domains and built-in CDN |
 | Function App | Flex Consumption (FC1) | API backend with managed identity, scales to 100 instances |
 | Storage Account | Standard_ZRS | Zone-redundant Tables + Blob Storage (no shared keys) |
+| Virtual Network | 10.0.0.0/16 | Network isolation with subnets for Function App and private endpoints |
+| Private Endpoints | — | Blob, Table, and Queue private connectivity |
+| Private DNS Zones | — | DNS resolution for storage private endpoints |
 | User-Assigned Managed Identity | — | RBAC access to storage |
 | Application Insights | — | Monitoring and logging |
 | Log Analytics Workspace | PerGB2018 | Centralized logs |
@@ -397,8 +426,9 @@ It will prompt for:
 3. **Authentication** — logs into both `azd` and `az` CLI for the chosen tenant
 4. **Subscription** — lists available subscriptions and lets you pick by number
 5. **Region** — defaults to `eastus2`, type to override
-6. **Confirmation** — displays a summary before proceeding
-7. **Deployment** — runs `azd up` (provision + deploy)
+6. **Resource provider registration** — automatically registers required Azure providers (Microsoft.App, Microsoft.Web, Microsoft.Storage, etc.)
+7. **Confirmation** — displays a summary before proceeding
+8. **Deployment** — runs `azd up` (provision + deploy)
 
 If you skip a required field, the script re-asks instead of exiting.
 
@@ -424,12 +454,15 @@ azd up
 
 The `azd up` command will:
 
-1. Create a new resource group: `rg-{environment-name}`
-2. Provision all Azure resources using Bicep
-3. Deploy the Static Web App frontend (from `src/web/`)
-4. Deploy the Function App backend (from `api/`)
-5. Link the Function App to the Static Web App (postprovision hook)
-6. Invite administrators to the Static Web App (postprovision hook)
+1. **Register resource providers** — Preprovision hook registers all required Azure providers
+2. Create a new resource group: `rg-{environment-name}`
+3. Provision all Azure resources using Bicep (VNet, private endpoints, storage, Function App, SWA)
+4. **Re-enable storage public access** — Predeploy hook temporarily enables public network access for deployment
+5. Deploy the Static Web App frontend (from `src/web/`)
+6. Deploy the Function App backend (from `api/` with remote build)
+7. **Lock down storage** — Postdeploy hook disables public network access
+8. Link the Function App to the Static Web App (postprovision hook)
+9. Invite administrators to the Static Web App (postprovision hook)
 
 ### Post-Deployment Configuration
 
@@ -468,9 +501,9 @@ azd monitor --logs
 | File | Description |
 |------|-------------|
 | `deploy.ps1` | Interactive deployment script (prompts for all inputs) |
-| `azure.yaml` | AZD project definition with services and hooks |
+| `azure.yaml` | AZD project definition with services and lifecycle hooks (preprovision, predeploy, postdeploy, postprovision) |
 | `infra/main.bicep` | Main template (subscription scope) |
-| `infra/resources.bicep` | All Azure resources with RBAC |
+| `infra/resources.bicep` | All Azure resources with RBAC, VNet, private endpoints |
 | `infra/main.parameters.json` | Parameter values |
 
 ---
@@ -625,7 +658,8 @@ Or upload `locustfile.py` + `load-test-config.yaml` through the **Azure Portal �
 │           ├── schedule.js    # Schedule CRUD + CSV/Playlist import/export
 │           ├── speakers.js    # Speakers CRUD + extract + headshot upload
 │           ├── sponsors.js    # Sponsors CRUD + logo upload
-│           └── content.js     # About/CoC content management (Blob Storage)
+           ├── content.js     # About/CoC content management (Blob Storage)
+           └── registration.js# Registration config management (Blob Storage)
 ├── tests/
 │   ├── fixtures.js            # Shared mock data & test fixtures
 │   ├── homepage.spec.js       # Homepage rendering tests
