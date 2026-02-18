@@ -22,10 +22,32 @@ hooks:
   preprovision:
     shell: pwsh
     run: |
-      # Register Microsoft.App resource provider (required for Flex Consumption VNet integration)
-      Write-Host "Registering Microsoft.App resource provider..."
-      az provider register --namespace Microsoft.App --subscription $env:AZURE_SUBSCRIPTION_ID --wait
-      Write-Host "  ✓ Microsoft.App registered"
+      # Register all required resource providers before provisioning.
+      # This covers users running 'azd up' directly (without deploy.ps1).
+      $providers = @(
+        'Microsoft.App',
+        'Microsoft.Insights',
+        'Microsoft.ManagedIdentity',
+        'Microsoft.Network',
+        'Microsoft.OperationalInsights',
+        'Microsoft.Storage',
+        'Microsoft.Web'
+      )
+      $registered = az provider list --query "[?registrationState=='Registered'].namespace" -o tsv 2>$null
+      $toRegister = $providers | Where-Object { $_ -notin $registered }
+      if ($toRegister.Count -gt 0) {
+        Write-Host "Registering $($toRegister.Count) resource provider(s)..."
+        foreach ($ns in $toRegister) {
+          az provider register --namespace $ns --subscription $env:AZURE_SUBSCRIPTION_ID 2>$null
+        }
+        foreach ($ns in $toRegister) {
+          $retries = 0
+          do { Start-Sleep -Seconds 5; $state = az provider show --namespace $ns --query registrationState -o tsv 2>$null; $retries++ } while ($state -ne 'Registered' -and $retries -lt 60)
+          Write-Host "  ✓ $ns"
+        }
+      } else {
+        Write-Host "All required resource providers already registered."
+      }
 
   postprovision:
     shell: pwsh

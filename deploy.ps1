@@ -86,13 +86,54 @@ do {
 # Set az CLI to the selected subscription
 az account set --subscription $subscriptionId
 
-# ── 5. Region ────────────────────────────────────────────────────────────────
+# ── 5. Register required resource providers ──────────────────────────────────
+Write-Host ""
+Write-Host "Checking resource provider registrations..." -ForegroundColor DarkGray
+
+$requiredProviders = @(
+    'Microsoft.App'                   # Flex Consumption VNet subnet delegation
+    'Microsoft.Insights'              # Application Insights & diagnostics
+    'Microsoft.ManagedIdentity'       # User-assigned managed identity
+    'Microsoft.Network'               # VNet, Private DNS, Private Endpoints
+    'Microsoft.OperationalInsights'   # Log Analytics workspace
+    'Microsoft.Storage'               # Storage Account (blobs, tables, queues)
+    'Microsoft.Web'                   # Function App, App Service Plan, Static Web App
+)
+
+$registered = az provider list --query "[?registrationState=='Registered'].namespace" -o tsv 2>$null
+$toRegister = $requiredProviders | Where-Object { $_ -notin $registered }
+
+if ($toRegister.Count -gt 0) {
+    Write-Host "  Registering $($toRegister.Count) provider(s): $($toRegister -join ', ')" -ForegroundColor Yellow
+    foreach ($ns in $toRegister) {
+        az provider register --namespace $ns --subscription $subscriptionId 2>$null
+    }
+    # Wait for all registrations to complete
+    Write-Host "  Waiting for registrations to complete..." -ForegroundColor DarkGray
+    foreach ($ns in $toRegister) {
+        $retries = 0
+        do {
+            Start-Sleep -Seconds 5
+            $state = az provider show --namespace $ns --query "registrationState" -o tsv 2>$null
+            $retries++
+        } while ($state -ne 'Registered' -and $retries -lt 60)
+        if ($state -eq 'Registered') {
+            Write-Host "    ✓ $ns" -ForegroundColor Green
+        } else {
+            Write-Host "    ⚠ $ns — still $state after timeout" -ForegroundColor Yellow
+        }
+    }
+} else {
+    Write-Host "  ✓ All required providers already registered" -ForegroundColor Green
+}
+
+# ── 6. Region ────────────────────────────────────────────────────────────────
 Write-Host ""
 $defaultRegion = "eastus2"
 $regionInput = Read-Host "Azure region [$defaultRegion]"
 $region = if ([string]::IsNullOrWhiteSpace($regionInput)) { $defaultRegion } else { $regionInput }
 
-# ── 6. Confirm ───────────────────────────────────────────────────────────────
+# ── 7. Confirm ───────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "─── Deployment Summary ───" -ForegroundColor Cyan
 Write-Host "  Environment :  $envName"
@@ -108,7 +149,7 @@ if ($confirm -and $confirm -notin @('y', 'Y', 'yes', 'Yes', '')) {
     exit 0
 }
 
-# ── 7. Initialise azd environment & deploy ────────────────────────────────────
+# ── 8. Initialise azd environment & deploy ────────────────────────────────────
 Write-Host ""
 Write-Host "Initialising azd environment '$envName' ..." -ForegroundColor Green
 
