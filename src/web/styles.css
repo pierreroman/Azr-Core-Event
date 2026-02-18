@@ -455,6 +455,9 @@ section .section-subtitle {
 
 .speaker-card {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .speaker-avatar {

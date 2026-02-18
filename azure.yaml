@@ -49,6 +49,43 @@ hooks:
         Write-Host "All required resource providers already registered."
       }
 
+  predeploy:
+    shell: pwsh
+    run: |
+      # Re-enable public network access so the Flex Consumption deployment
+      # infrastructure can upload the zip package to blob storage.
+      # The networkAcls (defaultAction: Deny, bypass: AzureServices) still
+      # block all external traffic — only trusted Azure services are allowed.
+      Write-Host "Enabling public network access on storage for deployment..."
+      az account set --subscription $env:AZURE_SUBSCRIPTION_ID
+      az storage account update `
+        --name $env:AZURE_STORAGE_ACCOUNT_NAME `
+        --resource-group $env:AZURE_RESOURCE_GROUP `
+        --public-network-access Enabled `
+        --output none
+      if ($LASTEXITCODE -eq 0) {
+        Write-Host "  ✓ Public network access enabled (still protected by networkAcls)"
+      } else {
+        Write-Host "  ⚠ Could not enable public access — deployment may fail" -ForegroundColor Yellow
+      }
+
+  postdeploy:
+    shell: pwsh
+    run: |
+      # Lock down storage again after deployment completes.
+      Write-Host "Disabling public network access on storage account..."
+      az account set --subscription $env:AZURE_SUBSCRIPTION_ID
+      az storage account update `
+        --name $env:AZURE_STORAGE_ACCOUNT_NAME `
+        --resource-group $env:AZURE_RESOURCE_GROUP `
+        --public-network-access Disabled `
+        --output none
+      if ($LASTEXITCODE -eq 0) {
+        Write-Host "  ✓ Public network access disabled on $env:AZURE_STORAGE_ACCOUNT_NAME"
+      } else {
+        Write-Host "  ⚠ Failed to disable public network access — please disable manually" -ForegroundColor Yellow
+      }
+
   postprovision:
     shell: pwsh
     run: |
@@ -71,19 +108,8 @@ hooks:
         --auth-mode login `
         --public-access off 2>$null
 
-      # Lock down storage: disable public network access now that all
-      # resources are provisioned and using private endpoints.
-      Write-Host "Disabling public network access on storage account..."
-      az storage account update `
-        --name $env:AZURE_STORAGE_ACCOUNT_NAME `
-        --resource-group $env:AZURE_RESOURCE_GROUP `
-        --public-network-access Disabled `
-        --output none
-      if ($LASTEXITCODE -eq 0) {
-        Write-Host "  ✓ Public network access disabled on $env:AZURE_STORAGE_ACCOUNT_NAME"
-      } else {
-        Write-Host "  ⚠ Failed to disable public network access — please disable manually" -ForegroundColor Yellow
-      }
+      # Note: Storage lockdown (publicNetworkAccess: Disabled) is handled by
+      # the postdeploy hook, which runs after every deployment including azd up.
 
       # ── Invite administrators to the Static Web App ──────────────
       # Add or remove email addresses in the list below to manage

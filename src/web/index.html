@@ -733,7 +733,7 @@
             
             // Determine if session is past or future
             const sessionStart = new Date(session.startTime);
-            const durationMs = (session.duration || 60) * 60 * 1000; // duration in minutes → ms
+            const durationMs = (session.duration || 3600) * 1000; // duration in seconds → ms
             const sessionEnd = new Date(sessionStart.getTime() + durationMs);
             const now = new Date();
             const actionsEl = document.getElementById('modal-actions');
@@ -788,8 +788,8 @@
             if (!session) return;
 
             const start = new Date(session.startTime);
-            const durationMin = session.duration || 60;
-            const end = new Date(start.getTime() + durationMin * 60 * 1000);
+            const durationSec = session.duration || 3600; // duration is in seconds
+            const end = new Date(start.getTime() + durationSec * 1000);
 
             // Format date to ICS format: YYYYMMDDTHHMMSSZ
             function toICSDate(d) {
