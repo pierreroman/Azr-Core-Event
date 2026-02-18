@@ -50,7 +50,8 @@ test.describe('Admin Dashboard — Authenticated', () => {
     await page.goto('/admin.html');
     // Live SWA redirects to Microsoft login
     const url = new URL(page.url());
-    const isLoginRedirect = url.hostname.endsWith('login.microsoftonline.com') ||
+    const allowedLoginHosts = ['login.microsoftonline.com'];
+    const isLoginRedirect = allowedLoginHosts.includes(url.hostname) ||
                             url.pathname.includes('/.auth/login') ||
                             url.pathname.endsWith('/admin.html');
     expect(isLoginRedirect).toBe(true);
