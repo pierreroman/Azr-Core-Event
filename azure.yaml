@@ -19,6 +19,14 @@ services:
     host: function
 
 hooks:
+  preprovision:
+    shell: pwsh
+    run: |
+      # Register Microsoft.App resource provider (required for Flex Consumption VNet integration)
+      Write-Host "Registering Microsoft.App resource provider..."
+      az provider register --namespace Microsoft.App --subscription $env:AZURE_SUBSCRIPTION_ID --wait
+      Write-Host "  ✓ Microsoft.App registered"
+
   postprovision:
     shell: pwsh
     run: |
