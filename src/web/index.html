@@ -162,10 +162,8 @@
             <div class="modal-time" id="modal-time"></div>
             <h2 class="modal-title" id="modal-title"></h2>
             <div class="modal-description" id="modal-description"></div>
-            <div class="modal-actions">
-                <a id="modal-youtube" href="#" target="_blank" class="btn-watch">
-                    ▶ Watch on YouTube
-                </a>
+            <div class="modal-actions" id="modal-actions">
+                <!-- Dynamically populated: Watch Recording or Add to Calendar -->
             </div>
         </div>
     </div>
@@ -732,7 +730,41 @@
             document.getElementById('modal-time').textContent = time;
             document.getElementById('modal-title').textContent = session.title;
             document.getElementById('modal-description').textContent = session.description || 'No description available.';
-            document.getElementById('modal-youtube').href = session.url || '#';
+            
+            // Determine if session is past or future
+            const sessionStart = new Date(session.startTime);
+            const durationMs = (session.duration || 60) * 60 * 1000; // duration in minutes → ms
+            const sessionEnd = new Date(sessionStart.getTime() + durationMs);
+            const now = new Date();
+            const actionsEl = document.getElementById('modal-actions');
+            
+            if (now > sessionEnd) {
+                // Session has passed — show recording link
+                if (session.url) {
+                    actionsEl.innerHTML = `
+                        <a href="${escapeHtml(session.url)}" target="_blank" rel="noopener" class="btn-watch">
+                            ▶ Watch Recording
+                        </a>
+                    `;
+                } else {
+                    actionsEl.innerHTML = `<span class="text-muted">Recording not yet available</span>`;
+                }
+            } else {
+                // Session is upcoming — show calendar download
+                actionsEl.innerHTML = `
+                    <button class="btn-calendar" onclick="downloadICS('${session.id}')">
+                        📅 Add to Calendar
+                    </button>
+                `;
+                // Also show watch link if available (e.g. live stream URL)
+                if (session.url) {
+                    actionsEl.innerHTML += `
+                        <a href="${escapeHtml(session.url)}" target="_blank" rel="noopener" class="btn-watch">
+                            ▶ Watch Live
+                        </a>
+                    `;
+                }
+            }
             
             document.getElementById('session-modal').classList.add('active');
             document.body.style.overflow = 'hidden';
@@ -749,6 +781,55 @@
                 closeModal();
             }
         });
+
+        // Generate and download ICS calendar file for a session
+        function downloadICS(sessionId) {
+            const session = scheduleData.find(s => s.id === sessionId);
+            if (!session) return;
+
+            const start = new Date(session.startTime);
+            const durationMin = session.duration || 60;
+            const end = new Date(start.getTime() + durationMin * 60 * 1000);
+
+            // Format date to ICS format: YYYYMMDDTHHMMSSZ
+            function toICSDate(d) {
+                return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+            }
+
+            const eventName = document.title || 'Community Event';
+            const description = (session.description || '').replace(/\n/g, '\\n');
+            const url = session.url || '';
+            const uid = `${session.id}@${window.location.hostname}`;
+
+            const ics = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//Community Event//Session//EN',
+                'CALSCALE:GREGORIAN',
+                'METHOD:PUBLISH',
+                'BEGIN:VEVENT',
+                `UID:${uid}`,
+                `DTSTART:${toICSDate(start)}`,
+                `DTEND:${toICSDate(end)}`,
+                `SUMMARY:${session.title}`,
+                `DESCRIPTION:${description}${url ? '\\n\\nLink: ' + url : ''}`,
+                url ? `URL:${url}` : '',
+                `ORGANIZER;CN=${eventName}:MAILTO:noreply@${window.location.hostname}`,
+                'STATUS:CONFIRMED',
+                `DTSTAMP:${toICSDate(new Date())}`,
+                'END:VEVENT',
+                'END:VCALENDAR'
+            ].filter(Boolean).join('\r\n');
+
+            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${session.title.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '-')}.ics`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }
         
         // Close speaker modal on overlay click
         document.getElementById('speaker-modal').addEventListener('click', function(e) {
