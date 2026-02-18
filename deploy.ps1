@@ -101,7 +101,7 @@ $requiredProviders = @(
 )
 
 $registered = az provider list --query "[?registrationState=='Registered'].namespace" -o tsv 2>$null
-[array]$toRegister = $requiredProviders | Where-Object { $_ -notin $registered }
+$toRegister = @($requiredProviders | Where-Object { $_ -notin $registered })
 
 if ($toRegister.Count -gt 0) {
     Write-Host "  Registering $($toRegister.Count) provider(s): $($toRegister -join ', ')" -ForegroundColor Yellow
