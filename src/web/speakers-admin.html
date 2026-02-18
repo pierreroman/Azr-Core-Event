@@ -114,7 +114,22 @@
                         <input type="url" id="twitter" placeholder="https://twitter.com/...">
                     </div>
                 </div>
-                
+
+                <div class="form-group">
+                    <label>Sessions</label>
+                    <div class="session-picker">
+                        <div class="session-picker-list" id="speakerSessionsList">
+                            <span class="text-muted">No sessions assigned</span>
+                        </div>
+                        <div class="session-picker-add">
+                            <select id="sessionDropdown" class="form-input">
+                                <option value="">— Add a session —</option>
+                            </select>
+                            <button type="button" class="btn btn-secondary btn-small" onclick="addSessionToSpeaker()">+ Add</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Speaker</button>
@@ -125,9 +140,25 @@
 
     <script>
         let speakers = [];
+        let allSessions = [];       // All schedule sessions
+        let pickedSessionIds = [];  // Session IDs currently assigned to the speaker being edited
         
         // Load speakers on page load
-        document.addEventListener('DOMContentLoaded', loadSpeakers);
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Promise.all([loadSpeakers(), loadAllSessions()]);
+        });
+
+        // Load schedule sessions for the session picker
+        async function loadAllSessions() {
+            try {
+                const resp = await fetch('/api/schedule');
+                const data = await resp.json();
+                allSessions = data.schedule || [];
+            } catch (err) {
+                console.error('Error loading sessions:', err);
+                allSessions = [];
+            }
+        }
         
         const STORAGE_BASE = ''; // Will be set dynamically from API
         let storageBase = '';
@@ -315,9 +346,11 @@
             document.getElementById('speakerForm').reset();
             document.getElementById('speakerId').value = '';
             document.getElementById('headshotFile').value = '';
+            pickedSessionIds = [];
             galleryLoaded = false;
             document.getElementById('headshotGallery').style.display = 'none';
             updateHeadshotPreview('');
+            renderSessionPicker();
             document.getElementById('speakerModal').classList.add('active');
         }
         
@@ -334,9 +367,11 @@
             document.getElementById('headshotFile').value = speaker.headshotFile || '';
             document.getElementById('linkedin').value = speaker.linkedin || '';
             document.getElementById('twitter').value = speaker.twitter || '';
+            pickedSessionIds = [...(speaker.sessionIds || [])];
             galleryLoaded = false;
             document.getElementById('headshotGallery').style.display = 'none';
             updateHeadshotPreview(speaker.headshotFile);
+            renderSessionPicker();
             
             document.getElementById('speakerModal').classList.add('active');
         }
@@ -356,7 +391,8 @@
                 bio: document.getElementById('bio').value,
                 headshotFile: document.getElementById('headshotFile').value,
                 linkedin: document.getElementById('linkedin').value,
-                twitter: document.getElementById('twitter').value
+                twitter: document.getElementById('twitter').value,
+                sessionIds: pickedSessionIds
             };
             
             try {
@@ -465,6 +501,55 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeModal();
         });
+
+        // ── Session Picker ──────────────────────────────────────────
+        function renderSessionPicker() {
+            const listEl = document.getElementById('speakerSessionsList');
+            const dropdown = document.getElementById('sessionDropdown');
+
+            // Render assigned sessions
+            if (pickedSessionIds.length === 0) {
+                listEl.innerHTML = '<span class="text-muted">No sessions assigned</span>';
+            } else {
+                listEl.innerHTML = pickedSessionIds.map(sid => {
+                    const session = allSessions.find(s => s.id === sid);
+                    const label = session
+                        ? `${escapeHtml(session.title)}`
+                        : `<em>${escapeHtml(sid)}</em>`;
+                    const time = session
+                        ? `<span class="session-tag-time">${new Date(session.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>`
+                        : '';
+                    return `
+                        <div class="session-tag">
+                            ${time}
+                            <span class="session-tag-title">${label}</span>
+                            <button type="button" class="session-tag-remove" onclick="removeSessionFromSpeaker('${escapeHtml(sid)}')" title="Remove">&times;</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Populate dropdown with sessions not yet assigned
+            const available = allSessions.filter(s => !pickedSessionIds.includes(s.id));
+            dropdown.innerHTML = '<option value="">— Add a session —</option>' +
+                available.map(s => {
+                    const d = new Date(s.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                    return `<option value="${escapeHtml(s.id)}">${escapeHtml(s.title)} (${d})</option>`;
+                }).join('');
+        }
+
+        function addSessionToSpeaker() {
+            const dropdown = document.getElementById('sessionDropdown');
+            const sid = dropdown.value;
+            if (!sid || pickedSessionIds.includes(sid)) return;
+            pickedSessionIds.push(sid);
+            renderSessionPicker();
+        }
+
+        function removeSessionFromSpeaker(sid) {
+            pickedSessionIds = pickedSessionIds.filter(id => id !== sid);
+            renderSessionPicker();
+        }
     </script>
 </body>
 </html>

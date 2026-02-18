@@ -1593,6 +1593,74 @@ footer .copyright {
     margin-top: 12px;
 }
 
+/* Session picker in speaker edit modal */
+.session-picker {
+    background: var(--surface, #1a2340);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.session-picker-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    min-height: 32px;
+    align-items: center;
+}
+
+.session-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(80, 230, 255, 0.1);
+    border: 1px solid rgba(80, 230, 255, 0.3);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    color: #e0e0e0;
+}
+
+.session-tag-time {
+    color: var(--accent, #FFB900);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.session-tag-title {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.session-tag-remove {
+    background: none;
+    border: none;
+    color: #ff6b6b;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0 2px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.session-tag-remove:hover {
+    opacity: 1;
+}
+
+.session-picker-add {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.session-picker-add select {
+    flex: 1;
+}
+
 .headshot-preview {
     width: 100px;
     height: 100px;
