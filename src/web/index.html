@@ -11,19 +11,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 </head>
 <body>
-    <!-- Hero Section -->
-    <section class="hero">
-        <img src="assets/event-logo.png" alt="Event Logo" class="hero-logo" id="site-logo">
-        <h1 id="site-title">Community Online Event</h1>
-        <p class="tagline" id="site-tagline">A community-driven online event bringing people together.</p>
-        
-        <div>
+    <!-- Fixed Header Navigation -->
+    <header class="site-header">
+        <nav class="nav-container">
             <a href="#about" class="cta">About</a>
             <a href="#schedule" class="cta">Schedule</a>
             <a href="#speakers" class="cta">Speakers</a>
             <a href="#sponsors" class="cta" id="nav-sponsors">Sponsors</a>
             <a href="#" class="cta cta-register" id="nav-register" onclick="openRegistrationModal(); return false;" style="display:none;">Register</a>
-        </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <img src="assets/event-logo.png" alt="Event Logo" class="hero-logo" id="site-logo">
+        <h1 id="site-title">Community Online Event</h1>
+        <p class="tagline" id="site-tagline">A community-driven online event bringing people together.</p>
     </section>
 
     <!-- Video Player Section -->
