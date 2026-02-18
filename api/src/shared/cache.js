@@ -57,7 +57,22 @@ function invalidate(keyOrPrefix) {
     }
 }
 
+/**
+ * Schedule version tracker.
+ * Incremented on every schedule write operation (POST/PUT/DELETE/import).
+ * Clients poll GET /api/schedule/version and refresh when the value changes.
+ */
+let scheduleVersion = Date.now().toString(36);
+
+function bumpScheduleVersion() {
+    scheduleVersion = Date.now().toString(36);
+}
+
+function getScheduleVersion() {
+    return scheduleVersion;
+}
+
 /** Cache-Control header value for public GET responses */
 const CACHE_CONTROL_PUBLIC = 'public, max-age=60, stale-while-revalidate=300';
 
-module.exports = { get, set, invalidate, CACHE_CONTROL_PUBLIC };
+module.exports = { get, set, invalidate, bumpScheduleVersion, getScheduleVersion, CACHE_CONTROL_PUBLIC };

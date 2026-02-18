@@ -102,6 +102,7 @@ async function addScheduleItem(request, context) {
         
         await client.createEntity(entity);
         cache.invalidate('schedule');
+        cache.bumpScheduleVersion();
         
         context.log("Created schedule item with sessionId:", sessionId);
         
@@ -161,6 +162,7 @@ async function updateScheduleItem(request, context) {
         
         await client.updateEntity(updatedEntity, "Replace");
         cache.invalidate('schedule');
+        cache.bumpScheduleVersion();
         
         return {
             status: 200,
@@ -199,6 +201,7 @@ async function deleteScheduleItem(request, context) {
         
         await client.deleteEntity(existingEntity.partitionKey, id);
         cache.invalidate('schedule');
+        cache.bumpScheduleVersion();
         
         return {
             status: 200,
@@ -441,6 +444,7 @@ async function importScheduleFromCsv(request, context) {
         }
         
         cache.invalidate('schedule');
+        cache.bumpScheduleVersion();
 
         return {
             status: 200,
@@ -623,6 +627,7 @@ async function importPlaylist(request, context) {
         }
         
         cache.invalidate('schedule');
+        cache.bumpScheduleVersion();
 
         return {
             status: 200,
@@ -705,6 +710,21 @@ app.http("deleteScheduleItem", {
     handler: async (request, context) => {
         const id = decodeURIComponent(request.params.id);
         return deleteScheduleItem(wrapRequest(request, id), context);
+    }
+});
+
+// GET /api/schedule/version - Lightweight endpoint for real-time change detection.
+// Clients poll this every ~10s. When the version changes, they reload the full schedule.
+app.http("getScheduleVersion", {
+    methods: ["GET"],
+    authLevel: "anonymous",
+    route: "schedule/version",
+    handler: async (request, context) => {
+        return {
+            status: 200,
+            headers: { 'Cache-Control': 'no-cache, no-store' },
+            jsonBody: { version: cache.getScheduleVersion() }
+        };
     }
 });
 

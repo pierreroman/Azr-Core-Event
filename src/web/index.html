@@ -917,7 +917,52 @@
             loadSponsors();
             loadMarkdownContent();
             loadRegistration();
+            startScheduleVersionPolling();
         });
+
+        // ==================== REAL-TIME SCHEDULE REFRESH ====================
+        // Polls /api/schedule/version every 10s. When the server-side version
+        // changes (i.e. an admin added/edited/deleted a session), the full
+        // schedule is automatically reloaded for every connected browser.
+        let _scheduleVersion = null;
+        let _versionPollTimer = null;
+
+        async function startScheduleVersionPolling() {
+            // Seed the initial version so we don't trigger a reload on first poll
+            try {
+                const res = await fetch('/api/schedule/version');
+                if (res.ok) {
+                    const data = await res.json();
+                    _scheduleVersion = data.version;
+                }
+            } catch (_) { /* ignore */ }
+
+            _versionPollTimer = setInterval(checkScheduleVersion, 10_000);
+            // Pause polling when tab is hidden, resume when visible
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    clearInterval(_versionPollTimer);
+                    _versionPollTimer = null;
+                } else {
+                    checkScheduleVersion(); // immediate check on return
+                    _versionPollTimer = setInterval(checkScheduleVersion, 10_000);
+                }
+            });
+        }
+
+        async function checkScheduleVersion() {
+            try {
+                const res = await fetch('/api/schedule/version');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (_scheduleVersion && data.version !== _scheduleVersion) {
+                    console.log('Schedule updated remotely — refreshing...');
+                    _scheduleVersion = data.version;
+                    await loadSchedule();       // re-renders schedule list + video player
+                }
+                _scheduleVersion = data.version;
+            } catch (_) { /* network hiccup — retry next interval */ }
+        }
         
         // Helper to parse markdown safely with XSS sanitization
         function parseMarkdown(content) {
