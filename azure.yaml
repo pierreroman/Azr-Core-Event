@@ -34,7 +34,7 @@ hooks:
         'Microsoft.Web'
       )
       $registered = az provider list --query "[?registrationState=='Registered'].namespace" -o tsv 2>$null
-      $toRegister = $providers | Where-Object { $_ -notin $registered }
+      [array]$toRegister = $providers | Where-Object { $_ -notin $registered }
       if ($toRegister.Count -gt 0) {
         Write-Host "Registering $($toRegister.Count) resource provider(s)..."
         foreach ($ns in $toRegister) {
