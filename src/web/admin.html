@@ -95,6 +95,12 @@
                 </div>
                 
                 <div class="form-group">
+                    <label for="eventTagline" class="label-bold">Event Tagline</label>
+                    <input type="text" id="eventTagline" placeholder="A community-driven online event bringing people together." class="form-input">
+                    <small>Displayed under the event name on the main page</small>
+                </div>
+                
+                <div class="form-group">
                     <label class="label-bold">Event Logo</label>
                     <div class="logo-upload-area">
                         <div id="currentLogo" class="current-logo">
@@ -161,6 +167,7 @@
                     <h4>Preview</h4>
                     <div id="brandingPreview" class="branding-preview">
                         <div class="event-name" id="previewEventName">Community Online Event</div>
+                        <div class="event-tagline" id="previewEventTagline" style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 10px;">A community-driven online event bringing people together.</div>
                         <div class="btn-row">
                             <button id="previewPrimaryBtn" class="preview-btn">Primary Button</button>
                             <button id="previewSecondaryBtn" class="preview-btn">Secondary Button</button>
@@ -631,6 +638,7 @@ This is a **free, community-driven virtual event** bringing together passionate 
         
         const defaultBranding = {
             eventName: 'Community Online Event',
+            tagLine: 'A community-driven online event bringing people together.',
             logo: '/assets/event-logo.png',
             primaryColor: '#0078D4',
             secondaryColor: '#50E6FF',
@@ -667,6 +675,9 @@ This is a **free, community-driven virtual event** bringing together passionate 
             
             // Event name change
             document.getElementById('eventName').addEventListener('input', updateBrandingPreview);
+            
+            // Event tagline change
+            document.getElementById('eventTagline').addEventListener('input', updateBrandingPreview);
         }
         
         function loadBranding() {
@@ -674,6 +685,7 @@ This is a **free, community-driven virtual event** bringing together passionate 
             const branding = stored ? JSON.parse(stored) : defaultBranding;
             
             document.getElementById('eventName').value = branding.eventName || defaultBranding.eventName;
+            document.getElementById('eventTagline').value = branding.tagLine || defaultBranding.tagLine;
             
             // Load logo
             if (branding.logo && branding.logo !== defaultBranding.logo) {
@@ -694,6 +706,7 @@ This is a **free, community-driven virtual event** bringing together passionate 
         function saveBranding() {
             const branding = {
                 eventName: document.getElementById('eventName').value || defaultBranding.eventName,
+                tagLine: document.getElementById('eventTagline').value || defaultBranding.tagLine,
                 logo: document.getElementById('logoPreview').src,
                 primaryColor: document.getElementById('primaryColor').value,
                 secondaryColor: document.getElementById('secondaryColor').value,
@@ -780,6 +793,7 @@ This is a **free, community-driven virtual event** bringing together passionate 
             const secondary = document.getElementById('secondaryColor').value;
             const accent = document.getElementById('accentColor').value;
             const eventName = document.getElementById('eventName').value || defaultBranding.eventName;
+            const tagLine = document.getElementById('eventTagline').value || defaultBranding.tagLine;
             
             // Update preview
             const previewArea = document.getElementById('brandingPreview');
@@ -787,6 +801,7 @@ This is a **free, community-driven virtual event** bringing together passionate 
             
             document.getElementById('previewEventName').textContent = eventName;
             document.getElementById('previewEventName').style.color = primary;
+            document.getElementById('previewEventTagline').textContent = tagLine;
             
             document.getElementById('previewPrimaryBtn').style.background = primary;
             document.getElementById('previewSecondaryBtn').style.background = secondary;

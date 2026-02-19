@@ -1183,7 +1183,13 @@
                 if (branding.eventName) {
                     document.title = branding.eventName;
                     document.getElementById('site-title').textContent = branding.eventName;
-                    // Extract base name without year for tagline
+                }
+                
+                // Apply tagline (use custom if set, otherwise generate from event name)
+                if (branding.tagLine) {
+                    document.getElementById('site-tagline').textContent = branding.tagLine;
+                } else if (branding.eventName) {
+                    // Extract base name without year for auto-generated tagline
                     const baseName = branding.eventName.replace(/\s*\d{4}$/, '');
                     document.getElementById('site-tagline').textContent = baseName + ' - a community event focused on compute, network, and storage in Azure.';
                 }
