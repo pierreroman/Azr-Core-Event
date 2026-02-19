@@ -301,7 +301,7 @@
                 const initials = getInitials(speaker.name);
                 
                 return `
-                    <div class="speaker-card" role="button" tabindex="0" onclick="openSpeakerModal('${speaker.id}')" onkeydown="handleCardKeydown(event, () => openSpeakerModal('${speaker.id}'))" aria-label="View ${escapeHtml(speaker.name || 'speaker')} details">
+                    <div class="speaker-card" role="button" tabindex="0" onclick="openSpeakerModal('${speaker.id}')" onkeydown="handleCardKeydown(event, () => openSpeakerModal('${speaker.id}'))">
                         <div class="speaker-avatar" style="${avatarStyle}">
                             ${!headshotUrl ? initials : ''}
                         </div>
@@ -758,7 +758,7 @@
                             : '';
                         
                         html += `
-                            <div class="session-card" role="button" tabindex="0" onclick="openSession('${session.id}')" onkeydown="handleCardKeydown(event, () => openSession('${session.id}'))" aria-label="View session: ${escapeHtml(session.title)}">
+                            <div class="session-card" role="button" tabindex="0" onclick="openSession('${session.id}')" onkeydown="handleCardKeydown(event, () => openSession('${session.id}'))">
                                 <div class="session-time">${time}</div>
                                 <h4>${escapeHtml(session.title)}</h4>
                                 <p>${escapeHtml(truncatedDesc)}</p>
@@ -1190,7 +1190,7 @@
                         ? `${sponsorStorageBaseUrl}/${sponsor.logoFile}`
                         : '';
                     html += `
-                        <div class="sponsor-logo" role="button" tabindex="0" onclick="openSponsorDetailModal('${sponsor.id}')" onkeydown="handleCardKeydown(event, () => openSponsorDetailModal('${sponsor.id}'))" title="${escapeHtml(sponsor.name)}" aria-label="View ${escapeHtml(sponsor.name)} details">
+                        <div class="sponsor-logo" role="button" tabindex="0" onclick="openSponsorDetailModal('${sponsor.id}')" onkeydown="handleCardKeydown(event, () => openSponsorDetailModal('${sponsor.id}'))" title="${escapeHtml(sponsor.name)}">
                             ${logoUrl
                                 ? `<img src="${logoUrl}" alt="${escapeHtml(sponsor.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';"><span style="display:none;">${escapeHtml(sponsor.name)}</span>`
                                 : `<span>${escapeHtml(sponsor.name)}</span>`
