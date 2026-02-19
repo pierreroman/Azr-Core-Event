@@ -7,10 +7,53 @@
   --surface: #121a2f;
   --card: #18213d;
   --header-height: 60px;
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.5);
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+
+/* Smooth scrolling with offset for fixed header */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-height) + 20px);
+}
+
+/* Skip to main content link (WCAG 2.4.1) */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 0 0 8px 8px;
+  text-decoration: none;
+  font-weight: 600;
+  z-index: 10001;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Global focus styles (WCAG 2.4.7) */
+:focus-visible {
+  outline: 2px solid var(--primary-2);
+  outline-offset: 2px;
+}
+
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--primary-2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
 /* Fixed Header */
 .site-header {
@@ -538,9 +581,15 @@ section .section-subtitle {
   border-radius: 14px;
 }
 
-.speaker-card:hover {
+.speaker-card:hover,
+.speaker-card:focus-visible {
   transform: translateY(-4px);
   background: rgba(59, 130, 246, 0.1);
+}
+
+.speaker-card:focus-visible {
+  outline: 2px solid var(--primary-2);
+  outline-offset: 2px;
 }
 
 .speaker-avatar {
@@ -717,10 +766,16 @@ section .section-subtitle {
   justify-content: center;
 }
 
-.sponsor-logo:hover {
+.sponsor-logo:hover,
+.sponsor-logo:focus-visible {
   transform: translateY(-2px);
   border-color: var(--primary);
   box-shadow: 0 4px 16px rgba(0, 120, 212, 0.15);
+}
+
+.sponsor-logo:focus-visible {
+  outline: 2px solid var(--primary-2);
+  outline-offset: 2px;
 }
 
 .sponsor-logo img {
@@ -1002,10 +1057,16 @@ section .section-subtitle {
   overflow: hidden;
 }
 
-.session-card:hover {
+.session-card:hover,
+.session-card:focus-visible {
   border-color: var(--primary-2);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(38, 112, 255, 0.15);
+}
+
+.session-card:focus-visible {
+  outline: 2px solid var(--primary-2);
+  outline-offset: 2px;
 }
 
 .session-card .session-time {
@@ -1457,7 +1518,8 @@ footer .copyright {
 
 .form-group input:focus,
 .form-group textarea:focus {
-    outline: none;
+    outline: 2px solid var(--primary-2);
+    outline-offset: 2px;
     border-color: var(--primary-2);
 }
 

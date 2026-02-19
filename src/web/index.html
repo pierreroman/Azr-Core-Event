@@ -11,6 +11,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 </head>
 <body>
+    <!-- Skip to main content link for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <!-- Fixed Header Navigation -->
     <header class="site-header">
         <nav class="nav-container">
@@ -24,6 +27,7 @@
     </header>
 
     <!-- Hero Section -->
+    <main id="main-content">
     <section class="hero">
         <img src="assets/event-logo.png" alt="Event Logo" class="hero-logo" id="site-logo">
         <h1 id="site-title">Community Online Event</h1>
@@ -99,10 +103,12 @@
         </div>
     </section>
 
+    </main>
+
     <!-- Sponsor Detail Modal -->
-    <div id="sponsor-modal" class="modal-overlay">
+    <div id="sponsor-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="sponsor-modal-name">
         <div class="modal-content sponsor-modal-content">
-            <button class="modal-close" onclick="closeSponsorDetailModal()">&times;</button>
+            <button class="modal-close" onclick="closeSponsorDetailModal()" aria-label="Close sponsor details">&times;</button>
             <div class="sponsor-modal-header">
                 <div class="sponsor-modal-logo" id="sponsor-modal-logo"></div>
                 <div class="sponsor-modal-info">
@@ -127,9 +133,9 @@
     </footer>
 
     <!-- Registration Modal -->
-    <div id="registration-modal" class="modal-overlay">
+    <div id="registration-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="registration-modal-title">
         <div class="modal-content registration-modal-content">
-            <button class="modal-close" onclick="closeRegistrationModal()">&times;</button>
+            <button class="modal-close" onclick="closeRegistrationModal()" aria-label="Close registration">&times;</button>
             <div class="registration-modal-icon">🎟️</div>
             <h2 class="modal-title" id="registration-modal-title">Register Now</h2>
             <div class="registration-modal-description markdown-content" id="registration-modal-description">Join us for this community event! Click the link below to register.</div>
@@ -140,9 +146,9 @@
     </div>
 
     <!-- Code of Conduct Modal -->
-    <div id="coc-modal" class="modal-overlay">
+    <div id="coc-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Code of Conduct">
         <div class="modal-content coc-modal-content">
-            <button class="modal-close" onclick="closeCodeOfConduct()">&times;</button>
+            <button class="modal-close" onclick="closeCodeOfConduct()" aria-label="Close code of conduct">&times;</button>
             <div id="coc-content" class="markdown-content coc-content">
                 <div class="loading">Loading code of conduct...</div>
             </div>
@@ -150,9 +156,9 @@
     </div>
 
     <!-- Session Modal -->
-    <div id="session-modal" class="modal-overlay">
+    <div id="session-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <button class="modal-close" onclick="closeModal()" aria-label="Close session details">&times;</button>
             <div class="modal-time" id="modal-time"></div>
             <h2 class="modal-title" id="modal-title"></h2>
             <div class="modal-description" id="modal-description"></div>
@@ -163,9 +169,9 @@
     </div>
 
     <!-- Speaker Modal -->
-    <div id="speaker-modal" class="modal-overlay">
+    <div id="speaker-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="speaker-modal-name">
         <div class="modal-content speaker-modal-content">
-            <button class="modal-close" onclick="closeSpeakerModal()">&times;</button>
+            <button class="modal-close" onclick="closeSpeakerModal()" aria-label="Close speaker details">&times;</button>
             <div class="speaker-modal-header">
                 <div class="speaker-modal-avatar" id="speaker-modal-avatar"></div>
                 <div class="speaker-modal-info">
@@ -197,6 +203,65 @@
         
         function onYouTubeIframeAPIReady() {
             // API is ready, player will be created when needed
+        }
+        
+        // Accessibility utilities
+        let lastFocusedElement = null;
+        
+        function trapFocus(modalElement) {
+            const focusableElements = modalElement.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            const firstFocusable = focusableElements[0];
+            const lastFocusable = focusableElements[focusableElements.length - 1];
+            
+            function handleKeydown(e) {
+                if (e.key === 'Escape') {
+                    const closeBtn = modalElement.querySelector('.modal-close');
+                    if (closeBtn) closeBtn.click();
+                    return;
+                }
+                
+                if (e.key !== 'Tab') return;
+                
+                if (e.shiftKey) {
+                    if (document.activeElement === firstFocusable) {
+                        lastFocusable.focus();
+                        e.preventDefault();
+                    }
+                } else {
+                    if (document.activeElement === lastFocusable) {
+                        firstFocusable.focus();
+                        e.preventDefault();
+                    }
+                }
+            }
+            
+            modalElement._trapFocusHandler = handleKeydown;
+            modalElement.addEventListener('keydown', handleKeydown);
+            
+            // Focus the first focusable element
+            if (firstFocusable) {
+                setTimeout(() => firstFocusable.focus(), 50);
+            }
+        }
+        
+        function releaseFocus(modalElement) {
+            if (modalElement._trapFocusHandler) {
+                modalElement.removeEventListener('keydown', modalElement._trapFocusHandler);
+                delete modalElement._trapFocusHandler;
+            }
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+                lastFocusedElement = null;
+            }
+        }
+        
+        function handleCardKeydown(event, callback) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                callback();
+            }
         }
         
         // Speaker functions
@@ -236,7 +301,7 @@
                 const initials = getInitials(speaker.name);
                 
                 return `
-                    <div class="speaker-card" onclick="openSpeakerModal('${speaker.id}')">
+                    <div class="speaker-card" role="button" tabindex="0" onclick="openSpeakerModal('${speaker.id}')" onkeydown="handleCardKeydown(event, () => openSpeakerModal('${speaker.id}'))" aria-label="View ${escapeHtml(speaker.name || 'speaker')} details">
                         <div class="speaker-avatar" style="${avatarStyle}">
                             ${!headshotUrl ? initials : ''}
                         </div>
@@ -330,10 +395,14 @@
             
             document.getElementById('speaker-modal').classList.add('active');
             document.body.style.overflow = 'hidden';
+            lastFocusedElement = document.activeElement;
+            trapFocus(document.getElementById('speaker-modal'));
         }
         
         function closeSpeakerModal() {
-            document.getElementById('speaker-modal').classList.remove('active');
+            const modal = document.getElementById('speaker-modal');
+            releaseFocus(modal);
+            modal.classList.remove('active');
             document.body.style.overflow = '';
         }
         
@@ -689,7 +758,7 @@
                             : '';
                         
                         html += `
-                            <div class="session-card" onclick="openSession('${session.id}')">
+                            <div class="session-card" role="button" tabindex="0" onclick="openSession('${session.id}')" onkeydown="handleCardKeydown(event, () => openSession('${session.id}'))" aria-label="View session: ${escapeHtml(session.title)}">
                                 <div class="session-time">${time}</div>
                                 <h4>${escapeHtml(session.title)}</h4>
                                 <p>${escapeHtml(truncatedDesc)}</p>
@@ -762,10 +831,14 @@
             
             document.getElementById('session-modal').classList.add('active');
             document.body.style.overflow = 'hidden';
+            lastFocusedElement = document.activeElement;
+            trapFocus(document.getElementById('session-modal'));
         }
         
         function closeModal() {
-            document.getElementById('session-modal').classList.remove('active');
+            const modal = document.getElementById('session-modal');
+            releaseFocus(modal);
+            modal.classList.remove('active');
             document.body.style.overflow = '';
         }
         
@@ -847,10 +920,14 @@
         function openCodeOfConduct() {
             document.getElementById('coc-modal').classList.add('active');
             document.body.style.overflow = 'hidden';
+            lastFocusedElement = document.activeElement;
+            trapFocus(document.getElementById('coc-modal'));
         }
         
         function closeCodeOfConduct() {
-            document.getElementById('coc-modal').classList.remove('active');
+            const modal = document.getElementById('coc-modal');
+            releaseFocus(modal);
+            modal.classList.remove('active');
             document.body.style.overflow = '';
         }
         
@@ -901,10 +978,14 @@
             if (!registrationConfig || !registrationConfig.enabled) return;
             document.getElementById('registration-modal').classList.add('active');
             document.body.style.overflow = 'hidden';
+            lastFocusedElement = document.activeElement;
+            trapFocus(document.getElementById('registration-modal'));
         }
 
         function closeRegistrationModal() {
-            document.getElementById('registration-modal').classList.remove('active');
+            const modal = document.getElementById('registration-modal');
+            releaseFocus(modal);
+            modal.classList.remove('active');
             document.body.style.overflow = '';
         }
 
@@ -1109,7 +1190,7 @@
                         ? `${sponsorStorageBaseUrl}/${sponsor.logoFile}`
                         : '';
                     html += `
-                        <div class="sponsor-logo" onclick="openSponsorDetailModal('${sponsor.id}')" title="${escapeHtml(sponsor.name)}">
+                        <div class="sponsor-logo" role="button" tabindex="0" onclick="openSponsorDetailModal('${sponsor.id}')" onkeydown="handleCardKeydown(event, () => openSponsorDetailModal('${sponsor.id}'))" title="${escapeHtml(sponsor.name)}" aria-label="View ${escapeHtml(sponsor.name)} details">
                             ${logoUrl
                                 ? `<img src="${logoUrl}" alt="${escapeHtml(sponsor.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';"><span style="display:none;">${escapeHtml(sponsor.name)}</span>`
                                 : `<span>${escapeHtml(sponsor.name)}</span>`
@@ -1164,10 +1245,14 @@
 
             document.getElementById('sponsor-modal').classList.add('active');
             document.body.style.overflow = 'hidden';
+            lastFocusedElement = document.activeElement;
+            trapFocus(document.getElementById('sponsor-modal'));
         }
 
         function closeSponsorDetailModal() {
-            document.getElementById('sponsor-modal').classList.remove('active');
+            const modal = document.getElementById('sponsor-modal');
+            releaseFocus(modal);
+            modal.classList.remove('active');
             document.body.style.overflow = '';
         }
 
