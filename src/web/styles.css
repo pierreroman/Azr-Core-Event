@@ -85,7 +85,8 @@ button:focus-visible,
 
 /* Hero Section */
 .hero {
-  background: radial-gradient(1000px 500px at 10% 0%, rgba(38,112,255,0.3), transparent 60%), linear-gradient(180deg, #0a0f1f 0%, #0a0f1f 70%, #0c1224 100%);
+  background-color: #0a0f1f; /* Solid fallback for WCAG 2 AA contrast (16.8:1 with white) */
+  background-image: radial-gradient(1000px 500px at 10% 0%, rgba(38,112,255,0.3), transparent 60%), linear-gradient(180deg, #0a0f1f 0%, #0a0f1f 70%, #0c1224 100%);
   border-bottom: 1px solid #1c2544;
   padding: calc(var(--header-height) + 24px) 24px 48px;
   text-align: center;
