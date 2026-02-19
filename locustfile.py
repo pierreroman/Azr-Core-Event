@@ -30,7 +30,7 @@ class EventAttendee(HttpUser):
     """Simulates a typical event attendee browsing the site."""
 
     wait_time = between(1, 5)  # Think time between requests
-    host = os.getenv("HOST", "https://www.azureinfrasummit.com")
+    host = os.getenv("HOST", "https://gentle-tree-01406420f.1.azurestaticapps.net")
 
     # ── Page loads (browser-like) ────────────────────────────────
 

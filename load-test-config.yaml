@@ -29,24 +29,22 @@ configurationOverrides:
     users: 10000           # Total concurrent users
     spawnRate: 500          # Users spawned per second (ramp-up)
     runTime: 600           # Test duration in seconds (10 min)
-    host: https://www.azureinfrasummit.com
+    host: https://gentle-tree-01406420f.1.azurestaticapps.net
+
+# Environment variables for all engines
+env:
+  - name: HOST
+    value: https://gentle-tree-01406420f.1.azurestaticapps.net
 
 # ── Geographic Distribution ─────────────────────────────────────────────────
-# Distribute engine instances across regions to simulate real-world traffic.
+# Single region (multi-region has HOST propagation issues with Locust)
+# All 10 engines in East US 2 for 10K users
 #
-#   Region             | Engines | Users  | % of Traffic
-#   -------------------|---------|--------|-------------
-#   East US 2          |    7    | 7,000  | 70%
-#   West Europe        |    2    | 2,000  | 20%
-#   Southeast Asia     |    1    | 1,000  | 10%
-#
-regionalLoadTestConfig:
-  - region: eastus2
-    engineInstances: 7
-  - region: westeurope
-    engineInstances: 2
-  - region: southeastasia
-    engineInstances: 1
+# regionalLoadTestConfig:
+#   - region: eastus2
+#     engineInstances: 7
+#   - region: westeurope
+#     engineInstances: 3
 
 # ── Failure Criteria ────────────────────────────────────────────────────────
 # Automatically flag the test as failed if these thresholds are breached.
