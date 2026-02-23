@@ -284,7 +284,7 @@
             const grid = document.getElementById('speakers-grid');
             
             if (!speakersData || speakersData.length === 0) {
-                grid.innerHTML = '<p>No speakers available yet.</p>';
+                grid.innerHTML = '<p style="text-align: center; width: 100%;">No speakers available yet.</p>';
                 return;
             }
             
@@ -712,7 +712,7 @@
                 
                 if (scheduleData.length === 0) {
                     container.innerHTML = `
-                        <div class="no-schedule-message">
+                        <div class="no-schedule-message" style="text-align: center; max-width: 600px; margin: 0 auto;">
                             <p>The full event schedule isn't available just yet, but we're working on it. Check back soon for updates as sessions and speakers are finalized. In the meantime, be sure to save the date using the <strong>Add to Calendar (ICS)</strong> button below so it's locked into your calendar and you don't miss a thing.</p>
                             <button class="btn btn-primary" onclick="downloadICS()" style="margin-top: 16px;">📅 Add to Calendar (ICS)</button>
                         </div>`;
