@@ -102,6 +102,21 @@
                     <input type="text" id="eventTagline" placeholder="A community-driven online event bringing people together." class="form-input">
                     <small>Displayed under the event name on the main page</small>
                 </div>
+
+                <div class="form-group">
+                    <label class="label-bold">Event Dates</label>
+                    <div class="grid-auto">
+                        <div>
+                            <label for="eventStartDate" class="label-muted">Start Date</label>
+                            <input type="date" id="eventStartDate" class="form-input" style="margin-top: 5px;">
+                        </div>
+                        <div>
+                            <label for="eventEndDate" class="label-muted">End Date</label>
+                            <input type="date" id="eventEndDate" class="form-input" style="margin-top: 5px;">
+                        </div>
+                    </div>
+                    <small>Used for the "Add to Calendar (ICS)" button shown when no schedule is available</small>
+                </div>
                 
                 <div class="form-group">
                     <label class="label-bold">Event Logo</label>
@@ -646,7 +661,9 @@ This is a **free, community-driven virtual event** bringing together passionate 
             primaryColor: '#0078D4',
             secondaryColor: '#50E6FF',
             accentColor: '#FFB900',
-            hideSponsors: false
+            hideSponsors: false,
+            eventStartDate: '',
+            eventEndDate: ''
         };
         
         const colorPresets = {
@@ -681,6 +698,10 @@ This is a **free, community-driven virtual event** bringing together passionate 
             
             // Event tagline change
             document.getElementById('eventTagline').addEventListener('input', updateBrandingPreview);
+
+            // Event date changes
+            document.getElementById('eventStartDate').addEventListener('input', updateBrandingPreview);
+            document.getElementById('eventEndDate').addEventListener('input', updateBrandingPreview);
         }
         
         function loadBranding() {
@@ -689,6 +710,8 @@ This is a **free, community-driven virtual event** bringing together passionate 
             
             document.getElementById('eventName').value = branding.eventName || defaultBranding.eventName;
             document.getElementById('eventTagline').value = branding.tagLine || defaultBranding.tagLine;
+            document.getElementById('eventStartDate').value = branding.eventStartDate || '';
+            document.getElementById('eventEndDate').value = branding.eventEndDate || '';
             
             // Load logo
             if (branding.logo && branding.logo !== defaultBranding.logo) {
@@ -713,7 +736,9 @@ This is a **free, community-driven virtual event** bringing together passionate 
                 logo: document.getElementById('logoPreview').src,
                 primaryColor: document.getElementById('primaryColor').value,
                 secondaryColor: document.getElementById('secondaryColor').value,
-                accentColor: document.getElementById('accentColor').value
+                accentColor: document.getElementById('accentColor').value,
+                eventStartDate: document.getElementById('eventStartDate').value,
+                eventEndDate: document.getElementById('eventEndDate').value
             };
             
             // Preserve hideSponsors from existing branding (managed in Sponsors page)

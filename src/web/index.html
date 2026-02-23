@@ -711,7 +711,11 @@
                 updateVideoPlayer();
                 
                 if (scheduleData.length === 0) {
-                    container.innerHTML = '<p>No sessions scheduled yet.</p>';
+                    container.innerHTML = `
+                        <div class="no-schedule-message">
+                            <p>The full event schedule isn't available just yet, but we're working on it. Check back soon for updates as sessions and speakers are finalized. In the meantime, be sure to save the date using the <strong>Add to Calendar (ICS)</strong> button below so it's locked into your calendar and you don't miss a thing.</p>
+                            <button class="btn btn-primary" onclick="downloadICS()" style="margin-top: 16px;">📅 Add to Calendar (ICS)</button>
+                        </div>`;
                     return;
                 }
                 
@@ -1254,6 +1258,59 @@
             releaseFocus(modal);
             modal.classList.remove('active');
             document.body.style.overflow = '';
+        }
+
+        // Generate and download an ICS calendar file for the event
+        function downloadICS() {
+            const stored = localStorage.getItem('event-branding');
+            const branding = stored ? JSON.parse(stored) : {};
+            const eventName = branding.eventName || document.getElementById('site-title').textContent || 'Community Online Event';
+            const tagLine = branding.tagLine || document.getElementById('site-tagline').textContent || '';
+
+            // Use dates from branding or fall back to reasonable defaults
+            let startDate, endDate;
+            if (branding.eventStartDate) {
+                startDate = new Date(branding.eventStartDate + 'T09:00:00');
+            } else {
+                // Default: next Monday at 9 AM
+                startDate = new Date();
+                startDate.setDate(startDate.getDate() + ((8 - startDate.getDay()) % 7 || 7));
+                startDate.setHours(9, 0, 0, 0);
+            }
+            if (branding.eventEndDate) {
+                endDate = new Date(branding.eventEndDate + 'T17:00:00');
+            } else {
+                endDate = new Date(startDate);
+                endDate.setHours(17, 0, 0, 0);
+            }
+
+            const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+            const uid = 'event-' + Date.now() + '@community-event';
+
+            const ics = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//Community Event//EN',
+                'BEGIN:VEVENT',
+                'UID:' + uid,
+                'DTSTAMP:' + fmt(new Date()),
+                'DTSTART:' + fmt(startDate),
+                'DTEND:' + fmt(endDate),
+                'SUMMARY:' + eventName,
+                'DESCRIPTION:' + tagLine.replace(/\n/g, '\\n'),
+                'END:VEVENT',
+                'END:VCALENDAR'
+            ].join('\r\n');
+
+            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = eventName.replace(/[^a-zA-Z0-9]/g, '_') + '.ics';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         // Apply branding from localStorage
