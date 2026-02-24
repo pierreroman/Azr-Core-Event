@@ -705,9 +705,23 @@ This is a **free, community-driven virtual event** bringing together passionate 
         }
         
         function loadBranding() {
-            const stored = localStorage.getItem('event-branding');
-            const branding = stored ? JSON.parse(stored) : defaultBranding;
-            
+            // Load from API first, fall back to localStorage
+            fetch('/api/branding')
+                .then(r => r.json())
+                .then(branding => {
+                    // Sync to localStorage for local preview
+                    localStorage.setItem('event-branding', JSON.stringify(branding));
+                    applyBrandingToForm(branding);
+                })
+                .catch(err => {
+                    console.log('Branding API unavailable, loading from localStorage:', err);
+                    const stored = localStorage.getItem('event-branding');
+                    const branding = stored ? JSON.parse(stored) : defaultBranding;
+                    applyBrandingToForm(branding);
+                });
+        }
+
+        function applyBrandingToForm(branding) {
             document.getElementById('eventName').value = branding.eventName || defaultBranding.eventName;
             document.getElementById('eventTagline').value = branding.tagLine || defaultBranding.tagLine;
             document.getElementById('eventStartDate').value = branding.eventStartDate || '';
@@ -750,13 +764,41 @@ This is a **free, community-driven virtual event** bringing together passionate 
                 } catch(e) {}
             }
             
+            // Save to localStorage for immediate local use
             localStorage.setItem('event-branding', JSON.stringify(branding));
-            showAlert('Branding saved! Changes will appear on the main site.', 'success');
+
+            // Save to cloud API so all devices get the branding
+            fetch('/api/branding', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(branding)
+            })
+            .then(r => {
+                if (r.ok) {
+                    showAlert('Branding saved to cloud! Changes will appear on all devices.', 'success');
+                } else {
+                    return r.json().then(err => {
+                        showAlert(`Saved locally but cloud save failed: ${err.error}`, 'danger');
+                    });
+                }
+            })
+            .catch(err => {
+                console.error('Error saving branding to cloud:', err);
+                showAlert('Saved locally but cloud save failed. Changes only visible on this device.', 'danger');
+            });
         }
         
         function resetBranding() {
             if (confirm('Reset all branding to default values?')) {
                 localStorage.removeItem('event-branding');
+                
+                // Reset in cloud too
+                fetch('/api/branding', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(defaultBranding)
+                }).catch(err => console.error('Error resetting cloud branding:', err));
+                
                 loadBranding();
                 document.getElementById('logoPreview').src = defaultBranding.logo;
                 showAlert('Branding reset to default', 'success');

@@ -90,6 +90,16 @@
       "route": "/api/registration",
       "methods": ["GET"],
       "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/api/branding",
+      "methods": ["PUT"],
+      "allowedRoles": ["administrator"]
+    },
+    {
+      "route": "/api/branding",
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous"]
     }
   ],
   "responseOverrides": {

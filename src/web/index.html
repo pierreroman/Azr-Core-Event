@@ -1327,14 +1327,27 @@
             URL.revokeObjectURL(url);
         }
 
-        // Apply branding from localStorage
+        // Apply branding from cloud API (with localStorage fallback)
         function applyBranding() {
-            const stored = localStorage.getItem('event-branding');
-            if (!stored) return;
-            
+            // Try API first for cross-device consistency
+            fetch('/api/branding')
+                .then(r => r.json())
+                .then(branding => {
+                    // Sync to localStorage
+                    localStorage.setItem('event-branding', JSON.stringify(branding));
+                    applyBrandingData(branding);
+                })
+                .catch(err => {
+                    console.log('Branding API unavailable, using localStorage:', err);
+                    const stored = localStorage.getItem('event-branding');
+                    if (stored) {
+                        applyBrandingData(JSON.parse(stored));
+                    }
+                });
+        }
+
+        function applyBrandingData(branding) {
             try {
-                const branding = JSON.parse(stored);
-                
                 // Apply event name (use as-is, don't append year)
                 if (branding.eventName) {
                     document.title = branding.eventName;
@@ -1356,8 +1369,6 @@
                 }
                 
                 // Apply colors via CSS custom properties
-                // Primary Color -> --primary (buttons, links)
-                // Secondary Color -> --primary-2 (highlights, gradients)
                 if (branding.primaryColor) {
                     document.documentElement.style.setProperty('--primary', branding.primaryColor);
                 }
@@ -1371,6 +1382,11 @@
                     const sponsorsNav = document.getElementById('nav-sponsors');
                     if (sponsorsSection) sponsorsSection.style.display = 'none';
                     if (sponsorsNav) sponsorsNav.style.display = 'none';
+                }
+
+                // Re-evaluate video placeholder now that branding dates are available
+                if (scheduleData.length === 0) {
+                    updateVideoPlayer();
                 }
             } catch (e) {
                 console.error('Error applying branding:', e);
