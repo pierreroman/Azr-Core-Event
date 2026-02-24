@@ -511,7 +511,21 @@
             const now = new Date();
             
             if (scheduleData.length === 0) {
-                container.innerHTML = '<img src="assets/OnDemand.png" alt="Watch on demand">';
+                // Determine placeholder based on event dates from branding
+                const stored = localStorage.getItem('event-branding');
+                const branding = stored ? JSON.parse(stored) : {};
+                let placeholderImg = 'assets/OnDemand.png';
+                let placeholderAlt = 'Watch on demand';
+
+                if (branding.eventStartDate) {
+                    const eventStart = new Date(branding.eventStartDate + 'T00:00:00');
+                    if (eventStart > now) {
+                        placeholderImg = 'assets/Save-the-date.png';
+                        placeholderAlt = 'Save the date';
+                    }
+                }
+
+                container.innerHTML = `<img src="${placeholderImg}" alt="${placeholderAlt}">`;
                 updateInfoBoxes(null, null);
                 return;
             }
