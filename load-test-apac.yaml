@@ -1,0 +1,43 @@
+###############################################################################
+# Azure Load Testing — Asia-Pacific (20%)
+# ---------------------------------------------------------------------------
+# 2,000 concurrent users from Southeast Asia
+# Part of a 3-region capacity test totaling 10,000 users.
+# Run all 3 region configs simultaneously for full load.
+#
+# Insight budget: 5 insights for this region's test run.
+###############################################################################
+
+version: v0.1
+testId: azureinfrasummit-load-10k-apac
+displayName: "10K Capacity Test — Asia-Pacific (20%)"
+description: "2,000 users from Southeast Asia — run with NA and EU configs for full 10K load"
+
+testPlan: locustfile.py
+testType: Locust
+
+engineInstances: 2        # 2 engines × ~1,000 users = 2,000
+
+configurationOverrides:
+  locust:
+    users: 2000            # Concurrent users for this region
+    spawnRate: 100          # Ramp-up: 100 users/sec (~20s to full load)
+    runTime: 600            # 10 minutes
+    host: https://www.azureinfrasummit.com/
+
+env:
+  - name: HOST
+    value: https://www.azureinfrasummit.com/
+  - name: REGION
+    value: Asia-Pacific
+
+# ── Failure Criteria ────────────────────────────────────────────────────────
+failureCriteria:
+  - avg(response_time_ms) > 3000                # Avg response > 3s
+  - percentage(error) > 5                        # Error rate > 5%
+  - p99(response_time_ms) > 10000               # P99 latency > 10s
+
+# ── Auto-Stop ───────────────────────────────────────────────────────────────
+autoStop:
+  errorPercentage: 80
+  timeWindow: 60

@@ -25,6 +25,9 @@ from locust import HttpUser, task, between, events
 
 logging.basicConfig(level=logging.WARNING)
 
+# Region tag for multi-region test identification
+REGION = os.getenv("REGION", "default")
+
 
 class EventAttendee(HttpUser):
     """Simulates a typical event attendee browsing the site."""
@@ -37,7 +40,7 @@ class EventAttendee(HttpUser):
     @task(50)
     def browse_homepage(self):
         """Load the main event page — highest traffic."""
-        with self.client.get("/", name="GET / (homepage)", catch_response=True) as r:
+        with self.client.get("/", name=f"[{REGION}] GET / (homepage)", catch_response=True) as r:
             if r.status_code == 200:
                 r.success()
             else:
@@ -46,14 +49,14 @@ class EventAttendee(HttpUser):
     @task(5)
     def load_styles(self):
         """Load the main stylesheet."""
-        self.client.get("/styles.css", name="GET /styles.css")
+        self.client.get("/styles.css", name=f"[{REGION}] GET /styles.css")
 
     # ── API endpoints (XHR calls the page makes) ────────────────
 
     @task(15)
     def get_schedule(self):
         """Fetch the event schedule — called on every page load."""
-        with self.client.get("/api/schedule", name="GET /api/schedule", catch_response=True) as r:
+        with self.client.get("/api/schedule", name=f"[{REGION}] GET /api/schedule", catch_response=True) as r:
             if r.status_code == 200:
                 r.success()
             else:
@@ -62,7 +65,7 @@ class EventAttendee(HttpUser):
     @task(15)
     def get_speakers(self):
         """Fetch speaker list."""
-        with self.client.get("/api/speakers", name="GET /api/speakers", catch_response=True) as r:
+        with self.client.get("/api/speakers", name=f"[{REGION}] GET /api/speakers", catch_response=True) as r:
             if r.status_code == 200:
                 r.success()
             else:
@@ -71,7 +74,7 @@ class EventAttendee(HttpUser):
     @task(5)
     def get_sponsors(self):
         """Fetch sponsor list."""
-        with self.client.get("/api/sponsors", name="GET /api/sponsors", catch_response=True) as r:
+        with self.client.get("/api/sponsors", name=f"[{REGION}] GET /api/sponsors", catch_response=True) as r:
             if r.status_code == 200:
                 r.success()
             else:
@@ -80,7 +83,7 @@ class EventAttendee(HttpUser):
     @task(5)
     def get_about_content(self):
         """Fetch about page markdown content."""
-        with self.client.get("/api/content/about", name="GET /api/content/about", catch_response=True) as r:
+        with self.client.get("/api/content/about", name=f"[{REGION}] GET /api/content/about", catch_response=True) as r:
             if r.status_code == 200:
                 r.success()
             else:
@@ -89,4 +92,4 @@ class EventAttendee(HttpUser):
     @task(5)
     def get_code_of_conduct(self):
         """Fetch code of conduct."""
-        self.client.get("/api/content/code-of-conduct", name="GET /api/content/code-of-conduct")
+        self.client.get("/api/content/code-of-conduct", name=f"[{REGION}] GET /api/content/code-of-conduct")

@@ -1,0 +1,43 @@
+###############################################################################
+# Azure Load Testing — North America (60%)
+# ---------------------------------------------------------------------------
+# 6,000 concurrent users from East US 2
+# Part of a 3-region capacity test totaling 10,000 users.
+# Run all 3 region configs simultaneously for full load.
+#
+# Insight budget: 5 insights for this region's test run.
+###############################################################################
+
+version: v0.1
+testId: azureinfrasummit-load-10k-na
+displayName: "10K Capacity Test — North America (60%)"
+description: "6,000 users from East US 2 — run with EU and APAC configs for full 10K load"
+
+testPlan: locustfile.py
+testType: Locust
+
+engineInstances: 6        # 6 engines × ~1,000 users = 6,000
+
+configurationOverrides:
+  locust:
+    users: 6000            # Concurrent users for this region
+    spawnRate: 300          # Ramp-up: 300 users/sec (~20s to full load)
+    runTime: 600            # 10 minutes
+    host: https://www.azureinfrasummit.com/
+
+env:
+  - name: HOST
+    value: https://www.azureinfrasummit.com/
+  - name: REGION
+    value: North America
+
+# ── Failure Criteria ────────────────────────────────────────────────────────
+failureCriteria:
+  - avg(response_time_ms) > 3000                # Avg response > 3s
+  - percentage(error) > 5                        # Error rate > 5%
+  - p99(response_time_ms) > 10000               # P99 latency > 10s
+
+# ── Auto-Stop ───────────────────────────────────────────────────────────────
+autoStop:
+  errorPercentage: 80
+  timeWindow: 60
