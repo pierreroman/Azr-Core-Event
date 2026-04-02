@@ -36,8 +36,11 @@
 
     <!-- Video Player Section -->
     <section id="video" class="video-section">
-        <div class="video-container" id="video-container">
+        <div class="video-container-wrapper">
+            <span class="video-container-label">Watch Here</span>
+            <div class="video-container" id="video-container">
             <img src="assets/Loading-Schedule.png" alt="Loading schedule..." id="video-placeholder">
+            </div>
         </div>
         <p class="autoplay-note"><em>Most browsers require videos to be muted for autoplay to work due to autoplay policies. The video will start automatically when the page loads, but it will be muted initially. You can unmute it using the player controls.</em></p>
         
@@ -520,7 +523,7 @@
                 if (branding.eventStartDate) {
                     const eventStart = new Date(branding.eventStartDate + 'T00:00:00');
                     if (eventStart > now) {
-                        placeholderImg = 'assets/Save-the-date.png';
+                        placeholderImg = 'assets/save-the-date-2.png';
                         placeholderAlt = 'Save the date';
                     }
                 }

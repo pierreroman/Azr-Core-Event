@@ -129,7 +129,7 @@
                             <button class="btn btn-secondary" onclick="resetLogo()">🔄 Reset to Default</button>
                             <input type="file" id="logoInput" accept="image/png,image/jpeg,image/svg+xml,image/webp" class="file-input-hidden" onchange="handleLogoUpload(event)">
                         </div>
-                        <small class="mt-10">Recommended: PNG or SVG, 400x200px max. Saved to browser storage.</small>
+                        <small class="mt-10">Recommended: PNG or SVG, 1920x600px max. Saved to browser storage.</small>
                     </div>
                 </div>
                 
@@ -820,9 +820,9 @@ This is a **free, community-driven virtual event** bringing together passionate 
                 return;
             }
             
-            // Validate file size (2MB max for logo)
-            if (file.size > 2 * 1024 * 1024) {
-                showAlert('File too large. Maximum size: 2MB', 'error');
+            // Validate file size (6MB max for logo)
+            if (file.size > 6 * 1024 * 1024) {
+                showAlert('File too large. Maximum size: 6MB', 'error');
                 return;
             }
             
