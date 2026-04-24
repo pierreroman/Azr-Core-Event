@@ -29,14 +29,18 @@ function generateSessionId() {
 // GET /api/schedule - Get all schedule items
 async function getSchedule(request, context) {
     try {
-        // Check cache first
-        const cached = cache.get('schedule:all');
-        if (cached) {
-            return {
-                status: 200,
-                headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
-                jsonBody: cached
-            };
+        const bypassCache = request.query?.nocache !== undefined || request.query?.refresh !== undefined;
+
+        // Check cache first unless the caller explicitly asks for a fresh read
+        if (!bypassCache) {
+            const cached = cache.get('schedule:all');
+            if (cached) {
+                return {
+                    status: 200,
+                    headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+                    jsonBody: cached
+                };
+            }
         }
 
         const client = getTableClient();
@@ -66,7 +70,7 @@ async function getSchedule(request, context) {
         
         return {
             status: 200,
-            headers: { 'Cache-Control': cache.CACHE_CONTROL_PUBLIC },
+            headers: { 'Cache-Control': bypassCache ? 'no-cache, no-store' : cache.CACHE_CONTROL_PUBLIC },
             jsonBody: body
         };
     } catch (error) {

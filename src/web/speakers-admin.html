@@ -21,6 +21,17 @@
         </div>
         
         <div id="alertContainer"></div>
+
+        <div class="bulk-actions-bar" id="bulkActionsBar">
+            <label class="bulk-select-all">
+                <input type="checkbox" id="selectAllSpeakers" onchange="toggleSelectAll(this.checked)">
+                Select all
+            </label>
+            <span class="bulk-selected-count" id="bulkSelectedCount">0 selected</span>
+            <button id="bulkDeleteBtn" class="btn btn-danger btn-small" onclick="deleteSelectedSpeakers()" disabled>
+                🗑️ Delete selected
+            </button>
+        </div>
         
         <div class="stats-bar">
             <div class="stat">
@@ -314,11 +325,15 @@
                         or click "Add Speaker" to add one manually.</p>
                     </div>
                 `;
+                updateBulkSelectionUi();
                 return;
             }
             
             container.innerHTML = speakers.map(speaker => `
                 <div class="speaker-card">
+                    <label class="speaker-card-select" title="Select speaker">
+                        <input type="checkbox" class="speaker-select-checkbox" data-speaker-id="${speaker.id}" onchange="updateBulkSelectionUi()">
+                    </label>
                     <div class="speaker-card-header">
                         <div class="speaker-headshot">
                             ${speaker.headshotFile 
@@ -342,6 +357,72 @@
                     </div>
                 </div>
             `).join('');
+
+            updateBulkSelectionUi();
+        }
+
+        function getSelectedSpeakerIds() {
+            return Array.from(document.querySelectorAll('.speaker-select-checkbox:checked'))
+                .map(el => el.dataset.speakerId);
+        }
+
+        function updateBulkSelectionUi() {
+            const checkboxes = document.querySelectorAll('.speaker-select-checkbox');
+            const selected = getSelectedSpeakerIds();
+            const countEl = document.getElementById('bulkSelectedCount');
+            const deleteBtn = document.getElementById('bulkDeleteBtn');
+            const selectAll = document.getElementById('selectAllSpeakers');
+
+            if (countEl) countEl.textContent = `${selected.length} selected`;
+            if (deleteBtn) deleteBtn.disabled = selected.length === 0;
+
+            if (selectAll) {
+                if (checkboxes.length === 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                    selectAll.disabled = true;
+                } else {
+                    selectAll.disabled = false;
+                    selectAll.checked = selected.length === checkboxes.length;
+                    selectAll.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+                }
+            }
+        }
+
+        function toggleSelectAll(checked) {
+            document.querySelectorAll('.speaker-select-checkbox').forEach(cb => { cb.checked = checked; });
+            updateBulkSelectionUi();
+        }
+
+        async function deleteSelectedSpeakers() {
+            const ids = getSelectedSpeakerIds();
+            if (ids.length === 0) return;
+
+            if (!confirm(`Delete ${ids.length} selected speaker(s)? This cannot be undone.`)) return;
+
+            const deleteBtn = document.getElementById('bulkDeleteBtn');
+            if (deleteBtn) deleteBtn.disabled = true;
+
+            const results = await Promise.allSettled(ids.map(id =>
+                fetch(`/api/speakers/${encodeURIComponent(id)}`, { method: 'DELETE' })
+                    .then(res => {
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        return id;
+                    })
+            ));
+
+            const failures = results.filter(r => r.status === 'rejected').length;
+            const succeeded = results.length - failures;
+
+            if (failures === 0) {
+                showAlert(`Deleted ${succeeded} speaker(s)`, 'success');
+            } else if (succeeded === 0) {
+                showAlert(`Failed to delete ${failures} speaker(s)`, 'error');
+            } else {
+                showAlert(`Deleted ${succeeded}, failed ${failures}`, 'info');
+            }
+
+            await loadSpeakers();
         }
         
         function openAddModal() {
