@@ -1,11 +1,4 @@
 #!/usr/bin/env pwsh
-<#
-.SYNOPSIS
-    Interactive deployment script for the Community Online Event platform.
-.DESCRIPTION
-    Prompts for Azure environment details (environment name, tenant, subscription, region)
-    then runs azd auth login + azd up to provision infrastructure and deploy all services.
-#>
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -16,7 +9,6 @@ Write-Host "  Community Online Event - Deployment"   -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ── 1. Environment name ──────────────────────────────────────────────────────
 do {
     $envName = Read-Host "Environment name (e.g. dev, staging, prod)"
     if ([string]::IsNullOrWhiteSpace($envName)) {
@@ -24,7 +16,6 @@ do {
     }
 } while ([string]::IsNullOrWhiteSpace($envName))
 
-# ── 2. Tenant ID ─────────────────────────────────────────────────────────────
 Write-Host ""
 do {
     $tenantId = Read-Host "Tenant ID (GUID)"
@@ -33,7 +24,6 @@ do {
     }
 } while ([string]::IsNullOrWhiteSpace($tenantId))
 
-# ── 3. Authenticate to the tenant ────────────────────────────────────────────
 Write-Host ""
 Write-Host "Logging in to tenant $tenantId ..." -ForegroundColor DarkGray
 azd auth login --tenant-id $tenantId
@@ -42,9 +32,6 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Also ensure az CLI is logged in to the same tenant (needed by post-provision hooks).
-# Capture output as JSON to suppress the interactive subscription picker and
-# reuse the returned list for our own subscription selection below.
 Write-Host "Logging in to az CLI ..." -ForegroundColor DarkGray
 $loginJson = az login --tenant $tenantId -o json 2>$null
 if ($LASTEXITCODE -ne 0) {
@@ -52,7 +39,6 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# ── 4. Subscription ──────────────────────────────────────────────────────────
 Write-Host ""
 $subs = $loginJson | ConvertFrom-Json |
     Where-Object { $_.tenantId -eq $tenantId } |
@@ -83,21 +69,19 @@ do {
     }
 } while ([string]::IsNullOrWhiteSpace($subscriptionId))
 
-# Set az CLI to the selected subscription
 az account set --subscription $subscriptionId
 
-# ── 5. Register required resource providers ──────────────────────────────────
 Write-Host ""
 Write-Host "Checking resource provider registrations..." -ForegroundColor DarkGray
 
 $requiredProviders = @(
-    'Microsoft.App'                   # Flex Consumption VNet subnet delegation
-    'Microsoft.Insights'              # Application Insights & diagnostics
-    'Microsoft.ManagedIdentity'       # User-assigned managed identity
-    'Microsoft.Network'               # VNet, Private DNS, Private Endpoints
-    'Microsoft.OperationalInsights'   # Log Analytics workspace
-    'Microsoft.Storage'               # Storage Account (blobs, tables, queues)
-    'Microsoft.Web'                   # Function App, App Service Plan, Static Web App
+    'Microsoft.App'
+    'Microsoft.Insights'
+    'Microsoft.ManagedIdentity'
+    'Microsoft.Network'
+    'Microsoft.OperationalInsights'
+    'Microsoft.Storage'
+    'Microsoft.Web'
 )
 
 $registered = az provider list --query "[?registrationState=='Registered'].namespace" -o tsv 2>$null
@@ -108,7 +92,6 @@ if ($toRegister.Count -gt 0) {
     foreach ($ns in $toRegister) {
         az provider register --namespace $ns --subscription $subscriptionId 2>$null
     }
-    # Wait for all registrations to complete
     Write-Host "  Waiting for registrations to complete..." -ForegroundColor DarkGray
     foreach ($ns in $toRegister) {
         $retries = 0
@@ -127,13 +110,11 @@ if ($toRegister.Count -gt 0) {
     Write-Host "  ✓ All required providers already registered" -ForegroundColor Green
 }
 
-# ── 6. Region ────────────────────────────────────────────────────────────────
 Write-Host ""
 $defaultRegion = "eastus2"
 $regionInput = Read-Host "Azure region [$defaultRegion]"
 $region = if ([string]::IsNullOrWhiteSpace($regionInput)) { $defaultRegion } else { $regionInput }
 
-# ── 7. Confirm ───────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "─── Deployment Summary ───" -ForegroundColor Cyan
 Write-Host "  Environment :  $envName"
@@ -149,11 +130,9 @@ if ($confirm -and $confirm -notin @('y', 'Y', 'yes', 'Yes', '')) {
     exit 0
 }
 
-# ── 8. Initialise azd environment & deploy ────────────────────────────────────
 Write-Host ""
 Write-Host "Initialising azd environment '$envName' ..." -ForegroundColor Green
 
-# Create the environment if it doesn't already exist, then select it
 $existingEnvs = azd env list -o json 2>$null | ConvertFrom-Json
 $envExists = $existingEnvs | Where-Object { $_.Name -eq $envName }
 if (-not $envExists) {
@@ -177,9 +156,6 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "  Deployment completed successfully!"    -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Green
 
-    # ── Surface admin invitation details ──────────────────────────────────────
-    # Read the SWA hostname from the azd environment so we can display the
-    # invitation acceptance URL and remind the deployer to complete the step.
     $swaHostname = azd env get-value AZURE_STATICWEBAPP_HOSTNAME 2>$null
     if ($swaHostname) {
         $inviteUrl = "https://$swaHostname/.auth/invitations"

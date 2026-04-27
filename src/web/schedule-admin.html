@@ -81,6 +81,11 @@
                 </div>
                 
                 <div class="form-actions">
+                    <div class="edit-nav" id="edit-nav" style="display:none;">
+                        <button type="button" class="btn btn-secondary" id="edit-nav-prev" onclick="navigateEdit(-1)" title="Save and go to previous session">← Prev</button>
+                        <span class="edit-nav-position" id="edit-nav-position"></span>
+                        <button type="button" class="btn btn-secondary" id="edit-nav-next" onclick="navigateEdit(1)" title="Save and go to next session">Next →</button>
+                    </div>
                     <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
@@ -234,6 +239,7 @@
         </div>
     </div>
     
+    <script src="timezone-utils.js"></script>
     <script>
         let scheduleData = [];
         
@@ -261,7 +267,10 @@
         // Load schedule
         async function loadSchedule() {
             try {
-                const response = await fetch('/api/schedule', { cache: 'no-cache' });
+                const response = await fetch(`/api/schedule?nocache=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
                 const data = await response.json();
                 console.log('Loaded schedule data:', data);
                 console.log('First item ID:', data.schedule?.[0]?.id);
@@ -340,82 +349,123 @@
         }
         
         // Modal functions
+        let editNavOrder = [];   // snapshot of session IDs in current sort order
+        let editNavIndex = -1;   // current position within editNavOrder
+        let pendingReload = false; // true if a save happened during navigation
+
         function openAddModal() {
             document.getElementById('modal-title').textContent = 'Add Schedule Item';
             document.getElementById('schedule-form').reset();
             document.getElementById('item-id').value = '';
+            editNavOrder = [];
+            editNavIndex = -1;
+            updateEditNavUi();
             document.getElementById('schedule-modal').classList.add('active');
         }
         
+        function populateEditForm(item) {
+            document.getElementById('modal-title').textContent = 'Edit Schedule Item';
+            document.getElementById('item-id').value = item.id;
+            document.getElementById('title').value = item.title || '';
+            document.getElementById('videoId').value = item.videoId || '';
+            document.getElementById('startTime').value = TimezoneUtils.isoToEasternDateTimeLocal(item.startTime);
+            document.getElementById('duration').value = item.duration || 0;
+            document.getElementById('description').value = item.description || '';
+            document.getElementById('url').value = item.url || '';
+        }
+
         function editItem(id) {
             const item = scheduleData.find(i => i.id === id);
             if (!item) return;
             
-            document.getElementById('modal-title').textContent = 'Edit Schedule Item';
-            document.getElementById('item-id').value = id;
-            document.getElementById('title').value = item.title;
-            document.getElementById('videoId').value = item.videoId;
-            
-            // Convert stored time to datetime-local format in Eastern Time
-            // datetime-local needs YYYY-MM-DDTHH:MM format
-            const date = new Date(item.startTime);
-            const easternTime = date.toLocaleString('sv-SE', { timeZone: 'America/New_York' }).slice(0, 16);
-            document.getElementById('startTime').value = easternTime;
-            
-            document.getElementById('duration').value = item.duration || 0;
-            document.getElementById('description').value = item.description || '';
-            document.getElementById('url').value = item.url || '';
+            // Snapshot the navigation order so it stays stable while editing,
+            // even if a time change reorders scheduleData after a save.
+            editNavOrder = scheduleData.map(s => s.id);
+            editNavIndex = editNavOrder.indexOf(id);
+            pendingReload = false;
+
+            populateEditForm(item);
+            updateEditNavUi();
             
             document.getElementById('schedule-modal').classList.add('active');
         }
         
-        function closeModal() {
-            document.getElementById('schedule-modal').classList.remove('active');
+        function updateEditNavUi() {
+            const navEl = document.getElementById('edit-nav');
+            const prevBtn = document.getElementById('edit-nav-prev');
+            const nextBtn = document.getElementById('edit-nav-next');
+            const posEl = document.getElementById('edit-nav-position');
+            if (!navEl) return;
+            
+            // Only show navigation when editing an existing item with siblings
+            if (editNavIndex < 0 || editNavOrder.length <= 1) {
+                navEl.style.display = 'none';
+                return;
+            }
+            navEl.style.display = '';
+            prevBtn.disabled = editNavIndex <= 0;
+            nextBtn.disabled = editNavIndex >= editNavOrder.length - 1;
+            posEl.textContent = `${editNavIndex + 1} of ${editNavOrder.length}`;
         }
         
-        // Save schedule item
-        async function saveScheduleItem(event) {
-            event.preventDefault();
+        async function navigateEdit(delta) {
+            if (editNavIndex < 0) return;
+            const targetIndex = editNavIndex + delta;
+            if (targetIndex < 0 || targetIndex >= editNavOrder.length) return;
+            
+            // Auto-save current edits before jumping
+            const saved = await saveScheduleItem(null, { keepOpen: true });
+            if (!saved) return; // validation or network error — stay put
+            
+            const nextId = editNavOrder[targetIndex];
+            const nextItem = scheduleData.find(i => i.id === nextId);
+            if (!nextItem) {
+                showMessage('Could not find the next session. Reloading...', 'error');
+                closeModal();
+                return;
+            }
+            editNavIndex = targetIndex;
+            populateEditForm(nextItem);
+            updateEditNavUi();
+        }
+        
+        function closeModal() {
+            document.getElementById('schedule-modal').classList.remove('active');
+            editNavOrder = [];
+            editNavIndex = -1;
+            if (pendingReload) {
+                pendingReload = false;
+                loadSchedule();
+            }
+        }
+        
+        // Save schedule item.
+        // Returns true on success, false on validation/network failure.
+        // When opts.keepOpen is true, the modal stays open and the schedule
+        // list is NOT reloaded (used by the prev/next navigation flow).
+        async function saveScheduleItem(event, opts = {}) {
+            if (event && typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+            const keepOpen = opts.keepOpen === true;
             
             const id = document.getElementById('item-id').value;
             const startTimeValue = document.getElementById('startTime').value;
             
-            console.log('Save called with ID:', id, '| ID type:', typeof id, '| ID length:', id?.length);
-            
             // Validate required fields
             if (!document.getElementById('title').value || !document.getElementById('videoId').value || !startTimeValue) {
                 showMessage('Please fill in all required fields.', 'error');
-                return;
+                return false;
             }
             
-            // Format startTime - datetime-local gives YYYY-MM-DDTHH:MM in local time
-            // We need to interpret this as Eastern Time and convert to ISO
+            // Convert the Eastern Time wall-clock value to UTC ISO, including DST handling
             let startTime;
             try {
-                // The datetime-local value is in Eastern Time (event timezone)
-                // Create a date string that explicitly specifies Eastern timezone
-                // Note: America/New_York handles EST/EDT automatically
-                const [datePart, timePart] = startTimeValue.split('T');
-                const [year, month, day] = datePart.split('-');
-                const [hour, minute] = timePart.split(':');
-                
-                // Create date in Eastern timezone and convert to ISO
-                const easternDate = new Date(Date.UTC(
-                    parseInt(year), 
-                    parseInt(month) - 1, 
-                    parseInt(day), 
-                    parseInt(hour), 
-                    parseInt(minute)
-                ));
-                
-                // Adjust for Eastern Time offset (EST = UTC-5, EDT = UTC-4)
-                // For February 2026, it's EST (UTC-5)
-                const estOffset = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
-                startTime = new Date(easternDate.getTime() + estOffset).toISOString();
+                startTime = TimezoneUtils.easternDateTimeLocalToIso(startTimeValue);
             } catch (e) {
                 console.error('Time parsing error:', e);
                 showMessage('Invalid start time format.', 'error');
-                return;
+                return false;
             }
             
             const data = {
@@ -427,14 +477,10 @@
                 url: document.getElementById('url').value || `https://www.youtube.com/watch?v=${document.getElementById('videoId').value}`
             };
             
-            console.log('Saving data:', data);
-            
             try {
                 // URL-encode the ID to handle special characters like hyphens
                 const url = id ? `/api/schedule/${encodeURIComponent(id)}` : '/api/schedule';
                 const method = id ? 'PUT' : 'POST';
-                
-                console.log('Request:', method, url);
                 
                 const response = await fetch(url, {
                     method: method,
@@ -442,20 +488,35 @@
                     body: JSON.stringify(data)
                 });
                 
-                console.log('Response status:', response.status);
-                
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('Error response:', errorText);
                     throw new Error(`Failed to save: ${response.status} - ${errorText}`);
                 }
                 
+                // Update the in-memory entry so prev/next navigation reflects
+                // the latest values without a full reload.
+                if (id) {
+                    const idx = scheduleData.findIndex(i => i.id === id);
+                    if (idx >= 0) {
+                        scheduleData[idx] = { ...scheduleData[idx], ...data };
+                    }
+                }
+                
+                if (keepOpen) {
+                    pendingReload = true;
+                    showMessage(id ? 'Saved — jumping to next session...' : 'Schedule item added!');
+                    return true;
+                }
+                
                 closeModal();
                 showMessage(id ? 'Schedule item updated!' : 'Schedule item added!');
                 loadSchedule();
+                return true;
             } catch (error) {
                 console.error('Error saving:', error);
                 showMessage(`Failed to save: ${error.message}`, 'error');
+                return false;
             }
         }
         

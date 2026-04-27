@@ -328,10 +328,18 @@ async function extractSpeakers(request, context) {
                         .filter(n => n && n.length > 2 && !n.includes('http') && !n.includes('@'));
                     
                     for (const name of names) {
-                        // Clean up the name - remove title/role after dash
+                        // Clean up the name:
+                        // 1. Strip leading bullet/list markers: -, –, —, •, *, ·, ●, ○,
+                        //    ▪, ▫, ►, ▶, →, »,  ., …, and numbered "1." / "1)" forms
+                        //    (repeated in case the source uses "- • Name").
+                        // 2. Strip leading numeric markers: "1.", "1)", "(1)"
+                        // 3. Drop anything after a separating dash (title/role)
+                        // 4. Drop trailing parenthesised qualifiers
                         const cleanName = name
-                            .replace(/^\d+\.\s*/, '')
-                            .replace(/\s*[-–—]\s*.*$/, '')
+                            .replace(/^[\s\-\u2010-\u2015\u2022\u00B7\u25CF\u25CB\u25AA\u25AB\u25BA\u25B6\u2192\u00BB\.\u2026*]+/, '')
+                            .replace(/^\(?\d+[\.\)]\s*/, '')
+                            .replace(/^[\s\-\u2010-\u2015\u2022\u00B7\u25CF\u25CB\u25AA\u25AB\u25BA\u25B6\u2192\u00BB\.\u2026*]+/, '')
+                            .replace(/\s*[-\u2013\u2014]\s*.*$/, '')
                             .replace(/\s*\(.*\)/, '')
                             .trim();
                         

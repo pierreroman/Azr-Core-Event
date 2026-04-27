@@ -37,8 +37,11 @@
 
     <!-- Video Player Section -->
     <section id="video" class="video-section">
-        <div class="video-container" id="video-container">
+        <div class="video-container-wrapper">
+            <span class="video-container-label">Watch Here</span>
+            <div class="video-container" id="video-container">
             <img src="assets/Loading-Schedule.png" alt="Loading schedule..." id="video-placeholder">
+            </div>
         </div>
         <p class="autoplay-note"><em>Most browsers require videos to be muted for autoplay to work due to autoplay policies. The video will start automatically when the page loads, but it will be muted initially. You can unmute it using the player controls.</em></p>
         
@@ -510,9 +513,28 @@
         function updateVideoPlayer() {
             const container = document.getElementById('video-container');
             const now = new Date();
-            
+
+            // Get today's date (midnight) for day comparisons
+            const today = new Date(now);
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            // Helper: find the earliest scheduled session start
+            const earliestStart = scheduleData.length
+                ? new Date(Math.min(...scheduleData.map(s => new Date(s.startTime).getTime())))
+                : null;
+
+            // Pre-event: the first scheduled session is on a future day (not today).
+            // Show "Save the date" until the event day arrives.
+            if (earliestStart && earliestStart >= tomorrow) {
+                container.innerHTML = '<img src="assets/save-the-date-2.png" alt="Save the date">';
+                updateInfoBoxes(null, null);
+                return;
+            }
+
             if (scheduleData.length === 0) {
-                // Determine placeholder based on event dates from branding
+                // No schedule loaded - fall back to branding eventStartDate if available
                 const stored = localStorage.getItem('event-branding');
                 const branding = stored ? JSON.parse(stored) : {};
                 let placeholderImg = 'assets/OnDemand.png';
@@ -520,8 +542,8 @@
 
                 if (branding.eventStartDate) {
                     const eventStart = new Date(branding.eventStartDate + 'T00:00:00');
-                    if (eventStart > now) {
-                        placeholderImg = 'assets/Save-the-date.png';
+                    if (eventStart >= tomorrow) {
+                        placeholderImg = 'assets/save-the-date-2.png';
                         placeholderAlt = 'Save the date';
                     }
                 }
@@ -530,18 +552,12 @@
                 updateInfoBoxes(null, null);
                 return;
             }
-            
+
             // Find currently playing session
             let currentSession = null;
             let hasUpcomingToday = false;
             let hasUpcomingLater = false;
-            
-            // Get today's date (midnight)
-            const today = new Date(now);
-            today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
+
             for (const session of scheduleData) {
                 const startTime = new Date(session.startTime);
                 const endTime = new Date(startTime.getTime() + (session.duration || 3600) * 1000);
@@ -1013,14 +1029,40 @@
             if (e.target === this) closeRegistrationModal();
         });
 
+        // Re-scroll to the URL hash target after async content has loaded.
+        // Sections like #schedule, #speakers, #sponsors and #about are
+        // populated by fetch() calls that finish AFTER DOMContentLoaded —
+        // so the browser's initial jump to the hash lands on a still-empty
+        // (or "Loading…") section and ends up at the wrong scroll position.
+        function scrollToHashTarget(behavior = 'auto') {
+            const hash = window.location.hash;
+            if (!hash || hash === '#') return;
+            try {
+                const target = document.querySelector(hash);
+                if (target) {
+                    target.scrollIntoView({ behavior, block: 'start' });
+                }
+            } catch (_) { /* invalid selector — ignore */ }
+        }
+
+        // Re-anchor whenever the hash changes (back/forward, manual edits)
+        window.addEventListener('hashchange', () => scrollToHashTarget('smooth'));
+
         // Load schedule and speakers when page loads
         document.addEventListener('DOMContentLoaded', function() {
             applyBranding();
-            loadSchedule();
-            loadSpeakers();
-            loadSponsors();
-            loadMarkdownContent();
-            loadRegistration();
+
+            // Run loaders in parallel; once they all settle, re-scroll to the
+            // hash target so the page lands on the correct (now fully sized)
+            // section instead of where it was at first paint.
+            Promise.allSettled([
+                loadSchedule(),
+                loadSpeakers(),
+                loadSponsors(),
+                loadMarkdownContent(),
+                loadRegistration()
+            ]).then(() => scrollToHashTarget('auto'));
+
             startScheduleVersionPolling();
         });
 
