@@ -1,20 +1,11 @@
-@description('Name of the environment')
 param environmentName string
-
-@description('Location for all resources')
 param location string
-
-@description('Unique resource token')
 param resourceToken string
 
-// Common tags for all resources
 var commonTags = {
   environment: environmentName
 }
 
-// ============================================================================
-// Virtual Network
-// ============================================================================
 resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: 'azvnet${resourceToken}'
   location: location
@@ -50,9 +41,6 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   }
 }
 
-// ============================================================================
-// Private DNS Zones
-// ============================================================================
 resource privateDnsZoneBlob 'Microsoft.Network/privateDnsZones@2024-06-01' = {
   name: 'privatelink.blob.${environment().suffixes.storage}'
   location: 'global'
@@ -71,7 +59,6 @@ resource privateDnsZoneQueue 'Microsoft.Network/privateDnsZones@2024-06-01' = {
   tags: commonTags
 }
 
-// Link DNS zones to VNet
 resource privateDnsZoneBlobLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = {
   parent: privateDnsZoneBlob
   name: 'blob-vnet-link'
@@ -108,18 +95,12 @@ resource privateDnsZoneQueueLink 'Microsoft.Network/privateDnsZones/virtualNetwo
   }
 }
 
-// ============================================================================
-// User-Assigned Managed Identity
-// ============================================================================
 resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'azid${resourceToken}'
   location: location
   tags: commonTags
 }
 
-// ============================================================================
-// Log Analytics Workspace
-// ============================================================================
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: 'azlog${resourceToken}'
   location: location
@@ -132,9 +113,6 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   }
 }
 
-// ============================================================================
-// Application Insights
-// ============================================================================
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: 'azai${resourceToken}'
   location: location
@@ -146,9 +124,6 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-// ============================================================================
-// Storage Account (Tables, Blobs, and Function App runtime)
-// ============================================================================
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: 'azst${resourceToken}'
   location: location
@@ -163,9 +138,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     allowSharedKeyAccess: false
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
-    // During provisioning, public access must be enabled so Azure services
-    // (Function App deployment, container creation, etc.) can reach storage.
-    // The postprovision hook in azure.yaml sets this to 'Disabled' after deployment.
     publicNetworkAccess: 'Enabled'
     networkAcls: {
       defaultAction: 'Deny'
@@ -174,9 +146,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-// ============================================================================
-// Storage Private Endpoints
-// ============================================================================
 resource storageBlobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
   name: 'pe-blob-${resourceToken}'
   location: location
@@ -288,13 +257,11 @@ resource storageQueueDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZone
   }
 }
 
-// Blob service
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
 }
 
-// Create speakerheadshots container (private — served via API proxy)
 resource speakerHeadshotsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   parent: blobService
   name: 'speakerheadshots'
@@ -303,7 +270,6 @@ resource speakerHeadshotsContainer 'Microsoft.Storage/storageAccounts/blobServic
   }
 }
 
-// Create sponsorlogos container (private — served via API proxy)
 resource sponsorLogosContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   parent: blobService
   name: 'sponsorlogos'
@@ -312,7 +278,6 @@ resource sponsorLogosContainer 'Microsoft.Storage/storageAccounts/blobServices/c
   }
 }
 
-// Create sitecontent container for markdown content (about, code-of-conduct)
 resource siteContentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   parent: blobService
   name: 'sitecontent'
@@ -321,7 +286,6 @@ resource siteContentContainer 'Microsoft.Storage/storageAccounts/blobServices/co
   }
 }
 
-// Create deployments container for Flex Consumption function app
 resource deploymentsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   parent: blobService
   name: 'deployments'
@@ -330,35 +294,26 @@ resource deploymentsContainer 'Microsoft.Storage/storageAccounts/blobServices/co
   }
 }
 
-// Create Table Storage service
 resource tableService 'Microsoft.Storage/storageAccounts/tableServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
 }
 
-// Create VideoSchedule table
 resource videoScheduleTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-01-01' = {
   parent: tableService
   name: 'VideoSchedule'
 }
 
-// Create Speakers table
 resource speakersTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-01-01' = {
   parent: tableService
   name: 'Speakers'
 }
 
-// Create Sponsors table
 resource sponsorsTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-01-01' = {
   parent: tableService
   name: 'Sponsors'
 }
 
-// ============================================================================
-// Storage Role Assignments for Managed Identity
-// ============================================================================
-
-// Storage Blob Data Owner
 resource storageBlobDataOwnerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, userAssignedIdentity.id, 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
   scope: storageAccount
@@ -369,7 +324,6 @@ resource storageBlobDataOwnerRole 'Microsoft.Authorization/roleAssignments@2022-
   }
 }
 
-// Storage Blob Data Contributor
 resource storageBlobDataContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, userAssignedIdentity.id, 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
   scope: storageAccount
@@ -380,7 +334,6 @@ resource storageBlobDataContributorRole 'Microsoft.Authorization/roleAssignments
   }
 }
 
-// Storage Queue Data Contributor
 resource storageQueueDataContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, userAssignedIdentity.id, '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
   scope: storageAccount
@@ -391,7 +344,6 @@ resource storageQueueDataContributorRole 'Microsoft.Authorization/roleAssignment
   }
 }
 
-// Storage Table Data Contributor
 resource storageTableDataContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, userAssignedIdentity.id, '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')
   scope: storageAccount
@@ -402,7 +354,6 @@ resource storageTableDataContributorRole 'Microsoft.Authorization/roleAssignment
   }
 }
 
-// Storage Account Contributor (for Function App runtime)
 resource storageAccountContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, userAssignedIdentity.id, '17d1049b-9a84-46fb-8f53-869881c3d3ab')
   scope: storageAccount
@@ -413,9 +364,6 @@ resource storageAccountContributorRole 'Microsoft.Authorization/roleAssignments@
   }
 }
 
-// ============================================================================
-// App Service Plan (Flex Consumption for Function App)
-// ============================================================================
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: 'azasp${resourceToken}'
   location: location
@@ -429,9 +377,6 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   }
 }
 
-// ============================================================================
-// Function App (Flex Consumption)
-// ============================================================================
 resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   name: 'azfn${resourceToken}'
   location: location
@@ -531,7 +476,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   ]
 }
 
-// Function App diagnostic settings
 resource functionAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'functionAppDiagnostics'
   scope: functionApp
@@ -552,7 +496,6 @@ resource functionAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
   }
 }
 
-// Monitoring Metrics Publisher role for App Insights
 resource monitoringMetricsPublisherRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(functionApp.id, userAssignedIdentity.id, '3913510d-42f4-4e42-8a64-420c390055eb')
   scope: functionApp
@@ -563,9 +506,6 @@ resource monitoringMetricsPublisherRole 'Microsoft.Authorization/roleAssignments
   }
 }
 
-// ============================================================================
-// Static Web App
-// ============================================================================
 resource staticWebApp 'Microsoft.Web/staticSites@2022-09-01' = {
   name: 'azswa${resourceToken}'
   location: location
@@ -585,9 +525,6 @@ resource staticWebApp 'Microsoft.Web/staticSites@2022-09-01' = {
   }
 }
 
-// ============================================================================
-// Outputs
-// ============================================================================
 output staticWebAppName string = staticWebApp.name
 output staticWebAppHostname string = staticWebApp.properties.defaultHostname
 
