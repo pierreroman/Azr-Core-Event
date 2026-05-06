@@ -745,7 +745,7 @@
                     container.innerHTML = `
                         <div class="no-schedule-message" style="text-align: center; max-width: 600px; margin: 0 auto;">
                             <p>The full event schedule isn't available just yet, but we're working on it. Check back soon for updates as sessions and speakers are finalized. In the meantime, be sure to save the date using the <strong>Add to Calendar (ICS)</strong> button below so it's locked into your calendar and you don't miss a thing.</p>
-                            <button class="btn btn-primary" onclick="downloadICS()" style="margin-top: 16px;">📅 Add to Calendar (ICS)</button>
+                            <button class="btn btn-primary" onclick="downloadEventICS()" style="margin-top: 16px;">📅 Add to Calendar (ICS)</button>
                         </div>`;
                     return;
                 }
@@ -890,8 +890,17 @@
             if (!session) return;
 
             const start = new Date(session.startTime);
-            const durationSec = session.duration || 3600; // duration is in seconds
-            const end = new Date(start.getTime() + durationSec * 1000);
+            let durationMs;
+            
+            // Heuristic: if duration ≤ 120, assume it's in minutes (old data);
+            // otherwise assume it's in seconds (YouTube import or new admin entries)
+            if (session.duration && session.duration <= 120) {
+                durationMs = session.duration * 60 * 1000; // minutes to milliseconds
+            } else {
+                durationMs = (session.duration || 3600) * 1000; // seconds to milliseconds
+            }
+            
+            const end = new Date(start.getTime() + durationMs);
 
             // Format date to ICS format: YYYYMMDDTHHMMSSZ
             function toICSDate(d) {
@@ -1318,7 +1327,7 @@
         }
 
         // Generate and download an ICS calendar file for the event
-        function downloadICS() {
+        function downloadEventICS() {
             const stored = localStorage.getItem('event-branding');
             const branding = stored ? JSON.parse(stored) : {};
             const eventName = branding.eventName || document.getElementById('site-title').textContent || 'Community Online Event';

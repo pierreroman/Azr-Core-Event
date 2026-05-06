@@ -66,8 +66,8 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="duration">Duration (seconds)</label>
-                    <input type="number" id="duration" min="0" step="1" value="0" placeholder="e.g., 3600 for 1 hour">
+                    <label for="duration">Duration (minutes)</label>
+                    <input type="number" id="duration" min="0" step="1" value="0" placeholder="e.g., 60 for 1 hour">
                 </div>
                 
                 <div class="form-group">
@@ -343,9 +343,10 @@
         
         function formatDuration(seconds) {
             if (!seconds) return '-';
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            if (hrs > 0) return `${hrs}h ${mins}m`;
+            return `${mins}m`;
         }
         
         // Modal functions
@@ -369,7 +370,19 @@
             document.getElementById('title').value = item.title || '';
             document.getElementById('videoId').value = item.videoId || '';
             document.getElementById('startTime').value = TimezoneUtils.isoToEasternDateTimeLocal(item.startTime);
-            document.getElementById('duration').value = item.duration || 0;
+            
+            // Heuristic: if duration ≤ 120, assume it's in minutes (old data); use as-is.
+            // If duration > 120, assume it's in seconds (YouTube/new data); convert to minutes.
+            let durationDisplay = 0;
+            if (item.duration) {
+                if (item.duration <= 120) {
+                    durationDisplay = item.duration; // already in minutes
+                } else {
+                    durationDisplay = Math.round(item.duration / 60); // convert seconds to minutes
+                }
+            }
+            document.getElementById('duration').value = durationDisplay;
+            
             document.getElementById('description').value = item.description || '';
             document.getElementById('url').value = item.url || '';
         }
@@ -472,7 +485,7 @@
                 title: document.getElementById('title').value,
                 videoId: document.getElementById('videoId').value,
                 startTime: startTime,
-                duration: parseInt(document.getElementById('duration').value) || 0,
+                duration: (parseInt(document.getElementById('duration').value) || 0) * 60,
                 description: document.getElementById('description').value,
                 url: document.getElementById('url').value || `https://www.youtube.com/watch?v=${document.getElementById('videoId').value}`
             };
