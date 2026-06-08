@@ -11,17 +11,11 @@
     <!-- HTML sanitizer to prevent XSS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 </head>
-<body>
+<body data-rail="admin" data-rail-active="dashboard">
     <!-- Skip to main content link for accessibility -->
     <a href="#section-dashboard" class="skip-link">Skip to main content</a>
 
     <div class="admin-dashboard">
-        <div class="user-bar">
-            <span id="user-name">Loading...</span>
-            <a href="/.auth/logout" class="btn btn-secondary btn-sm">Logout</a>
-            <a href="/" class="btn btn-secondary btn-sm">← Back to Site</a>
-        </div>
-        
         <div class="dashboard-header">
             <h1>⚙️ Admin Dashboard</h1>
             <p>Manage your community event</p>
@@ -610,16 +604,18 @@ This is a **free, community-driven virtual event** bringing together passionate 
         
         // User info
         async function loadUserInfo() {
+            var el = document.getElementById('user-name');
+            if (!el) return; // user bar removed; rail handles auth
             try {
                 const response = await fetch('/.auth/me');
                 const data = await response.json();
                 if (data.clientPrincipal) {
-                    document.getElementById('user-name').textContent = data.clientPrincipal.userDetails || 'Admin';
+                    el.textContent = data.clientPrincipal.userDetails || 'Admin';
                 } else {
-                    document.getElementById('user-name').textContent = 'Not logged in';
+                    el.textContent = 'Not logged in';
                 }
             } catch (error) {
-                document.getElementById('user-name').textContent = 'Admin';
+                el.textContent = 'Admin';
             }
         }
         
@@ -969,5 +965,6 @@ This is a **free, community-driven virtual event** bringing together passionate 
             }
         }
     </script>
+    <script src="rail.js" defer></script>
 </body>
 </html>

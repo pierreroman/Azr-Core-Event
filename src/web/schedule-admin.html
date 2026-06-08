@@ -7,18 +7,13 @@
     <link rel="icon" type="image/png" sizes="16x16" href="assets/Azure-A-16px.png">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-rail="admin" data-rail-active="schedule">
     <!-- Skip to main content link for accessibility -->
     <a href="#schedule-container" class="skip-link">Skip to main content</a>
 
     <div class="admin-container">
         <div class="admin-header">
             <h1>📅 Schedule Manager</h1>
-            <div class="user-info">
-                <a href="admin.html" class="btn btn-secondary">← Admin Dashboard</a>
-                <span id="user-name">Loading...</span>
-                <a href="/.auth/logout" class="btn btn-secondary">Logout</a>
-            </div>
         </div>
         
         <div id="message-container"></div>
@@ -245,11 +240,13 @@
         
         // Get user info
         async function getUserInfo() {
+            var el = document.getElementById('user-name');
+            if (!el) return; // user bar removed; rail handles auth
             try {
                 const response = await fetch('/.auth/me');
                 const data = await response.json();
                 if (data.clientPrincipal) {
-                    document.getElementById('user-name').textContent = 
+                    el.textContent =
                         data.clientPrincipal.userDetails || data.clientPrincipal.userId;
                 }
             } catch (error) {
@@ -889,5 +886,6 @@
             } catch (_) {}
         }
     </script>
+    <script src="rail.js" defer></script>
 </body>
 </html>

@@ -11,7 +11,7 @@
     <!-- HTML sanitizer to prevent XSS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 </head>
-<body>
+<body data-rail="admin" data-rail-active="sponsors">
     <!-- Skip to main content link for accessibility -->
     <a href="#sponsorsContainer" class="skip-link">Skip to main content</a>
 
@@ -19,7 +19,6 @@
         <div class="admin-header">
             <h1>🤝 Sponsors Management</h1>
             <div class="header-actions">
-                <a href="admin.html" class="btn btn-secondary">← Admin Dashboard</a>
                 <button class="btn btn-primary" onclick="openAddModal()">+ Add Sponsor</button>
             </div>
         </div>
@@ -167,26 +166,59 @@
 
         // ==================== SPONSORS VISIBILITY ====================
 
-        function loadSponsorsVisibility() {
+        // Fetch the authoritative branding object from the API, falling back
+        // to localStorage if the API is unavailable. The toggle below merges
+        // the `hideSponsors` flag into the full object so a PUT doesn't drop
+        // other fields (eventName, colors, dates, etc.) the server is holding.
+        async function fetchCurrentBranding() {
+            try {
+                const r = await fetch('/api/branding', { cache: 'no-store' });
+                if (r.ok) {
+                    const data = await r.json();
+                    // Cache locally so admin.html's local-first read stays in sync
+                    try { localStorage.setItem('event-branding', JSON.stringify(data)); } catch(e) {}
+                    return data;
+                }
+            } catch(e) {
+                console.warn('Branding fetch failed, falling back to localStorage:', e);
+            }
             const stored = localStorage.getItem('event-branding');
             if (stored) {
-                try {
-                    const branding = JSON.parse(stored);
-                    document.getElementById('hideSponsors').checked = branding.hideSponsors || false;
-                } catch(e) {}
+                try { return JSON.parse(stored); } catch(e) {}
             }
+            return {};
         }
 
-        function toggleSponsorsVisibility() {
+        async function loadSponsorsVisibility() {
+            const branding = await fetchCurrentBranding();
+            document.getElementById('hideSponsors').checked = !!branding.hideSponsors;
+        }
+
+        async function toggleSponsorsVisibility() {
             const hidden = document.getElementById('hideSponsors').checked;
-            const stored = localStorage.getItem('event-branding');
-            let branding = {};
-            if (stored) {
-                try { branding = JSON.parse(stored); } catch(e) {}
-            }
+            const branding = await fetchCurrentBranding();
             branding.hideSponsors = hidden;
-            localStorage.setItem('event-branding', JSON.stringify(branding));
-            showAlert(hidden ? 'Sponsors section hidden on main site' : 'Sponsors section visible on main site', 'success');
+
+            // Update localStorage immediately for snappy local feedback
+            try { localStorage.setItem('event-branding', JSON.stringify(branding)); } catch(e) {}
+
+            // Persist to the API so every visitor sees the change
+            try {
+                const r = await fetch('/api/branding', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(branding)
+                });
+                if (r.ok) {
+                    showAlert(hidden ? 'Sponsors hidden on main site (saved to cloud)' : 'Sponsors visible on main site (saved to cloud)', 'success');
+                } else {
+                    const err = await r.json().catch(() => ({}));
+                    showAlert(`Saved locally but cloud save failed: ${err.error || r.status}`, 'danger');
+                }
+            } catch(e) {
+                console.error('Error saving sponsors visibility to cloud:', e);
+                showAlert('Saved locally but cloud save failed. Changes only visible on this device.', 'danger');
+            }
         }
 
         function updateLogoPreview(filename) {
@@ -548,5 +580,6 @@
             if (e.key === 'Escape') closeModal();
         });
     </script>
+    <script src="rail.js" defer></script>
 </body>
 </html>

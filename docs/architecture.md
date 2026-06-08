@@ -85,6 +85,55 @@
 
 ---
 
+## Frontend Architecture
+
+### Multi-page structure (no build step)
+
+The public site is split into focused pages, all hosted by the Static Web App and sharing a small set of plain-JS modules. No bundler, framework, or build pipeline.
+
+| Page | File | Notes |
+|------|------|-------|
+| Home (landing) | `src/web/index.html` | Hero — logo, title, tagline, CTAs |
+| Watch | `src/web/watch.html` | Full-bleed video player + now-playing widgets |
+| About | `src/web/about.html` | Markdown content from Content API |
+| Schedule | `src/web/schedule.html` | Sessions + session modal |
+| Speakers | `src/web/speakers.html` | Speaker grid + speaker modal |
+| Sponsors | `src/web/sponsors.html` | Sponsor grid + sponsor modal |
+| Admin Dashboard | `src/web/admin.html` | All admin entry points |
+| Schedule Admin | `src/web/schedule-admin.html` | CRUD + CSV/YouTube import |
+| Speakers Admin | `src/web/speakers-admin.html` | CRUD + headshot upload |
+| Sponsors Admin | `src/web/sponsors-admin.html` | CRUD + logo upload |
+
+`staticwebapp.config.json` defines clean-URL rewrites so `/watch`, `/about`, `/schedule`, `/speakers`, and `/sponsors` resolve to the corresponding `.html` files.
+
+### Shared scripts
+
+| File | Responsibility |
+|------|----------------|
+| `src/web/rail.js` | Theme system (CSS vars + `localStorage`) and the side-rail navigation. Mounted automatically on any page that sets `body[data-rail]`. |
+| `src/web/site.js` | Shared loaders for branding, schedule, speakers, sponsors, content (about, code-of-conduct), and modal helpers. Classic script so `onclick=` handlers in HTML can resolve `window.foo`. |
+| `src/web/timezone-utils.js` | Date/time formatting for session start/end. |
+| `src/web/styles.css` | Single stylesheet keyed entirely off CSS custom properties on `:root[data-theme]`. |
+
+### Side-rail navigation
+
+`rail.js` reads two `data-*` attributes from `<body>`:
+
+- `data-rail="public"` or `data-rail="admin"` — picks the nav set.
+- `data-rail-active="<id>"` — marks the corresponding link as the current page (adds `.is-active` and `aria-current="page"`).
+
+The rail is rendered as `<aside class="side-rail">` with a `<nav aria-label="Main">` body and a footer that holds page-specific actions (Register / Back-to-site / Logout) plus the theme toggle. Below 900px the rail collapses into an off-canvas drawer toggled by a hamburger button; the collapsed/expanded state on desktop is persisted under `localStorage` key `rail.collapsed`.
+
+### Theme system
+
+All structural colors in `styles.css` are referenced via CSS custom properties (`var(--bg)`, `var(--surface)`, `var(--text)`, `var(--primary)`, etc.) declared on `:root[data-theme="dark"]` and `:root[data-theme="light"]`. Switching the `data-theme` attribute re-paints the entire UI without touching individual selectors.
+
+- First-visit default uses `window.matchMedia('(prefers-color-scheme)')`.
+- User override is stored in `localStorage` key `site.theme` (`"dark"` | `"light"`).
+- Brand-specific colors (Microsoft Azure gradients, sponsor tier badges, LIVE indicator red) are intentionally left as literals so they stay on-brand in both themes.
+
+---
+
 ## Security
 
 - **User-Assigned Managed Identity** — Function App authenticates to Storage via RBAC (no connection strings or shared keys)

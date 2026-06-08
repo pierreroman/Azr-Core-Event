@@ -1,14 +1,12 @@
 /**
- * Homepage test protocol — verifies the public landing page renders
- * correctly, loads data from APIs, and displays all major sections.
+ * Homepage tests — index.html (`/`) is now the Home page: logo, title,
+ * tagline, and CTA buttons. The video player lives on /watch.html.
  */
 const { test, expect } = require('./fixtures');
 
-test.describe('Homepage', () => {
+test.describe('Home page (/)', () => {
 
-  // ── Page Load & SEO ───────────────────────────────────────────
-
-  test('should load successfully and have correct title', async ({ page, mockAPIs }) => {
+  test('should load with the correct document title', async ({ page, mockAPIs }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/Community Online Event/i);
   });
@@ -19,54 +17,32 @@ test.describe('Homepage', () => {
     await expect(viewport).toHaveAttribute('content', /width=device-width/);
   });
 
-  // ── Hero Section ──────────────────────────────────────────────
-
-  test('should display hero section with title and tagline', async ({ page, mockAPIs }) => {
+  test('should set body[data-rail="public"] and mark "home" as active', async ({ page, mockAPIs }) => {
     await page.goto('/');
+    await expect(page.locator('body')).toHaveAttribute('data-rail', 'public');
+    await expect(page.locator('body')).toHaveAttribute('data-rail-active', 'home');
+  });
+
+  test('should display hero with logo, title, and tagline', async ({ page, mockAPIs }) => {
+    await page.goto('/');
+    await expect(page.locator('#site-logo')).toBeVisible();
     await expect(page.locator('#site-title')).toBeVisible();
     await expect(page.locator('#site-tagline')).toBeVisible();
   });
 
-  test('hero should have CTA navigation buttons', async ({ page, mockAPIs }) => {
+  test('should display Watch and Schedule CTA buttons', async ({ page, mockAPIs }) => {
     await page.goto('/');
-    const ctas = page.locator('.hero .cta');
-    await expect(ctas).toHaveCount(4); // About, Schedule, Speakers, Sponsors
+    const watchCta = page.locator('.hero-actions a[href="/watch.html"]');
+    const scheduleCta = page.locator('.hero-actions a[href="/schedule.html"]');
+    await expect(watchCta).toBeVisible();
+    await expect(scheduleCta).toBeVisible();
   });
 
-  // ── Schedule Section ──────────────────────────────────────────
-
-  test('should render schedule section with session data', async ({ page, mockAPIs }) => {
+  test('should NOT render the video player on the Home page', async ({ page, mockAPIs }) => {
     await page.goto('/');
-    const scheduleSection = page.locator('#schedule');
-    await expect(scheduleSection).toBeVisible();
-    await expect(scheduleSection.locator('h2')).toContainText('Event Schedule');
-
-    // Wait for schedule content to load (loading placeholder should disappear)
-    await expect(page.locator('#schedule-container .loading')).toBeHidden({ timeout: 10_000 });
+    await expect(page.locator('#video')).toHaveCount(0);
+    await expect(page.locator('#video-container')).toHaveCount(0);
   });
-
-  // ── Speakers Section ──────────────────────────────────────────
-
-  test('should render speakers section', async ({ page, mockAPIs }) => {
-    await page.goto('/');
-    const speakersSection = page.locator('#speakers');
-    await expect(speakersSection).toBeVisible();
-    await expect(speakersSection.locator('h2')).toContainText('Featured Speakers');
-
-    // Wait for speakers to load
-    await expect(page.locator('#speakers-grid .loading')).toBeHidden({ timeout: 10_000 });
-  });
-
-  // ── Sponsors Section ──────────────────────────────────────────
-
-  test('should have sponsors section in DOM', async ({ page, mockAPIs }) => {
-    await page.goto('/');
-    const sponsorsSection = page.locator('#sponsors');
-    // Sponsors section may be hidden if no sponsors are configured
-    await expect(sponsorsSection).toBeAttached();
-  });
-
-  // ── Footer ────────────────────────────────────────────────────
 
   test('should display footer with links', async ({ page, mockAPIs }) => {
     await page.goto('/');
@@ -75,12 +51,35 @@ test.describe('Homepage', () => {
     await expect(footer.locator('.footer-links a')).toHaveCount(4);
     await expect(footer.locator('.copyright')).toContainText('2026');
   });
+});
 
-  // ── External Scripts ──────────────────────────────────────────
+test.describe('Watch page (/watch.html)', () => {
+
+  test('should load with the correct document title', async ({ page, mockAPIs }) => {
+    await page.goto('/watch.html');
+    await expect(page).toHaveTitle(/Watch/i);
+  });
+
+  test('should set body[data-rail="public"] and mark "watch" as active', async ({ page, mockAPIs }) => {
+    await page.goto('/watch.html');
+    await expect(page.locator('body')).toHaveAttribute('data-rail', 'public');
+    await expect(page.locator('body')).toHaveAttribute('data-rail-active', 'watch');
+  });
+
+  test('should display the video section and container', async ({ page, mockAPIs }) => {
+    await page.goto('/watch.html');
+    await expect(page.locator('#video')).toBeVisible();
+    await expect(page.locator('#video-container')).toBeVisible();
+  });
+
+  test('should NOT render the hero on the Watch page', async ({ page, mockAPIs }) => {
+    await page.goto('/watch.html');
+    await expect(page.locator('.hero')).toHaveCount(0);
+    await expect(page.locator('#site-title')).toHaveCount(0);
+  });
 
   test('should load required external scripts', async ({ page, mockAPIs }) => {
-    await page.goto('/');
-    // marked.js and DOMPurify should be loaded
+    await page.goto('/watch.html');
     const hasMarked = await page.evaluate(() => typeof window.marked !== 'undefined');
     const hasDOMPurify = await page.evaluate(() => typeof window.DOMPurify !== 'undefined');
     expect(hasMarked).toBe(true);

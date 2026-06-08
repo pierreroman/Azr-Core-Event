@@ -1,118 +1,166 @@
 /**
- * Navigation & interaction test protocol — verifies anchor links,
- * modal dialogs, and cross-page navigation work correctly.
+ * Navigation & interaction tests — covers the new side-rail navigation,
+ * cross-page transitions, and modal dialogs that now live on the
+ * per-section pages (schedule.html, speakers.html, sponsors.html).
  */
 const { test, expect } = require('./fixtures');
 
-test.describe('Navigation & Interactions', () => {
+test.describe('Side Rail — Public', () => {
 
-  // ── Anchor Navigation ─────────────────────────────────────────
-
-  test('CTA buttons should scroll to correct sections', async ({ page, mockAPIs }) => {
+  test('rail renders on the home page with all 6 nav items', async ({ page, mockAPIs }) => {
     await page.goto('/');
-
-    // Click "Schedule" CTA and verify scroll position
-    await page.locator('.hero .cta', { hasText: 'Schedule' }).click();
-    await expect(page.locator('#schedule')).toBeInViewport();
+    const rail = page.locator('aside.side-rail');
+    await expect(rail).toBeVisible();
+    await expect(rail).toHaveAttribute('aria-label', 'Primary navigation');
+    await expect(rail.locator('.rail-item[data-rail-id]')).toHaveCount(6);
   });
 
-  test('About anchor link should navigate to about section', async ({ page, mockAPIs }) => {
+  test('rail marks the current page with aria-current="page"', async ({ page, mockAPIs }) => {
     await page.goto('/');
-    await page.locator('.hero .cta', { hasText: 'About' }).click();
-    await expect(page.locator('section#about').first()).toBeInViewport();
+    const active = page.locator('aside.side-rail .rail-item.is-active');
+    await expect(active).toHaveCount(1);
+    await expect(active).toHaveAttribute('aria-current', 'page');
+    await expect(active).toHaveAttribute('data-rail-id', 'home');
   });
 
-  // ── Code of Conduct Modal ─────────────────────────────────────
+  test('rail active state updates per page', async ({ page, mockAPIs }) => {
+    const pages = [
+      { url: '/watch.html', id: 'watch' },
+      { url: '/about.html', id: 'about' },
+      { url: '/schedule.html', id: 'schedule' },
+      { url: '/speakers.html', id: 'speakers' },
+      { url: '/sponsors.html', id: 'sponsors' },
+    ];
+    for (const p of pages) {
+      await page.goto(p.url);
+      const active = page.locator('aside.side-rail .rail-item.is-active');
+      await expect(active, `active item on ${p.url}`).toHaveAttribute('data-rail-id', p.id);
+    }
+  });
 
-  test('should open and close Code of Conduct modal', async ({ page, mockAPIs }) => {
+  test('rail link navigates between pages', async ({ page, mockAPIs }) => {
     await page.goto('/');
+    await page.locator('aside.side-rail .rail-item[data-rail-id="schedule"]').click();
+    await expect(page).toHaveURL(/\/schedule\.html$/);
+    await expect(page.locator('aside.side-rail .rail-item.is-active'))
+      .toHaveAttribute('data-rail-id', 'schedule');
+  });
 
-    // Find and click the Code of Conduct link in the footer
+  test('rail footer contains the theme toggle button', async ({ page, mockAPIs }) => {
+    await page.goto('/');
+    const toggle = page.locator('aside.side-rail .rail-theme-toggle');
+    await expect(toggle).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-pressed', /true|false/);
+  });
+
+  test('rail collapse state persists across navigations', async ({ page, mockAPIs }) => {
+    await page.goto('/');
+    await page.locator('.rail-collapse').click();
+    await expect(page.locator('body')).toHaveClass(/rail-collapsed/);
+    await page.goto('/about.html');
+    await expect(page.locator('body')).toHaveClass(/rail-collapsed/);
+    // Cleanup so we don't leak state into other tests
+    await page.evaluate(() => localStorage.removeItem('rail.collapsed'));
+  });
+});
+
+test.describe('Side Rail — Mobile drawer', () => {
+  test.use({ viewport: { width: 480, height: 800 } });
+
+  test('hamburger toggles the off-canvas drawer below 900px', async ({ page, mockAPIs }) => {
+    await page.goto('/');
+    const hamburger = page.locator('.rail-toggle-mobile');
+    await expect(hamburger).toBeVisible();
+    await expect(hamburger).toHaveAttribute('aria-expanded', 'false');
+
+    await hamburger.click();
+    await expect(page.locator('body')).toHaveClass(/rail-open/);
+    await expect(hamburger).toHaveAttribute('aria-expanded', 'true');
+
+    // Escape closes the drawer
+    await page.keyboard.press('Escape');
+    await expect(page.locator('body')).not.toHaveClass(/rail-open/);
+    await expect(hamburger).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
+test.describe('Code of Conduct modal', () => {
+
+  test('opens and closes from the Watch page footer link', async ({ page, mockAPIs }) => {
+    await page.goto('/');
     await page.locator('footer a', { hasText: 'Code of Conduct' }).click();
-
-    // Modal should be visible
     const modal = page.locator('#coc-modal');
     await expect(modal).toBeVisible();
-
-    // Close the modal
     await modal.locator('.modal-close').click();
     await expect(modal).toBeHidden();
   });
 
-  // ── Session Modal ─────────────────────────────────────────────
+  test('is available on the schedule page', async ({ page, mockAPIs }) => {
+    await page.goto('/schedule.html');
+    await page.locator('footer a', { hasText: 'Code of Conduct' }).click();
+    await expect(page.locator('#coc-modal')).toBeVisible();
+  });
+});
 
-  test('should open session detail modal when clicking a schedule item', async ({ page, mockAPIs }) => {
-    await page.goto('/');
+test.describe('Session modal (schedule page)', () => {
 
-    // Wait for schedule to load
+  test('clicking a schedule item opens the session modal', async ({ page, mockAPIs }) => {
+    await page.goto('/schedule.html');
     await expect(page.locator('#schedule-container .loading')).toBeHidden({ timeout: 10_000 });
 
-    // Click the first schedule card (if rendered)
     const firstSession = page.locator('.schedule-card, .session-card').first();
     if (await firstSession.isVisible()) {
       await firstSession.click();
-
       const sessionModal = page.locator('#session-modal');
       await expect(sessionModal).toBeVisible();
-
-      // Close modal
       await sessionModal.locator('.modal-close').click();
       await expect(sessionModal).toBeHidden();
     }
   });
+});
 
-  // ── Speaker Modal ─────────────────────────────────────────────
+test.describe('Speaker modal (speakers page)', () => {
 
-  test('should open speaker detail modal when clicking a speaker card', async ({ page, mockAPIs }) => {
-    await page.goto('/');
-
-    // Wait for speakers to load
+  test('clicking a speaker opens the speaker modal', async ({ page, mockAPIs }) => {
+    await page.goto('/speakers.html');
     await expect(page.locator('#speakers-grid .loading')).toBeHidden({ timeout: 10_000 });
 
-    // Click the first speaker card (if rendered)
     const firstSpeaker = page.locator('.speaker-card').first();
     if (await firstSpeaker.isVisible()) {
       await firstSpeaker.click();
-
       const speakerModal = page.locator('#speaker-modal');
       await expect(speakerModal).toBeVisible();
-
-      // Verify speaker name is displayed
       await expect(speakerModal.locator('#speaker-modal-name')).not.toBeEmpty();
-
-      // Close modal
       await speakerModal.locator('.modal-close').click();
       await expect(speakerModal).toBeHidden();
     }
   });
+});
 
-  // ── Sponsor Modal ─────────────────────────────────────────────
+test.describe('Sponsor modal (sponsors page)', () => {
 
-  test('should open sponsor detail modal when clicking a sponsor', async ({ page, mockAPIs }) => {
-    await page.goto('/');
-
-    // Wait for sponsors to load
+  test('clicking a sponsor opens the sponsor modal', async ({ page, mockAPIs }) => {
+    await page.goto('/sponsors.html');
     await expect(page.locator('#sponsors-grid .loading')).toBeHidden({ timeout: 10_000 });
 
     const firstSponsor = page.locator('.sponsor-card, .sponsor-item').first();
     if (await firstSponsor.isVisible()) {
       await firstSponsor.click();
-
       const sponsorModal = page.locator('#sponsor-modal');
       await expect(sponsorModal).toBeVisible();
-
-      // Close modal
       await sponsorModal.locator('.modal-close').click();
       await expect(sponsorModal).toBeHidden();
     }
   });
+});
 
-  // ── Admin Link ────────────────────────────────────────────────
+test.describe('Footer admin link', () => {
 
-  test('footer should contain link to admin page', async ({ page, mockAPIs }) => {
-    await page.goto('/');
-    const adminLink = page.locator('footer a[href="/admin.html"]');
-    await expect(adminLink).toBeVisible();
-    await expect(adminLink).toHaveText('Admin');
+  test('every public page links to /admin.html', async ({ page, mockAPIs }) => {
+    for (const url of ['/', '/watch.html', '/about.html', '/schedule.html', '/speakers.html', '/sponsors.html']) {
+      await page.goto(url);
+      const adminLink = page.locator('footer a[href="/admin.html"]');
+      await expect(adminLink, `admin link on ${url}`).toBeVisible();
+    }
   });
 });

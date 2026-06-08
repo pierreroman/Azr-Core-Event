@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Community Online Event</title>
+    <title>Watch</title>
     <link rel="icon" type="image/png" sizes="16x16" href="assets/Azure-A-16px.png">
     <link rel="stylesheet" href="styles.css">
     <!-- Markdown parser for content sections -->
@@ -11,20 +11,44 @@
     <!-- HTML sanitizer to prevent XSS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 </head>
-<body data-rail="public" data-rail-active="home">
+<body data-rail="public" data-rail-active="watch">
     <!-- Skip to main content link for accessibility -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <main id="main-content">
-        <!-- Hero Section -->
-        <section class="hero">
-            <img src="assets/event-logo.png" alt="Event Logo" class="hero-logo" id="site-logo">
-            <h1 id="site-title">Community Online Event</h1>
-            <p class="tagline" id="site-tagline">A community-driven online event bringing people together.</p>
+        <!-- Video Player Section -->
+        <section id="video" class="video-section">
+            <div class="video-container-wrapper">
+                <span class="video-container-label">Watch Here</span>
+                <div class="video-container" id="video-container">
+                    <img src="assets/Loading-Schedule.png" alt="Loading schedule..." id="video-placeholder">
+                </div>
+            </div>
+            <p class="autoplay-note"><em>Most browsers require videos to be muted for autoplay to work due to autoplay policies. The video will start automatically when the page loads, but it will be muted initially. You can unmute it using the player controls.</em></p>
 
-            <div class="hero-actions">
-                <a href="/watch.html" class="cta">▶ Watch Now</a>
-                <a href="/schedule.html" class="cta secondary">View Schedule</a>
+            <!-- Live Chat Button -->
+            <div id="live-chat-button" class="live-chat-button" hidden>
+                <button onclick="openLiveChat()" class="btn-chat">💬 Open Live Chat</button>
+            </div>
+
+            <!-- Now Playing Info Box -->
+            <div id="now-playing-box" class="now-playing-box" hidden>
+                <div class="now-playing-header">
+                    <span class="live-indicator">● LIVE</span>
+                    <span class="now-playing-label">Now Playing</span>
+                </div>
+                <h3 id="now-playing-title"></h3>
+                <div id="now-playing-description" class="now-playing-description"></div>
+                <a id="now-playing-link" href="#" target="_blank" rel="noopener" class="btn-youtube">▶ Watch on YouTube</a>
+            </div>
+
+            <!-- Up Next Box -->
+            <div id="up-next-box" class="up-next-box" hidden>
+                <div class="up-next-header">
+                    <span class="up-next-label">Up Next</span>
+                    <span id="up-next-countdown" class="up-next-countdown"></span>
+                </div>
+                <h4 id="up-next-title"></h4>
             </div>
         </section>
     </main>
@@ -62,6 +86,9 @@
             </div>
         </div>
     </div>
+
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
 
     <script src="rail.js" defer></script>
     <script src="site.js" defer></script>

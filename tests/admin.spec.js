@@ -1,21 +1,16 @@
 /**
- * Admin pages test protocol — verifies that admin pages are protected
- * and that authenticated flows render correctly.
+ * Admin pages test protocol — verifies admin pages are protected and that
+ * the admin rail markup is present in the HTML source. Authenticated
+ * dashboard rendering requires SWA CLI with mocked auth or a real session.
  */
-const { test, expect } = require('./fixtures');
+const { test, expect } = require('@playwright/test');
 
 test.describe('Admin Pages — Authentication', () => {
 
-  // ── Unauthenticated access should redirect/block ──────────────
-
   test('admin.html should redirect unauthenticated users', async ({ page }) => {
     const response = await page.goto('/admin.html');
-    // SWA returns 401/302 for unauthenticated users on protected routes
     const status = response?.status() ?? 0;
-    // Either redirected to login or got a 401
     expect(status === 200 || status === 401 || status === 302).toBeTruthy();
-
-    // If redirected, URL should contain auth/login path
     if (status === 302) {
       expect(page.url()).toContain('.auth/login');
     }
@@ -40,35 +35,58 @@ test.describe('Admin Pages — Authentication', () => {
   });
 });
 
-test.describe('Admin Dashboard — Authenticated', () => {
-  // NOTE: These tests require real authentication against the live site.
-  // They can only fully pass when running locally with SWA CLI (where
-  // auth can be mocked) or when a test user session cookie is provided.
-  // Against a live SWA deployment, admin routes redirect to the login page.
+test.describe('Admin Dashboard — Markup', () => {
+  // These tests check the raw HTML to verify structure even when auth
+  // would block rendering against a live SWA deployment.
 
-  test('admin page should redirect to login when not authenticated', async ({ page }) => {
-    await page.goto('/admin.html');
-    // Live SWA redirects to Microsoft login
-    const url = new URL(page.url());
-    const allowedLoginHosts = ['login.microsoftonline.com'];
-    const isLoginRedirect = allowedLoginHosts.includes(url.hostname) ||
-                            url.pathname.includes('/.auth/login') ||
-                            url.pathname.endsWith('/admin.html');
-    expect(isLoginRedirect).toBe(true);
+  test('admin.html source contains rail markers and dashboard markup', async ({ request }) => {
+    const response = await request.get('/admin.html', { maxRedirects: 0 }).catch(() => null);
+    if (!response || response.status() !== 200) {
+      test.skip(true, 'admin.html not directly served (auth redirect or non-local target)');
+      return;
+    }
+    const html = await response.text();
+    // Rail markers
+    expect(html).toContain('data-rail="admin"');
+    expect(html).toContain('data-rail-active="dashboard"');
+    expect(html).toContain('rail.js');
+    // Dashboard markup
+    expect(html).toContain('dashboard-card');
+    // Legacy .user-bar should be gone — the rail now renders Logout / Back-to-site
+    expect(html).not.toMatch(/class=["'][^"']*user-bar/);
   });
 
-  test('admin HTML source should contain dashboard markup', async ({ request }) => {
-    // Fetch the raw admin.html to verify its structure (bypass auth redirect)
-    // This confirms the page has the expected elements even if auth blocks rendering
-    const response = await request.get('/admin.html', {
-      maxRedirects: 0,
-    }).catch(() => null);
-    // If we get the page (locally), verify content; otherwise skip gracefully
-    if (response && response.status() === 200) {
-      const html = await response.text();
-      expect(html).toContain('dashboard-card');
-      expect(html).toContain('Logout');
-      expect(html).toContain('Back to Site');
+  test('schedule-admin.html source mounts the admin rail with Schedule active', async ({ request }) => {
+    const response = await request.get('/schedule-admin.html', { maxRedirects: 0 }).catch(() => null);
+    if (!response || response.status() !== 200) {
+      test.skip(true, 'schedule-admin.html not directly served');
+      return;
     }
+    const html = await response.text();
+    expect(html).toContain('data-rail="admin"');
+    expect(html).toContain('data-rail-active="schedule"');
+    expect(html).toContain('rail.js');
+  });
+
+  test('speakers-admin.html source mounts the admin rail with Speakers active', async ({ request }) => {
+    const response = await request.get('/speakers-admin.html', { maxRedirects: 0 }).catch(() => null);
+    if (!response || response.status() !== 200) {
+      test.skip(true, 'speakers-admin.html not directly served');
+      return;
+    }
+    const html = await response.text();
+    expect(html).toContain('data-rail="admin"');
+    expect(html).toContain('data-rail-active="speakers"');
+  });
+
+  test('sponsors-admin.html source mounts the admin rail with Sponsors active', async ({ request }) => {
+    const response = await request.get('/sponsors-admin.html', { maxRedirects: 0 }).catch(() => null);
+    if (!response || response.status() !== 200) {
+      test.skip(true, 'sponsors-admin.html not directly served');
+      return;
+    }
+    const html = await response.text();
+    expect(html).toContain('data-rail="admin"');
+    expect(html).toContain('data-rail-active="sponsors"');
   });
 });

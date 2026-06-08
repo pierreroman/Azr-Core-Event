@@ -1,6 +1,26 @@
 {
   "routes": [
     {
+      "route": "/watch",
+      "rewrite": "/watch.html"
+    },
+    {
+      "route": "/about",
+      "rewrite": "/about.html"
+    },
+    {
+      "route": "/schedule",
+      "rewrite": "/schedule.html"
+    },
+    {
+      "route": "/speakers",
+      "rewrite": "/speakers.html"
+    },
+    {
+      "route": "/sponsors",
+      "rewrite": "/sponsors.html"
+    },
+    {
       "route": "/admin.html",
       "allowedRoles": ["administrator"]
     },

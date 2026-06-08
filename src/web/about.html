@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Community Online Event</title>
+    <title>About</title>
     <link rel="icon" type="image/png" sizes="16x16" href="assets/Azure-A-16px.png">
     <link rel="stylesheet" href="styles.css">
     <!-- Markdown parser for content sections -->
@@ -11,20 +11,14 @@
     <!-- HTML sanitizer to prevent XSS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 </head>
-<body data-rail="public" data-rail-active="home">
+<body data-rail="public" data-rail-active="about">
     <!-- Skip to main content link for accessibility -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <main id="main-content">
-        <!-- Hero Section -->
-        <section class="hero">
-            <img src="assets/event-logo.png" alt="Event Logo" class="hero-logo" id="site-logo">
-            <h1 id="site-title">Community Online Event</h1>
-            <p class="tagline" id="site-tagline">A community-driven online event bringing people together.</p>
-
-            <div class="hero-actions">
-                <a href="/watch.html" class="cta">▶ Watch Now</a>
-                <a href="/schedule.html" class="cta secondary">View Schedule</a>
+        <section id="about">
+            <div id="about-content" class="markdown-content">
+                <div class="loading">Loading about content...</div>
             </div>
         </section>
     </main>

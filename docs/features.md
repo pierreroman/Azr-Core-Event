@@ -1,14 +1,41 @@
 # Features
 
-## Public Website (index.html)
+## Public Website
 
-### Hero & Navigation
+The public site is split into six focused pages, each sharing a persistent side-rail navigation. Clean URLs are configured in `staticwebapp.config.json` so `/watch`, `/about`, `/schedule`, `/speakers`, and `/sponsors` rewrite to their respective `.html` files.
+
+| URL | File | Purpose |
+|-----|------|---------|
+| `/` | `index.html` | Home — logo, title, tagline, primary CTAs |
+| `/watch` | `watch.html` | Watch — full-bleed video player + now-playing & up-next |
+| `/about` | `about.html` | About content (Markdown from Content API) |
+| `/schedule` | `schedule.html` | Full event schedule with session modals |
+| `/speakers` | `speakers.html` | Speaker grid with detail modals |
+| `/sponsors` | `sponsors.html` | Sponsor grid grouped by tier with detail modals |
+
+### Side-rail Navigation
+
+- **Persistent rail** on every public and admin page — mounted by [rail.js](../src/web/rail.js) and configured via `body[data-rail="public|admin"]` and `body[data-rail-active="<id>"]`
+- **Fluent UI inline SVG icons** (no font dependency) for Home, Watch, About, Schedule, Speakers, Sponsors
+- **Collapse toggle** in the rail header — collapsed state persisted to `localStorage` key `rail.collapsed`
+- **Mobile drawer** below 900px — hamburger toggles off-canvas overlay; Escape or scrim click closes
+- **Register button** in the rail footer — shown when registration is enabled, opens the registration modal
+- **Active state** marked with `.is-active` class and `aria-current="page"` for assistive tech
+
+### Theme System (Dark / Light)
+
+- **Dual themes** — both keyed off CSS custom properties on `:root[data-theme="dark|light"]`
+- **First-visit default** — honors the user's OS-level `prefers-color-scheme`
+- **Manual toggle** in the rail footer (sun/moon icon) — persists to `localStorage` key `site.theme`
+- **Brand colors preserved** — Azure gradients, sponsor tier badges, and the LIVE indicator stay branded across both themes
+
+### Hero & Branding (Home page)
 
 - **Event Logo** — Customizable conference logo displayed prominently above the title
 - Configurable branding and tagline via Admin Dashboard
-- Quick navigation to About, Schedule, Speakers, and Sponsors sections
+- Primary CTAs route to the Watch page and the Schedule page
 
-### Video Player Section
+### Video Player Section (Watch page)
 
 - **Embedded YouTube Player** — Automatically loads and plays the current session
 - **Live Stream Detection** — Shows "LIVE" badge when stream is broadcasting
@@ -29,11 +56,11 @@
 
 ### Registration
 
-- **Register Button** — Appears in the navigation bar when registration is enabled by an admin
+- **Register Button** — Appears in the rail footer when registration is enabled by an admin
 - **Registration Modal** — Opens with configurable title, Markdown-rendered description, and external registration link
 - Configuration managed via the Admin Dashboard (stored in Blob Storage)
 
-### Featured Speakers Section
+### Featured Speakers Section (speakers.html)
 
 - Dynamically loads speakers from API
 - Speaker cards with avatar (headshot or initials), name, title, and company
@@ -45,7 +72,7 @@
   - Full biography with clickable links
   - List of their sessions (clickable to open session details)
 
-### Sponsors Section
+### Sponsors Section (sponsors.html)
 
 - Fetches sponsors from API, grouped by tier (Platinum, Gold, Silver, Bronze, Community)
 - Logo grid with tier headings
@@ -55,10 +82,13 @@
   - Website link
   - Markdown-rendered description
 
-### Additional Sections
+### About Page (about.html)
 
 - **About** — Event description loaded from Content API (server-side Markdown stored in Blob Storage)
-- **Code of Conduct** — Modal with community guidelines loaded from Content API
+
+### Shared Across Public Pages
+
+- **Code of Conduct** — Modal with community guidelines loaded from Content API (link in every page footer)
 - **Footer** — Privacy Policy (links to Microsoft Privacy Statement), Code of Conduct, Admin link, Powered by Azure
 
 ### Accessibility & UX
@@ -74,6 +104,8 @@
 ## Admin Dashboard (admin.html)
 
 **Authentication:** Requires Microsoft Entra ID login (configured in staticwebapp.config.json)
+
+The admin rail (mounted by the same [rail.js](../src/web/rail.js)) provides persistent navigation to Dashboard, Schedule, Speakers, Sponsors, Branding, and Registration sections. The rail footer offers a **Back to site** link, **Logout**, and the theme toggle.
 
 Central dashboard with navigation to all admin functions:
 
