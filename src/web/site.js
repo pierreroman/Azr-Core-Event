@@ -26,6 +26,18 @@ let countdownInterval = null;
 // every recorded talk hits this).
 const endedSessionIds = new Set();
 
+// ==================== AUTH + FAVORITES STATE =====================
+// Signed-in user (resolved from /.auth/me) or null for anonymous.
+let currentUser = null;
+// Set of favorite session IDs for the current viewer. For signed-in
+// users this is loaded from /api/favorites and writes go to the API;
+// for anonymous users it lives in localStorage and is merged into the
+// account on the next sign-in.
+const favoriteSessions = new Set();
+const FAVORITES_LOCAL_KEY = 'event-favorites';
+// When true, the schedule page filters to only favorited sessions.
+let myScheduleFilterEnabled = false;
+
 function onYouTubeIframeAPIReady() {
     // API is ready, player will be created when needed
 }
@@ -609,7 +621,11 @@ async function loadSchedule() {
                     : '';
 
                 html += `
-                    <div class="session-card" role="button" tabindex="0" onclick="openSession('${session.id}')" onkeydown="handleCardKeydown(event, () => openSession('${session.id}'))">
+                    <div class="session-card" role="button" tabindex="0"
+                        data-session-id="${escapeHtml(session.id)}"
+                        onclick="openSession('${session.id}')"
+                        onkeydown="handleCardKeydown(event, () => openSession('${session.id}'))">
+                        ${favoriteStarMarkup(session.id)}
                         <div class="session-time">${time}</div>
                         <h4>${escapeHtml(session.title)}</h4>
                         <p>${escapeHtml(truncatedDesc)}</p>
@@ -648,6 +664,12 @@ function openSession(sessionId) {
     document.getElementById('modal-time').textContent = time;
     document.getElementById('modal-title').textContent = session.title;
     document.getElementById('modal-description').textContent = session.description || 'No description available.';
+
+    // Inject the favorite star next to the title (if the page provides a slot).
+    const favSlot = document.getElementById('modal-fav-slot');
+    if (favSlot) {
+        favSlot.innerHTML = favoriteStarMarkup(session.id);
+    }
 
     const sessionStart = new Date(session.startTime);
     const durationMs = (session.duration || 3600) * 1000;
@@ -1242,8 +1264,265 @@ function _attachOverlayClose(id, closer) {
     }
 }
 
+// ==================== AUTH + FAVORITES ====================
+
+/**
+ * Resolve the current user from Static Web Apps' built-in auth endpoint.
+ * Returns null for anonymous viewers. Never throws — falls back to null
+ * if /.auth/me is unavailable (e.g. local dev without SWA emulator).
+ */
+async function fetchCurrentUser() {
+    try {
+        const r = await fetch('/.auth/me');
+        if (!r.ok) return null;
+        const data = await r.json();
+        const principal = data && data.clientPrincipal;
+        if (!principal || !principal.userId) return null;
+        return {
+            id: principal.userId,
+            name: principal.userDetails || 'Signed in',
+            provider: principal.identityProvider
+        };
+    } catch (_) {
+        return null;
+    }
+}
+
+function readLocalFavorites() {
+    try {
+        const raw = localStorage.getItem(FAVORITES_LOCAL_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.filter(x => typeof x === 'string') : [];
+    } catch (_) {
+        return [];
+    }
+}
+
+function writeLocalFavorites(ids) {
+    try {
+        localStorage.setItem(FAVORITES_LOCAL_KEY, JSON.stringify(Array.from(ids)));
+    } catch (_) { /* ignore quota errors */ }
+}
+
+function clearLocalFavorites() {
+    try { localStorage.removeItem(FAVORITES_LOCAL_KEY); } catch (_) {}
+}
+
+async function loadFavorites() {
+    if (currentUser) {
+        try {
+            const r = await fetch('/api/favorites', { cache: 'no-store' });
+            if (r.ok) {
+                const data = await r.json();
+                favoriteSessions.clear();
+                (data.sessionIds || []).forEach(id => favoriteSessions.add(id));
+                return;
+            }
+        } catch (err) {
+            console.warn('Failed to load favorites from API:', err);
+        }
+        // Fall through on failure — leave favorites empty so the UI
+        // doesn't show stale local data for a signed-in user.
+        favoriteSessions.clear();
+        return;
+    }
+    // Anonymous: read from localStorage
+    favoriteSessions.clear();
+    readLocalFavorites().forEach(id => favoriteSessions.add(id));
+}
+
+/**
+ * If a freshly-signed-in user has any local favorites stashed from their
+ * anonymous browsing, push them up to the server then wipe local. The
+ * server upsert is idempotent so repeated calls are safe.
+ */
+async function mergeLocalFavoritesIntoAccount() {
+    if (!currentUser) return;
+    const local = readLocalFavorites();
+    if (local.length === 0) return;
+    try {
+        const r = await fetch('/api/favorites/merge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionIds: local })
+        });
+        if (r.ok) {
+            clearLocalFavorites();
+        }
+    } catch (err) {
+        console.warn('Favorites merge failed:', err);
+    }
+}
+
+/**
+ * Toggle a favorite for the given session. For signed-in users this hits
+ * the API; for anonymous users it writes localStorage. Either way the
+ * in-memory set + visible UI are updated synchronously for snappiness,
+ * and any failed API call rolls back the optimistic change.
+ */
+async function toggleFavorite(sessionId, btnEl) {
+    if (!sessionId) return;
+    const wasFavorited = favoriteSessions.has(sessionId);
+    // Optimistic update
+    if (wasFavorited) {
+        favoriteSessions.delete(sessionId);
+    } else {
+        favoriteSessions.add(sessionId);
+    }
+    refreshFavoriteUI(sessionId);
+
+    if (!currentUser) {
+        // Anonymous path — just persist locally.
+        writeLocalFavorites(favoriteSessions);
+        // Re-apply the schedule filter if it's active.
+        if (myScheduleFilterEnabled) renderScheduleFilterState();
+        return;
+    }
+
+    // Signed-in path — sync to API, roll back on failure.
+    try {
+        const r = wasFavorited
+            ? await fetch('/api/favorites/' + encodeURIComponent(sessionId), { method: 'DELETE' })
+            : await fetch('/api/favorites/' + encodeURIComponent(sessionId), { method: 'PUT' });
+        if (!r.ok && r.status !== 204) {
+            throw new Error('API returned ' + r.status);
+        }
+        if (myScheduleFilterEnabled) renderScheduleFilterState();
+    } catch (err) {
+        console.warn('Favorite toggle failed, rolling back:', err);
+        if (wasFavorited) {
+            favoriteSessions.add(sessionId);
+        } else {
+            favoriteSessions.delete(sessionId);
+        }
+        refreshFavoriteUI(sessionId);
+    }
+}
+
+/** Update every star button for a given session to match favorites state. */
+function refreshFavoriteUI(sessionId) {
+    const isFav = favoriteSessions.has(sessionId);
+    document.querySelectorAll('.fav-star[data-session-id="' + cssEscape(sessionId) + '"]').forEach(btn => {
+        btn.classList.toggle('is-favorite', isFav);
+        btn.setAttribute('aria-pressed', isFav ? 'true' : 'false');
+        btn.setAttribute('aria-label', isFav ? 'Remove from favorites' : 'Add to favorites');
+    });
+}
+
+/** Re-render all stars on the page (used after favorites load). */
+function refreshAllFavoriteStars() {
+    document.querySelectorAll('.fav-star').forEach(btn => {
+        const id = btn.getAttribute('data-session-id');
+        if (!id) return;
+        const isFav = favoriteSessions.has(id);
+        btn.classList.toggle('is-favorite', isFav);
+        btn.setAttribute('aria-pressed', isFav ? 'true' : 'false');
+        btn.setAttribute('aria-label', isFav ? 'Remove from favorites' : 'Add to favorites');
+    });
+}
+
+/** Minimal CSS.escape polyfill for older browsers. */
+function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === 'function') {
+        return window.CSS.escape(value);
+    }
+    return String(value).replace(/[^a-zA-Z0-9_-]/g, c => '\\' + c);
+}
+
+/**
+ * Markup for the star toggle button injected into session cards.
+ * `onclick` calls toggleFavorite and stops propagation so the click
+ * doesn't also open the session modal.
+ */
+function favoriteStarMarkup(sessionId) {
+    const isFav = favoriteSessions.has(sessionId);
+    const idAttr = escapeHtml(sessionId);
+    return `<button type="button" class="fav-star${isFav ? ' is-favorite' : ''}"
+        data-session-id="${idAttr}"
+        aria-pressed="${isFav ? 'true' : 'false'}"
+        aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}"
+        onclick="event.stopPropagation(); toggleFavorite('${idAttr}', this);"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();toggleFavorite('${idAttr}', this);}">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3.5l2.7 5.5 6 .9-4.4 4.3 1 6-5.3-2.8L6.7 20.2l1-6L3.3 9.9l6-.9z"/></svg>
+    </button>`;
+}
+
+// ==================== MY SCHEDULE FILTER ====================
+
+function toggleMyScheduleFilter() {
+    myScheduleFilterEnabled = !myScheduleFilterEnabled;
+    renderScheduleFilterState();
+}
+
+function renderScheduleFilterState() {
+    const chip = document.getElementById('my-schedule-filter');
+    if (chip) {
+        chip.classList.toggle('is-active', myScheduleFilterEnabled);
+        chip.setAttribute('aria-pressed', myScheduleFilterEnabled ? 'true' : 'false');
+    }
+    const container = document.getElementById('schedule-container');
+    if (!container) return;
+    container.classList.toggle('filter-favorites', myScheduleFilterEnabled);
+
+    if (!myScheduleFilterEnabled) {
+        // Show everything
+        container.querySelectorAll('.session-card').forEach(c => c.style.display = '');
+        container.querySelectorAll('.schedule-day').forEach(d => d.style.display = '');
+        return;
+    }
+    // Hide non-favorited cards; hide entire day blocks with zero visible cards.
+    container.querySelectorAll('.session-card').forEach(card => {
+        const id = card.getAttribute('data-session-id');
+        card.style.display = (id && favoriteSessions.has(id)) ? '' : 'none';
+    });
+    container.querySelectorAll('.schedule-day').forEach(dayEl => {
+        const visible = dayEl.querySelectorAll('.session-card[style=""], .session-card:not([style])').length
+            + Array.from(dayEl.querySelectorAll('.session-card')).filter(c => c.style.display !== 'none').length;
+        // Simpler: any non-hidden card?
+        const anyVisible = Array.from(dayEl.querySelectorAll('.session-card')).some(c => c.style.display !== 'none');
+        dayEl.style.display = anyVisible ? '' : 'none';
+    });
+
+    // Empty-state message
+    let emptyEl = container.querySelector('.my-schedule-empty');
+    const anyMatch = favoriteSessions.size > 0 && Array.from(container.querySelectorAll('.session-card')).some(c => c.style.display !== 'none');
+    if (!anyMatch) {
+        if (!emptyEl) {
+            emptyEl = document.createElement('div');
+            emptyEl.className = 'my-schedule-empty';
+            emptyEl.innerHTML = favoriteSessions.size === 0
+                ? '<p>You haven\'t starred any sessions yet. Tap the ★ on a session to add it to your schedule.</p>'
+                : '<p>No starred sessions match the current view.</p>';
+            container.appendChild(emptyEl);
+        } else {
+            emptyEl.style.display = '';
+        }
+    } else if (emptyEl) {
+        emptyEl.style.display = 'none';
+    }
+}
+
+
+
 document.addEventListener('DOMContentLoaded', function() {
     applyBranding();
+
+    // Resolve auth + load favorites first so the schedule render below
+    // picks up the right star state on its first paint.
+    fetchCurrentUser().then(async user => {
+        currentUser = user;
+        if (typeof window.setSignedInUser === 'function') {
+            window.setSignedInUser(user);
+        }
+        await loadFavorites();
+        // If they just signed in, sweep up any anon-era localStorage favorites
+        if (currentUser) {
+            await mergeLocalFavoritesIntoAccount();
+            await loadFavorites(); // re-pull to include merged items
+        }
+        refreshAllFavoriteStars();
+    });
 
     Promise.allSettled([
         loadSchedule(),
@@ -1251,7 +1530,12 @@ document.addEventListener('DOMContentLoaded', function() {
         loadSponsors(),
         loadMarkdownContent(),
         loadRegistration()
-    ]).then(() => scrollToHashTarget('auto'));
+    ]).then(() => {
+        scrollToHashTarget('auto');
+        // Stars on cards rendered during the schedule load may have used
+        // an empty favoriteSessions set; re-paint now that data is in.
+        refreshAllFavoriteStars();
+    });
 
     startScheduleVersionPolling();
 

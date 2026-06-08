@@ -17,7 +17,15 @@
 
     <main id="main-content">
         <section id="schedule">
-            <h2>Event Schedule</h2>
+            <div class="schedule-header">
+                <h2>Event Schedule</h2>
+                <button type="button" id="my-schedule-filter" class="filter-chip"
+                    aria-pressed="false"
+                    onclick="toggleMyScheduleFilter()">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3.5l2.7 5.5 6 .9-4.4 4.3 1 6-5.3-2.8L6.7 20.2l1-6L3.3 9.9l6-.9z"/></svg>
+                    My Schedule
+                </button>
+            </div>
 
             <div id="schedule-container" class="schedule-days">
                 <p class="loading">Loading schedule...</p>
@@ -64,7 +72,10 @@
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal()" aria-label="Close session details">&times;</button>
             <div class="modal-time" id="modal-time"></div>
-            <h2 class="modal-title" id="modal-title"></h2>
+            <div class="modal-title-row">
+                <h2 class="modal-title" id="modal-title"></h2>
+                <span id="modal-fav-slot"></span>
+            </div>
             <div class="modal-description" id="modal-description"></div>
             <div class="modal-actions" id="modal-actions">
                 <!-- Dynamically populated: Watch Recording or Add to Calendar -->

@@ -66,6 +66,19 @@ All API endpoints are served by Azure Functions (Node.js 20, v4 programming mode
 
 ---
 
+## Favorites API (`/api/favorites`)
+
+Per-user favorite sessions backed by Cosmos DB. The signed-in user is identified by the `x-ms-client-principal` header that Azure Static Web Apps injects after Entra ID sign-in — clients never supply a user ID.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/favorites` | Authenticated | Returns `{ sessionIds: string[] }` for the current user |
+| PUT | `/api/favorites/{sessionId}` | Authenticated | Adds (upserts) a favorite |
+| DELETE | `/api/favorites/{sessionId}` | Authenticated | Removes a favorite (idempotent — 204 even if not present) |
+| POST | `/api/favorites/merge` | Authenticated | Body `{ sessionIds: string[] }`; bulk-upserts. Used once on first sign-in to migrate anonymous `localStorage` favorites |
+
+---
+
 ## Environment Variables
 
 Configure these in `api/local.settings.json` for local development, or as App Settings in Azure for production:
@@ -75,6 +88,8 @@ Configure these in `api/local.settings.json` for local development, or as App Se
 | `AZURE_STORAGE_ACCOUNT` | Azure Storage account name | **Yes** |
 | `STORAGE_ACCOUNT_NAME` | Alternative storage account name (fallback) | No (use `AZURE_STORAGE_ACCOUNT`) |
 | `AZURE_CLIENT_ID` | Client ID for user-assigned managed identity | No (uses default credential locally) |
+| `COSMOS_ENDPOINT` | Cosmos DB account endpoint (e.g. `https://azcos<token>.documents.azure.com:443/`) | **Yes** for favorites API |
+| `COSMOS_DATABASE` | Cosmos DB database name | No (defaults to `event`) |
 | `YOUTUBE_API_KEY` | YouTube Data API v3 key for playlist imports | No (only needed for playlist import) |
 
 > **Important:** The `AZURE_STORAGE_ACCOUNT` environment variable is required. The API will not start correctly without a valid storage account name configured.

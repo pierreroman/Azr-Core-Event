@@ -14,6 +14,7 @@ api/local.settings.json
 # Build/deployment artifacts
 *.zip
 logs/
+azd-*.log
 
 # Bicep generated ARM templates
 infra/*.json

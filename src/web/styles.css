@@ -3431,3 +3431,137 @@ body[data-rail-active="watch"] .autoplay-note {
     }
 }
 
+
+/* ============================================================
+   Favorites (★ star) + My Schedule filter + Auth slot in rail
+   Added for v2.02 (sign-in + per-user favorites).
+   ============================================================ */
+
+/* Star button — anchored to the top-right of session-card via relative parent. */
+.session-card {
+  position: relative;
+}
+
+.fav-star {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.fav-star svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.fav-star:hover,
+.fav-star:focus-visible {
+  background: rgba(255, 193, 7, 0.12);
+  color: #f5b301;
+}
+
+.fav-star:focus-visible {
+  outline: 2px solid var(--primary-2);
+  outline-offset: 2px;
+}
+
+.fav-star.is-favorite {
+  color: #f5b301;
+}
+
+/* Inline star used inside the session modal (next to title) */
+.modal-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title-row .modal-title {
+  flex: 1;
+  margin: 0;
+}
+
+.modal-title-row .fav-star {
+  position: static;
+  flex-shrink: 0;
+}
+
+/* My Schedule filter chip on the schedule page */
+.schedule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.schedule-header h2 {
+  margin: 0;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--card);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.filter-chip:hover,
+.filter-chip:focus-visible {
+  border-color: var(--primary-2);
+  color: var(--primary-2);
+}
+
+.filter-chip:focus-visible {
+  outline: 2px solid var(--primary-2);
+  outline-offset: 2px;
+}
+
+.filter-chip.is-active {
+  background: rgba(245, 179, 1, 0.15);
+  border-color: #f5b301;
+  color: #f5b301;
+}
+
+.filter-chip.is-active svg {
+  fill: #f5b301;
+}
+
+.my-schedule-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--card);
+  border-radius: 8px;
+  border: 1px dashed var(--border-strong);
+}
+
+/* Rail: signed-in name row + sign-in/out items already inherit .rail-item.
+   Keep the user "button" non-interactive looking. */
+.rail-user {
+  cursor: default;
+  opacity: 0.85;
+}

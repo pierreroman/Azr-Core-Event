@@ -96,6 +96,10 @@
       '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
     logout:
       '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 8l-4 4 4 4M5 12h11"/></svg>',
+    signIn:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M14 8l4 4-4 4M3 12h14"/></svg>',
+    user:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c1-3.5 4-5.5 7-5.5s6 2 7 5.5"/></svg>',
     chevron:
       '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
     menu:
@@ -283,6 +287,20 @@
       footer.appendChild(registerBtn);
       // Expose so other scripts (branding loader) can show it.
       window.__railRegisterButton = registerBtn;
+
+      // Auth slot — populated by site.js once /.auth/me resolves.
+      // Defaults to a Sign in link so anon visitors see it immediately.
+      var authSlot = el('div', { class: 'rail-auth-slot' });
+      var signInLink = el('a', {
+        class: 'rail-item rail-signin',
+        href: '/.auth/login/aad?post_login_redirect_uri=' + encodeURIComponent(window.location.pathname + window.location.search),
+        'data-tooltip': 'Sign in'
+      });
+      signInLink.innerHTML =
+        ICONS.signIn + '<span class="rail-item-label">Sign in</span>';
+      authSlot.appendChild(signInLink);
+      footer.appendChild(authSlot);
+      window.__railAuthSlot = authSlot;
     } else if (variant === 'admin') {
       var back = el('a', {
         class: 'rail-item',
@@ -345,6 +363,43 @@
     var btn = window.__railRegisterButton;
     if (!btn) return;
     btn.style.display = enabled ? '' : 'none';
+  };
+
+  // ---------- Public helper: update auth slot --------------------------
+  // Called by site.js after /.auth/me resolves.
+  //   user: null  -> show "Sign in" link
+  //   user: { name } -> show name + Sign out link
+  window.setSignedInUser = function (user) {
+    var slot = window.__railAuthSlot;
+    if (!slot) return;
+    slot.innerHTML = '';
+    if (!user) {
+      var signInLink = el('a', {
+        class: 'rail-item rail-signin',
+        href: '/.auth/login/aad?post_login_redirect_uri=' + encodeURIComponent(window.location.pathname + window.location.search),
+        'data-tooltip': 'Sign in'
+      });
+      signInLink.innerHTML = ICONS.signIn + '<span class="rail-item-label">Sign in</span>';
+      slot.appendChild(signInLink);
+      return;
+    }
+    var userBtn = el('div', {
+      class: 'rail-item rail-user',
+      'data-tooltip': user.name || 'Signed in',
+      title: user.name || 'Signed in'
+    });
+    userBtn.innerHTML =
+      ICONS.user + '<span class="rail-item-label">' + escapeHtml(user.name || 'You') + '</span>';
+    slot.appendChild(userBtn);
+
+    var signOutLink = el('a', {
+      class: 'rail-item rail-signout',
+      href: '/.auth/logout?post_logout_redirect_uri=' + encodeURIComponent(window.location.pathname),
+      'data-tooltip': 'Sign out'
+    });
+    signOutLink.innerHTML =
+      ICONS.logout + '<span class="rail-item-label">Sign out</span>';
+    slot.appendChild(signOutLink);
   };
 
   // ---------- Boot -----------------------------------------------------

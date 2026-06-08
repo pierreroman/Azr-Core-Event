@@ -29,6 +29,16 @@ The public site is split into six focused pages, each sharing a persistent side-
 - **Manual toggle** in the rail footer (sun/moon icon) — persists to `localStorage` key `site.theme`
 - **Brand colors preserved** — Azure gradients, sponsor tier badges, and the LIVE indicator stay branded across both themes
 
+### Sign-in & Personal Favorites
+
+- **Sign in with Microsoft (Entra ID)** — uses Azure Static Web Apps' built-in `aad` provider, no app registration needed
+- **Sign-in button** in the rail footer for anonymous visitors; swaps to user name + Sign out once authenticated
+- **Star (★) on every session card** — toggles a session as a favorite; one click adds, another removes
+- **"My Schedule" filter chip** on `/schedule` — hides everything except starred sessions
+- **Anonymous → signed-in handoff** — anonymous favorites stored in `localStorage` (`event-favorites`) are pushed up to the user's account on first sign-in and then cleared locally
+- **Per-user persistence** — signed-in favorites live in Cosmos DB (Serverless tier) under partition key `/userId`; the user's ID is the SWA-issued per-provider hash, never the email
+- **Data-plane auth via managed identity** — the Function App uses its user-assigned identity with the *Cosmos DB Built-in Data Contributor* role; no Cosmos keys are issued or stored anywhere
+
 ### Hero & Branding (Home page)
 
 - **Event Logo** — Customizable conference logo displayed prominently above the title

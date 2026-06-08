@@ -120,6 +120,26 @@
       "route": "/api/branding",
       "methods": ["GET"],
       "allowedRoles": ["anonymous"]
+    },
+    {
+      "route": "/api/favorites",
+      "methods": ["GET", "POST"],
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/api/favorites/*",
+      "methods": ["GET", "PUT", "DELETE", "POST"],
+      "allowedRoles": ["authenticated"]
+    },
+    {
+      "route": "/login",
+      "redirect": "/.auth/login/aad",
+      "statusCode": 302
+    },
+    {
+      "route": "/logout",
+      "redirect": "/.auth/logout",
+      "statusCode": 302
     }
   ],
   "responseOverrides": {

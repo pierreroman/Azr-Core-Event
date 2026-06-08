@@ -4,13 +4,14 @@
 
 | Resource | Type | Purpose |
 |----------|------|---------|
-| Static Web App | Azure Static Web App (Standard) | Hosts frontend HTML/CSS/JS |
+| Static Web App | Azure Static Web App (Standard) | Hosts frontend HTML/CSS/JS, manages Entra ID auth |
 | Function App | Azure Function App (Flex Consumption, Node.js 20) | REST API backend |
 | Storage Account | Azure Storage Account (Standard_ZRS) | Table Storage + Blob Storage |
+| Cosmos DB | Azure Cosmos DB (Serverless, SQL API) | Per-user favorites — partition key `/userId` |
 | Virtual Network | Azure VNet (10.0.0.0/16) | Network isolation for Function App and Storage |
 | Private Endpoints | Azure Private Endpoints | Private connectivity to Blob, Table, and Queue storage |
 | Private DNS Zones | Azure Private DNS | DNS resolution for private endpoints |
-| User-Assigned Managed Identity | Managed Identity | RBAC access from Function App to Storage |
+| User-Assigned Managed Identity | Managed Identity | RBAC access from Function App to Storage and Cosmos DB |
 | Application Insights + Log Analytics | Monitoring | Logging and diagnostics |
 | Resource Group | Resource Group | Contains all resources |
 

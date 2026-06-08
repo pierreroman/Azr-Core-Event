@@ -50,3 +50,7 @@ output AZURE_FUNCTION_APP_ID string = resources.outputs.functionAppId
 
 // Storage outputs
 output AZURE_STORAGE_ACCOUNT_NAME string = resources.outputs.storageAccountName
+
+// Cosmos DB outputs
+output AZURE_COSMOS_ACCOUNT_NAME string = resources.outputs.cosmosAccountName
+output AZURE_COSMOS_ENDPOINT string = resources.outputs.cosmosEndpoint

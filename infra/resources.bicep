@@ -455,6 +455,14 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
           value: appInsights.properties.ConnectionString
         }
+        {
+          name: 'COSMOS_ENDPOINT'
+          value: cosmosAccount.properties.documentEndpoint
+        }
+        {
+          name: 'COSMOS_DATABASE'
+          value: 'event'
+        }
       ]
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
@@ -525,6 +533,95 @@ resource staticWebApp 'Microsoft.Web/staticSites@2022-09-01' = {
   }
 }
 
+// =========================================================================
+// Cosmos DB (Serverless) — stores per-user favorites for /schedule.
+// Public network access is enabled so the Functions runtime can reach the
+// endpoint, but data access is gated by Entra ID via the built-in
+// "Cosmos DB Built-in Data Contributor" data-plane role assignment below
+// (no account keys are ever issued or stored). Serverless tier means
+// pay-per-request: idle cost is ~$0.
+// =========================================================================
+resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
+  name: 'azcos${resourceToken}'
+  location: location
+  tags: commonTags
+  kind: 'GlobalDocumentDB'
+  properties: {
+    databaseAccountOfferType: 'Standard'
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Session'
+    }
+    locations: [
+      {
+        locationName: location
+        failoverPriority: 0
+        isZoneRedundant: false
+      }
+    ]
+    capabilities: [
+      {
+        name: 'EnableServerless'
+      }
+    ]
+    disableLocalAuth: true
+    publicNetworkAccess: 'Enabled'
+    minimalTlsVersion: 'Tls12'
+  }
+}
+
+resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
+  parent: cosmosAccount
+  name: 'event'
+  properties: {
+    resource: {
+      id: 'event'
+    }
+  }
+}
+
+resource cosmosFavoritesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDatabase
+  name: 'favorites'
+  properties: {
+    resource: {
+      id: 'favorites'
+      partitionKey: {
+        paths: [
+          '/userId'
+        ]
+        kind: 'Hash'
+      }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+        excludedPaths: [
+          {
+            path: '/"_etag"/?'
+          }
+        ]
+      }
+    }
+  }
+}
+
+// Grant the Function App's user-assigned identity data-plane read/write on
+// the Cosmos account. Role 00000000-0000-0000-0000-000000000002 is the
+// built-in "Cosmos DB Built-in Data Contributor".
+resource cosmosDataContributorRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = {
+  parent: cosmosAccount
+  name: guid(cosmosAccount.id, userAssignedIdentity.id, '00000000-0000-0000-0000-000000000002')
+  properties: {
+    roleDefinitionId: resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', cosmosAccount.name, '00000000-0000-0000-0000-000000000002')
+    principalId: userAssignedIdentity.properties.principalId
+    scope: cosmosAccount.id
+  }
+}
+
 output staticWebAppName string = staticWebApp.name
 output staticWebAppHostname string = staticWebApp.properties.defaultHostname
 
@@ -537,6 +634,9 @@ output storageAccountId string = storageAccount.id
 
 output userAssignedIdentityId string = userAssignedIdentity.id
 output userAssignedIdentityClientId string = userAssignedIdentity.properties.clientId
+
+output cosmosAccountName string = cosmosAccount.name
+output cosmosEndpoint string = cosmosAccount.properties.documentEndpoint
 
 output appInsightsName string = appInsights.name
 output logAnalyticsWorkspaceId string = logAnalytics.id

@@ -8,11 +8,15 @@ metadata:
 
 services:
   web:
-    project: ./src/web
-    dist: .
+    # NOTE: project is the parent (./src) so that swa CLI's cwd does not
+    # equal the outputLocation (./src/web). Recent SWA backend builds reject
+    # `Current directory cannot be identical to or contained within artifact
+    # folders.` when they match. dist is relative to project.
+    project: ./src
+    dist: web
     language: js
     host: staticwebapp
-  
+
   api:
     project: ./api
     language: js
