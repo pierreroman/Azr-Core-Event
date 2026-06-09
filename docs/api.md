@@ -16,6 +16,8 @@ All API endpoints are served by Azure Functions (Node.js 20, v4 programming mode
 | PUT | `/api/schedule/{id}` | Authenticated | Update session |
 | DELETE | `/api/schedule/{id}` | Authenticated | Delete session |
 
+> **Description field format:** The `description` property is stored verbatim and rendered as **Markdown** by the frontend (sanitized with DOMPurify on the client). CSV export/import and YouTube playlist import preserve multi-line Markdown text via RFC 4180 quoting.
+
 ---
 
 ## Speakers API (`/api/speakers`)

@@ -59,7 +59,7 @@ The public site is split into six focused pages, each sharing a persistent side-
 - Groups sessions by day with date headers
 - Clickable session cards open detailed modal with:
   - Session time and date
-  - Full title and description (with clickable links)
+  - Full title and **Markdown-rendered description** (headings, lists, bold/italic, links—all sanitized with DOMPurify)
   - Direct YouTube link
   - **Past sessions:** "Watch Recording" button linking to the YouTube video
   - **Future sessions:** "Add to Calendar" button that downloads an ICS file with correct start time and duration
@@ -137,8 +137,8 @@ Central dashboard with navigation to all admin functions:
 ### Schedule Management
 
 - **View All Sessions** — Table with title, video ID, date/time, duration, and actions
-- **Add Session** — Form with video ID, title, description, start time, and duration
-- **Edit Session** — Inline editing of any session field
+- **Add Session** — Form with video ID, title, **Markdown description (split-pane live preview + cheatsheet)**, start time, and duration
+- **Edit Session** — Inline editing of any session field; description editor shows the rendered preview side-by-side
 - **Delete Session** — Single delete with confirmation
 - **Multi-Select Delete** — Checkbox selection for bulk deletion
 

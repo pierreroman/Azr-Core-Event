@@ -256,6 +256,27 @@ function formatDescription(text) {
     ).replace(/\n/g, '<br>');
 }
 
+// Strip Markdown syntax to plain text for card snippets and truncated previews.
+// Removes headings, emphasis, links, images, code fences, list bullets, blockquotes
+// and collapses whitespace so a `substring()` on the result yields a clean preview.
+function stripMarkdown(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/```[\s\S]*?```/g, ' ')           // fenced code blocks
+        .replace(/`([^`]+)`/g, '$1')                 // inline code
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, '')        // images
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')     // links -> link text
+        .replace(/^>\s?/gm, '')                       // blockquotes
+        .replace(/^#{1,6}\s+/gm, '')                 // headings
+        .replace(/^\s*[-*+]\s+/gm, '')              // unordered list bullets
+        .replace(/^\s*\d+\.\s+/gm, '')              // ordered list bullets
+        .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1') // bold/italic
+        .replace(/~~([^~]+)~~/g, '$1')              // strikethrough
+        .replace(/^\s*[-=]{3,}\s*$/gm, '')          // hr / setext underlines
+        .replace(/\s+/g, ' ')                        // collapse whitespace
+        .trim();
+}
+
 function formatCountdown(ms) {
     if (ms <= 0) return 'Starting now...';
     const totalSeconds = Math.floor(ms / 1000);
@@ -304,7 +325,7 @@ function updateInfoBoxes(currentSession, nextSession) {
 
     if (currentSession) {
         document.getElementById('now-playing-title').textContent = currentSession.title;
-        document.getElementById('now-playing-description').innerHTML = formatDescription(currentSession.description);
+        document.getElementById('now-playing-description').innerHTML = parseMarkdown(currentSession.description || '');
         document.getElementById('now-playing-link').href = currentSession.url || '#';
         nowPlayingBox.style.display = 'block';
 
@@ -617,7 +638,7 @@ async function loadSchedule() {
                 });
 
                 const truncatedDesc = session.description
-                    ? session.description.substring(0, 120) + '...'
+                    ? stripMarkdown(session.description).substring(0, 120) + '…'
                     : '';
 
                 html += `
@@ -663,7 +684,16 @@ function openSession(sessionId) {
 
     document.getElementById('modal-time').textContent = time;
     document.getElementById('modal-title').textContent = session.title;
-    document.getElementById('modal-description').textContent = session.description || 'No description available.';
+    const descEl = document.getElementById('modal-description');
+    if (descEl) {
+        if (session.description) {
+            descEl.classList.add('markdown-content');
+            descEl.innerHTML = parseMarkdown(session.description);
+        } else {
+            descEl.classList.remove('markdown-content');
+            descEl.textContent = 'No description available.';
+        }
+    }
 
     // Inject the favorite star next to the title (if the page provides a slot).
     const favSlot = document.getElementById('modal-fav-slot');

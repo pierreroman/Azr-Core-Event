@@ -3565,3 +3565,10 @@ body[data-rail-active="watch"] .autoplay-note {
   cursor: default;
   opacity: 0.85;
 }
+
+/* Schedule admin: the schedule edit modal hosts the Markdown editor's
+   split-pane layout, so let it grow wider than the default modal. */
+#schedule-modal .modal-content {
+  max-width: 960px;
+}
+

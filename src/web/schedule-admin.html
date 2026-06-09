@@ -6,6 +6,9 @@
     <title>Schedule Admin - Community Online Event</title>
     <link rel="icon" type="image/png" sizes="16x16" href="assets/Azure-A-16px.png">
     <link rel="stylesheet" href="styles.css">
+    <!-- Markdown parser + sanitizer for the description live preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js" integrity="sha384-QsSpx6a0USazT7nK7w8qXDgpSAPhFsb2XtpoLFQ5+X2yFN6hvCKnwEzN8M5FWaJb" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 </head>
 <body data-rail="admin" data-rail-active="schedule">
     <!-- Skip to main content link for accessibility -->
@@ -66,8 +69,35 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea id="description" placeholder="Session description..."></textarea>
+                    <label for="description">Description (Markdown)</label>
+                    <small class="text-muted mb-10" style="display:block; margin-bottom: 8px;">
+                        Use Markdown for headings, bold, lists, and links. The full description appears in the session modal on the public schedule.
+                    </small>
+                    <div class="markdown-editor">
+                        <div class="markdown-editor-pane">
+                            <h4>✏️ Edit (Markdown)</h4>
+                            <textarea id="description" placeholder="## What you'll learn&#10;&#10;- Point one&#10;- Point two&#10;&#10;Read more at [docs.example.com](https://docs.example.com)." oninput="updateDescriptionPreview()"></textarea>
+                        </div>
+                        <div class="markdown-editor-pane">
+                            <h4>👁️ Live Preview</h4>
+                            <div class="markdown-preview markdown-content" id="descriptionPreview">
+                                <p class="text-muted">Preview will appear here…</p>
+                            </div>
+                        </div>
+                    </div>
+                    <details class="markdown-cheatsheet">
+                        <summary>📝 Markdown Cheatsheet</summary>
+                        <div class="markdown-cheatsheet-grid">
+                            <div class="markdown-cheatsheet-item"><code># Heading 1</code> — Main title</div>
+                            <div class="markdown-cheatsheet-item"><code>## Heading 2</code> — Section title</div>
+                            <div class="markdown-cheatsheet-item"><code>**bold**</code> — <strong>Bold text</strong></div>
+                            <div class="markdown-cheatsheet-item"><code>*italic*</code> — <em>Italic text</em></div>
+                            <div class="markdown-cheatsheet-item"><code>- item</code> — Bullet list</div>
+                            <div class="markdown-cheatsheet-item"><code>1. item</code> — Numbered list</div>
+                            <div class="markdown-cheatsheet-item"><code>[text](url)</code> — Link</div>
+                            <div class="markdown-cheatsheet-item"><code>&gt; quote</code> — Blockquote</div>
+                        </div>
+                    </details>
                 </div>
                 
                 <div class="form-group">
@@ -345,6 +375,35 @@
             if (hrs > 0) return `${hrs}h ${mins}m`;
             return `${mins}m`;
         }
+
+        // ----- Markdown live preview -----
+        function parseMarkdown(content) {
+            if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') {
+                // Fall back to escaped text if libraries are blocked or still loading.
+                const div = document.createElement('div');
+                div.textContent = content || '';
+                return div.innerHTML;
+            }
+            try {
+                const html = (typeof marked.parse === 'function')
+                    ? marked.parse(content || '')
+                    : marked(content || '');
+                return DOMPurify.sanitize(html);
+            } catch (e) {
+                console.error('Markdown parse error:', e);
+                return DOMPurify.sanitize(String(content || ''));
+            }
+        }
+
+        function updateDescriptionPreview() {
+            const ta = document.getElementById('description');
+            const preview = document.getElementById('descriptionPreview');
+            if (!ta || !preview) return;
+            const value = ta.value || '';
+            preview.innerHTML = value.trim()
+                ? parseMarkdown(value)
+                : '<p class="text-muted">Preview will appear here…</p>';
+        }
         
         // Modal functions
         let editNavOrder = [];   // snapshot of session IDs in current sort order
@@ -358,6 +417,7 @@
             editNavOrder = [];
             editNavIndex = -1;
             updateEditNavUi();
+            updateDescriptionPreview();
             document.getElementById('schedule-modal').classList.add('active');
         }
         
@@ -382,6 +442,7 @@
             
             document.getElementById('description').value = item.description || '';
             document.getElementById('url').value = item.url || '';
+            updateDescriptionPreview();
         }
 
         function editItem(id) {
