@@ -68,6 +68,19 @@ All API endpoints are served by Azure Functions (Node.js 20, v4 programming mode
 
 ---
 
+## Branding API (`/api/branding`)
+
+Cross-device branding configuration stored in Blob Storage (`sitecontent/branding-config.json`). Used to customize the event name, tagline, logo, color palette, and event dates without code changes.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/branding` | Anonymous | Get branding config (returns defaults if not yet saved, with `isDefault: true`) |
+| PUT | `/api/branding` | Authenticated | Save branding config to Blob Storage |
+
+**Fields:** `eventName`, `tagLine`, `logo`, `primaryColor`, `secondaryColor`, `accentColor`, `hideSponsors`, `eventStartDate`, `eventEndDate`.
+
+---
+
 ## Favorites API (`/api/favorites`)
 
 Per-user favorite sessions backed by Cosmos DB. The signed-in user is identified by the `x-ms-client-principal` header that Azure Static Web Apps injects after Entra ID sign-in — clients never supply a user ID.
