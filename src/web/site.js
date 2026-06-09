@@ -26,6 +26,50 @@ let countdownInterval = null;
 // every recorded talk hits this).
 const endedSessionIds = new Set();
 
+// Post-event on-demand playback source.
+//
+// Once every scheduled session is in the past, the watch page no longer
+// has a "current" video to mount. Rather than show a static placeholder,
+// we shuffle-play a YouTube channel's uploads playlist so visitors
+// always land on real content.
+//
+// The actual source is admin-configurable via the Branding page and
+// persists in `branding.onDemand{PlaylistId,ChannelName,ChannelUrl}`.
+// `getOnDemandChannel()` returns those values when configured, falling
+// back to the defaults below. The YouTube IFrame Player accepts the
+// uploads playlist ID directly via `listType: 'playlist'` + `list`,
+// and handles shuffle / autoplay-next natively — no API key needed.
+//
+// Default channel: ITOpsTalk (https://www.youtube.com/@ITOpsTalk).
+// Its channel ID `UCvyPX_vz17uFdtG3NyoV-UA` maps to uploads playlist
+// `UUvyPX_vz17uFdtG3NyoV-UA` (swap the `UC` prefix for `UU`).
+const ONDEMAND_DEFAULT_PLAYLIST_ID = 'UUvyPX_vz17uFdtG3NyoV-UA';
+const ONDEMAND_DEFAULT_CHANNEL_NAME = 'ITOpsTalk';
+const ONDEMAND_DEFAULT_CHANNEL_URL = 'https://www.youtube.com/@ITOpsTalk';
+
+function getOnDemandChannel() {
+    try {
+        const stored = localStorage.getItem('event-branding');
+        if (stored) {
+            const b = JSON.parse(stored);
+            if (b && b.onDemandPlaylistId) {
+                return {
+                    playlistId: b.onDemandPlaylistId,
+                    channelName: b.onDemandChannelName || b.onDemandPlaylistId,
+                    channelUrl: b.onDemandChannelUrl || ''
+                };
+            }
+        }
+    } catch (e) {
+        // Ignore malformed cache; fall through to defaults.
+    }
+    return {
+        playlistId: ONDEMAND_DEFAULT_PLAYLIST_ID,
+        channelName: ONDEMAND_DEFAULT_CHANNEL_NAME,
+        channelUrl: ONDEMAND_DEFAULT_CHANNEL_URL
+    };
+}
+
 // ==================== AUTH + FAVORITES STATE =====================
 // Signed-in user (resolved from /.auth/me) or null for anonymous.
 let currentUser = null;
@@ -38,8 +82,19 @@ const FAVORITES_LOCAL_KEY = 'event-favorites';
 // When true, the schedule page filters to only favorited sessions.
 let myScheduleFilterEnabled = false;
 
+// Pending player-mount request waiting for the YouTube IFrame API to
+// finish loading. Stored as a zero-arg callback so we can dispatch to
+// any of the player-mount entry points (live session or channel loop).
+// We keep only the most recent one — older pending requests are stale
+// by the time the API is ready.
+let pendingPlayerMount = null;
+
 function onYouTubeIframeAPIReady() {
-    // API is ready, player will be created when needed
+    if (pendingPlayerMount) {
+        const fn = pendingPlayerMount;
+        pendingPlayerMount = null;
+        try { fn(); } catch (e) { console.log('Deferred player mount failed:', e); }
+    }
 }
 
 // Accessibility utilities
@@ -430,108 +485,11 @@ function updateVideoPlayer() {
 
     if (currentSession) {
         const videoId = currentSession.videoId || extractVideoId(currentSession.url);
-
-        // If the player is already showing this exact video, don't tear it
-        // down and rebuild — that would reset playback (and re-mute it).
-        if (youtubePlayer && youtubePlayer.__videoId && youtubePlayer.__videoId === videoId) {
-            window.currentVideoId = videoId;
-            return;
-        }
-
-        window.currentVideoId = videoId;
-
-        const chatButton = document.getElementById('live-chat-button');
-        if (chatButton) {
-            chatButton.style.display = 'none';
-        }
-
         if (videoId) {
             const sessionStart = new Date(currentSession.startTime);
             const elapsedSeconds = Math.floor((now - sessionStart) / 1000);
             const startOffset = Math.max(0, elapsedSeconds);
-
-            container.innerHTML = `
-                <div id="youtube-player"></div>
-                <div class="live-badge" id="live-badge" style="display: none;">🔴 LIVE</div>
-                <div class="video-overlay" id="video-overlay">
-                    <div class="now-playing" id="now-playing-status">Now Playing</div>
-                    <div class="video-title">${escapeHtml(currentSession.title)}</div>
-                </div>`;
-
-            if (youtubePlayer) {
-                youtubePlayer.destroy();
-                youtubePlayer = null;
-            }
-
-            youtubePlayer = new YT.Player('youtube-player', {
-                videoId: videoId,
-                playerVars: {
-                    autoplay: 1,
-                    mute: 1,
-                    modestbranding: 1,
-                    rel: 0,
-                    start: startOffset
-                },
-                events: {
-                    onReady: function(event) {
-                        setTimeout(() => {
-                            try {
-                                const videoData = event.target.getVideoData();
-                                const isLive = videoData && videoData.isLive;
-
-                                const liveBadge = document.getElementById('live-badge');
-                                if (liveBadge) liveBadge.style.display = isLive ? 'block' : 'none';
-
-                                const statusEl = document.getElementById('now-playing-status');
-                                if (statusEl && isLive) statusEl.textContent = '🔴 LIVE';
-
-                                const chatButton = document.getElementById('live-chat-button');
-                                if (chatButton) chatButton.style.display = isLive ? 'block' : 'none';
-
-                                const liveIndicator = document.querySelector('.now-playing-box .live-indicator');
-                                if (liveIndicator) liveIndicator.style.display = isLive ? 'inline' : 'none';
-
-                                console.log('Video live status:', isLive);
-                            } catch (e) {
-                                console.log('Could not get video data:', e);
-                            }
-                        }, 1000);
-
-                        setTimeout(() => {
-                            const overlay = document.getElementById('video-overlay');
-                            if (overlay) overlay.style.opacity = '0';
-                        }, 5000);
-                    },
-                    onStateChange: function(event) {
-                        if (event.data === YT.PlayerState.ENDED) {
-                            console.log('Video ended, showing BRB placeholder');
-                            if (currentSession && currentSession.id) {
-                                endedSessionIds.add(currentSession.id);
-                            }
-                            if (youtubePlayer) {
-                                youtubePlayer.destroy();
-                                youtubePlayer = null;
-                            }
-                            const container = document.getElementById('video-container');
-                            container.innerHTML = '<img src="assets/BRB.jpg" alt="We\'ll be right back">';
-                            hideLiveChatButton();
-                            setTimeout(() => updateVideoPlayer(), 5000);
-                        }
-                    },
-                    onError: function(event) {
-                        container.innerHTML = `
-                            <div class="video-error">
-                                <img src="assets/BRB.jpg" alt="Video unavailable" class="error-bg">
-                                <div class="error-overlay">
-                                    <p class="error-title">Now Playing: ${escapeHtml(currentSession.title)}</p>
-                                    <p class="error-message">This video cannot be embedded.</p>
-                                    <a href="${currentSession.url}" target="_blank" class="btn-watch-large">▶ Watch on YouTube</a>
-                                </div>
-                            </div>`;
-                    }
-                }
-            });
-            youtubePlayer.__videoId = videoId;
+            mountSessionPlayer(currentSession, { videoId, startOffset, mode: 'live' });
         } else {
             container.innerHTML = '<img src="assets/BRB.jpg" alt="Be right back">';
             hideLiveChatButton();
@@ -546,10 +504,249 @@ function updateVideoPlayer() {
         hideLiveChatButton();
         if (youtubePlayer) { youtubePlayer.destroy(); youtubePlayer = null; }
     } else {
-        container.innerHTML = '<img src="assets/OnDemand.png" alt="Watch on demand">';
-        hideLiveChatButton();
-        if (youtubePlayer) { youtubePlayer.destroy(); youtubePlayer = null; }
+        // The whole event is in the past — shuffle-play a YouTube
+        // channel's uploads so visitors land on real content instead
+        // of a static OnDemand placeholder.
+        playChannelLoop();
     }
+}
+
+function mountSessionPlayer(session, options) {
+    const container = document.getElementById('video-container');
+    if (!container) return;
+
+    const { videoId, startOffset = 0 } = options || {};
+    if (!videoId) return;
+
+    // If the YouTube IFrame API hasn't loaded yet, defer until it has.
+    // The `onYouTubeIframeAPIReady` callback will replay the latest
+    // pending mount once the constructor is available.
+    if (typeof YT === 'undefined' || !YT.Player) {
+        pendingPlayerMount = () => mountSessionPlayer(session, options);
+        return;
+    }
+
+    // If the player is already showing this exact video, don't tear it
+    // down and rebuild — that would reset playback (and re-mute it).
+    if (youtubePlayer && youtubePlayer.__videoId === videoId) {
+        window.currentVideoId = videoId;
+        return;
+    }
+
+    window.currentVideoId = videoId;
+
+    const chatButton = document.getElementById('live-chat-button');
+    if (chatButton) chatButton.style.display = 'none';
+
+    container.innerHTML = `
+        <div id="youtube-player"></div>
+        <div class="live-badge" id="live-badge" style="display: none;">🔴 LIVE</div>
+        <div class="video-overlay" id="video-overlay">
+            <div class="now-playing" id="now-playing-status">Now Playing</div>
+            <div class="video-title">${escapeHtml(session.title)}</div>
+        </div>`;
+
+    if (youtubePlayer) {
+        youtubePlayer.destroy();
+        youtubePlayer = null;
+    }
+
+    youtubePlayer = new YT.Player('youtube-player', {
+        videoId: videoId,
+        playerVars: {
+            autoplay: 1,
+            mute: 1,
+            modestbranding: 1,
+            rel: 0,
+            start: startOffset
+        },
+        events: {
+            onReady: function(event) {
+                setTimeout(() => {
+                    try {
+                        const videoData = event.target.getVideoData();
+                        const isLive = videoData && videoData.isLive;
+
+                        const liveBadge = document.getElementById('live-badge');
+                        if (liveBadge) liveBadge.style.display = isLive ? 'block' : 'none';
+
+                        const statusEl = document.getElementById('now-playing-status');
+                        if (statusEl && isLive) statusEl.textContent = '🔴 LIVE';
+
+                        const chatBtn = document.getElementById('live-chat-button');
+                        if (chatBtn) chatBtn.style.display = isLive ? 'block' : 'none';
+
+                        const liveIndicator = document.querySelector('.now-playing-box .live-indicator');
+                        if (liveIndicator) liveIndicator.style.display = isLive ? 'inline' : 'none';
+
+                        console.log('Video live status:', isLive);
+                    } catch (e) {
+                        console.log('Could not get video data:', e);
+                    }
+                }, 1000);
+
+                setTimeout(() => {
+                    const overlay = document.getElementById('video-overlay');
+                    if (overlay) overlay.style.opacity = '0';
+                }, 5000);
+            },
+            onStateChange: function(event) {
+                if (event.data === YT.PlayerState.ENDED) {
+                    console.log('Video ended, showing BRB placeholder');
+                    if (session.id) {
+                        endedSessionIds.add(session.id);
+                    }
+                    if (youtubePlayer) {
+                        youtubePlayer.destroy();
+                        youtubePlayer = null;
+                    }
+                    const c = document.getElementById('video-container');
+                    if (c) c.innerHTML = '<img src="assets/BRB.jpg" alt="We\'ll be right back">';
+                    hideLiveChatButton();
+                    setTimeout(() => updateVideoPlayer(), 5000);
+                }
+            },
+            onError: function(event) {
+                container.innerHTML = `
+                    <div class="video-error">
+                        <img src="assets/BRB.jpg" alt="Video unavailable" class="error-bg">
+                        <div class="error-overlay">
+                            <p class="error-title">Now Playing: ${escapeHtml(session.title)}</p>
+                            <p class="error-message">This video cannot be embedded.</p>
+                            <a href="${session.url}" target="_blank" class="btn-watch-large">▶ Watch on YouTube</a>
+                        </div>
+                    </div>`;
+            }
+        }
+    });
+    youtubePlayer.__videoId = videoId;
+}
+
+// Shuffle-play the configured YouTube channel's uploads playlist for
+// the post-event on-demand experience. Relies entirely on the YouTube
+// IFrame Player's native playlist support — it handles autoplay-next,
+// shuffle, and looping, so no per-video state tracking is needed here.
+function playChannelLoop() {
+    const container = document.getElementById('video-container');
+    if (!container) return;
+
+    if (typeof YT === 'undefined' || !YT.Player) {
+        pendingPlayerMount = () => playChannelLoop();
+        return;
+    }
+
+    const channel = getOnDemandChannel();
+
+    // If a channel-loop player is already running for the same
+    // configured channel, leave it alone so we don't restart the
+    // current video on every schedule re-poll. If the admin changed
+    // the channel since this player was created, fall through and
+    // rebuild the player against the new playlist.
+    if (youtubePlayer && youtubePlayer.__channelLoop && youtubePlayer.__channelPlaylistId === channel.playlistId) {
+        return;
+    }
+
+    window.currentVideoId = null;
+    hideLiveChatButton();
+
+    container.innerHTML = `
+        <div id="youtube-player"></div>
+        <div class="video-overlay" id="video-overlay">
+            <div class="now-playing" id="now-playing-status">On Demand</div>
+            <div class="video-title" id="video-title">${escapeHtml(channel.channelName)}</div>
+        </div>`;
+
+    if (youtubePlayer) {
+        youtubePlayer.destroy();
+        youtubePlayer = null;
+    }
+
+    youtubePlayer = new YT.Player('youtube-player', {
+        playerVars: {
+            autoplay: 1,
+            mute: 1,
+            modestbranding: 1,
+            rel: 0,
+            listType: 'playlist',
+            list: channel.playlistId,
+            loop: 1
+        },
+        events: {
+            onReady: function(event) {
+                // playerVars.shuffle is unreliable across IFrame Player
+                // versions — call setShuffle explicitly once the player
+                // is ready so we definitely don't always start with the
+                // newest upload.
+                try { event.target.setShuffle(true); } catch (e) {}
+                setTimeout(() => updateChannelInfoFromPlayer(event.target), 1500);
+                setTimeout(() => {
+                    const overlay = document.getElementById('video-overlay');
+                    if (overlay) overlay.style.opacity = '0';
+                }, 5000);
+            },
+            onStateChange: function(event) {
+                // When the player advances to the next video in the
+                // shuffled playlist, refresh the now-playing info.
+                if (event.data === YT.PlayerState.PLAYING) {
+                    updateChannelInfoFromPlayer(event.target);
+                }
+            },
+            onError: function() {
+                // If the playlist itself fails (e.g. region block,
+                // network issue), fall back to the static placeholder.
+                container.innerHTML = '<img src="assets/OnDemand.png" alt="Watch on demand">';
+                hideLiveChatButton();
+                updateInfoBoxes(null, null);
+                if (youtubePlayer) { youtubePlayer.destroy(); youtubePlayer = null; }
+            }
+        }
+    });
+    youtubePlayer.__channelLoop = true;
+    youtubePlayer.__channelPlaylistId = channel.playlistId;
+}
+
+// Pull the currently-playing video's title from the player and reflect
+// it in the overlay + "Now Playing" info box. Called on `onReady` and
+// whenever the player advances to a new video in the shuffled playlist.
+function updateChannelInfoFromPlayer(player) {
+    if (!player || typeof player.getVideoData !== 'function') return;
+    let data;
+    try {
+        data = player.getVideoData();
+    } catch (e) {
+        return;
+    }
+    if (!data || !data.title) return;
+
+    const overlayTitle = document.getElementById('video-title');
+    if (overlayTitle) overlayTitle.textContent = data.title;
+
+    const nowPlayingBox = document.getElementById('now-playing-box');
+    const nowPlayingTitle = document.getElementById('now-playing-title');
+    const nowPlayingDesc = document.getElementById('now-playing-description');
+    const nowPlayingLink = document.getElementById('now-playing-link');
+
+    if (nowPlayingBox) nowPlayingBox.style.display = 'block';
+    if (nowPlayingTitle) nowPlayingTitle.textContent = data.title;
+    if (nowPlayingDesc) {
+        const channel = getOnDemandChannel();
+        const safeName = escapeHtml(channel.channelName);
+        if (channel.channelUrl) {
+            nowPlayingDesc.innerHTML = `From the <a href="${escapeHtml(channel.channelUrl)}" target="_blank" rel="noopener">${safeName}</a> YouTube channel.`;
+        } else {
+            nowPlayingDesc.innerHTML = `From the ${safeName} YouTube channel.`;
+        }
+    }
+    if (nowPlayingLink && data.video_id) {
+        nowPlayingLink.href = `https://www.youtube.com/watch?v=${encodeURIComponent(data.video_id)}`;
+    }
+
+    // No "LIVE" indicator and no "Up Next" countdown when we're in
+    // post-event on-demand mode.
+    const liveIndicator = nowPlayingBox && nowPlayingBox.querySelector('.live-indicator');
+    if (liveIndicator) liveIndicator.style.display = 'none';
+    const upNextBox = document.getElementById('up-next-box');
+    if (upNextBox) upNextBox.style.display = 'none';
 }
 
 function hideLiveChatButton() {

@@ -175,6 +175,17 @@
                         </button>
                     </div>
                 </div>
+
+                <div class="form-group">
+                    <label for="onDemandChannelInput" class="label-bold">On-Demand YouTube Channel</label>
+                    <input type="text" id="onDemandChannelInput" placeholder="https://www.youtube.com/@ITOpsTalk" class="form-input">
+                    <small>
+                        Once the scheduled event is over, the watch page shuffle-plays videos from this YouTube channel.
+                        Accepts a channel URL, <code>@handle</code>, channel ID (<code>UC&hellip;</code>), or uploads playlist ID (<code>UU&hellip;</code>).
+                        Leave blank to use the built-in default.
+                    </small>
+                    <div id="onDemandResolved" class="text-muted text-small mt-10"></div>
+                </div>
                 
                 <div class="color-preview">
                     <h4>Preview</h4>
@@ -660,7 +671,11 @@ This is a **free, community-driven virtual event** bringing together passionate 
             accentColor: '#FFB900',
             hideSponsors: false,
             eventStartDate: '',
-            eventEndDate: ''
+            eventEndDate: '',
+            onDemandChannelInput: '',
+            onDemandPlaylistId: '',
+            onDemandChannelName: '',
+            onDemandChannelUrl: ''
         };
         
         const colorPresets = {
@@ -736,7 +751,21 @@ This is a **free, community-driven virtual event** bringing together passionate 
             document.getElementById('secondaryColorHex').value = branding.secondaryColor || defaultBranding.secondaryColor;
             document.getElementById('accentColor').value = branding.accentColor || defaultBranding.accentColor;
             document.getElementById('accentColorHex').value = branding.accentColor || defaultBranding.accentColor;
-            
+
+            // On-demand channel
+            const odInput = document.getElementById('onDemandChannelInput');
+            if (odInput) odInput.value = branding.onDemandChannelInput || '';
+            const odResolved = document.getElementById('onDemandResolved');
+            if (odResolved) {
+                if (branding.onDemandPlaylistId) {
+                    const name = branding.onDemandChannelName || branding.onDemandPlaylistId;
+                    const url = branding.onDemandChannelUrl || '#';
+                    odResolved.innerHTML = `Resolved to <a href="${url}" target="_blank" rel="noopener">${name}</a> (playlist <code>${branding.onDemandPlaylistId}</code>).`;
+                } else {
+                    odResolved.textContent = 'Using built-in default channel.';
+                }
+            }
+
             updateBrandingPreview();
         }
         
@@ -749,7 +778,8 @@ This is a **free, community-driven virtual event** bringing together passionate 
                 secondaryColor: document.getElementById('secondaryColor').value,
                 accentColor: document.getElementById('accentColor').value,
                 eventStartDate: document.getElementById('eventStartDate').value,
-                eventEndDate: document.getElementById('eventEndDate').value
+                eventEndDate: document.getElementById('eventEndDate').value,
+                onDemandChannelInput: (document.getElementById('onDemandChannelInput')?.value || '').trim()
             };
             
             // Preserve hideSponsors from existing branding (managed in Sponsors page)
@@ -761,27 +791,39 @@ This is a **free, community-driven virtual event** bringing together passionate 
                 } catch(e) {}
             }
             
-            // Save to localStorage for immediate local use
-            localStorage.setItem('event-branding', JSON.stringify(branding));
-
-            // Save to cloud API so all devices get the branding
+            // Save to cloud API so all devices get the branding.
+            // We rely on the API response (which includes the resolved
+            // on-demand channel fields) for the localStorage write so
+            // that the cached branding matches what's in the cloud.
             fetch('/api/branding', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(branding)
             })
-            .then(r => {
+            .then(async r => {
+                let body = null;
+                try { body = await r.json(); } catch(e) {}
                 if (r.ok) {
+                    // The API echoes back the saved config (including
+                    // resolved on-demand channel fields). Cache that.
+                    if (body && typeof body === 'object') {
+                        const { success, message, ...cfg } = body;
+                        localStorage.setItem('event-branding', JSON.stringify(cfg));
+                        applyBrandingToForm(cfg);
+                    } else {
+                        localStorage.setItem('event-branding', JSON.stringify(branding));
+                    }
                     showAlert('Branding saved to cloud! Changes will appear on all devices.', 'success');
                 } else {
-                    return r.json().then(err => {
-                        showAlert(`Saved locally but cloud save failed: ${err.error}`, 'danger');
-                    });
+                    const detail = body && (body.details || body.error)
+                        ? `${body.error || 'Save failed'}: ${body.details || ''}`.trim()
+                        : `HTTP ${r.status}`;
+                    showAlert(`Save failed: ${detail}`, 'danger');
                 }
             })
             .catch(err => {
                 console.error('Error saving branding to cloud:', err);
-                showAlert('Saved locally but cloud save failed. Changes only visible on this device.', 'danger');
+                showAlert('Cloud save failed. Check the network and try again.', 'danger');
             });
         }
         
