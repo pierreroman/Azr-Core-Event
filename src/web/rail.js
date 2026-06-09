@@ -115,7 +115,7 @@
     { id: 'about', label: 'About', href: '/about.html', icon: 'info' },
     { id: 'schedule', label: 'Schedule', href: '/schedule.html', icon: 'calendar' },
     { id: 'speakers', label: 'Speakers', href: '/speakers.html', icon: 'mic' },
-    { id: 'code-of-conduct', label: 'Code of Conduct', icon: 'book', action: 'openCodeOfConduct' },
+    { id: 'code-of-conduct', label: 'Code of Conduct', href: '/code-of-conduct.html', icon: 'book' },
     { id: 'sponsors', label: 'Sponsors', href: '/sponsors.html', icon: 'handshake' }
   ];
 
@@ -144,24 +144,6 @@
 
   function buildItem(item, activeId) {
     var isActive = item.id === activeId;
-    // Action items (no href) render as <button> and invoke a window function.
-    if (item.action) {
-      var b = el('button', {
-        type: 'button',
-        class: 'rail-item' + (isActive ? ' is-active' : ''),
-        'data-rail-id': item.id,
-        'data-tooltip': item.label
-      });
-      b.innerHTML =
-        ICONS[item.icon] +
-        '<span class="rail-item-label">' + item.label + '</span>' +
-        (item.badge ? '<span class="rail-badge">' + item.badge + '</span>' : '');
-      b.addEventListener('click', function () {
-        var fn = window[item.action];
-        if (typeof fn === 'function') fn();
-      });
-      return b;
-    }
     var a = el('a', {
       class: 'rail-item' + (isActive ? ' is-active' : ''),
       href: item.href,

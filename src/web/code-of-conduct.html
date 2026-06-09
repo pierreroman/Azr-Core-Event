@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speakers</title>
+    <title>Code of Conduct</title>
     <link rel="icon" type="image/png" sizes="16x16" href="assets/Azure-A-16px.png">
     <link rel="stylesheet" href="styles.css">
     <!-- Markdown parser for content sections -->
@@ -11,17 +11,14 @@
     <!-- HTML sanitizer to prevent XSS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 </head>
-<body data-rail="public" data-rail-active="speakers">
+<body data-rail="public" data-rail-active="code-of-conduct">
     <!-- Skip to main content link for accessibility -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <main id="main-content">
-        <section id="speakers">
-            <h2>Featured Speakers</h2>
-            <p class="section-subtitle">Learn from Microsoft engineers and industry experts.</p>
-
-            <div id="speakers-grid" class="speakers-grid">
-                <p class="loading">Loading speakers...</p>
+        <section id="code-of-conduct">
+            <div id="coc-content" class="markdown-content">
+                <div class="loading">Loading code of conduct...</div>
             </div>
         </section>
     </main>
@@ -45,44 +42,6 @@
             <div class="registration-modal-description markdown-content" id="registration-modal-description">Join us for this community event! Click the link below to register.</div>
             <div class="registration-modal-actions">
                 <a id="registration-modal-link" href="#" target="_blank" rel="noopener" class="btn-register-action">Register Now</a>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Speaker Modal -->
-    <div id="speaker-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="speaker-modal-name">
-        <div class="modal-content speaker-modal-content">
-            <button class="modal-close" onclick="closeSpeakerModal()" aria-label="Close speaker details">&times;</button>
-            <div class="speaker-modal-header">
-                <div class="speaker-modal-avatar" id="speaker-modal-avatar"></div>
-                <div class="speaker-modal-info">
-                    <h2 class="modal-title" id="speaker-modal-name"></h2>
-                    <p class="speaker-modal-title" id="speaker-modal-title"></p>
-                    <p class="speaker-modal-company" id="speaker-modal-company"></p>
-                    <div class="speaker-modal-socials" id="speaker-modal-socials"></div>
-                </div>
-            </div>
-            <div class="speaker-modal-bio" id="speaker-modal-bio"></div>
-            <div class="speaker-modal-sessions">
-                <h3>Sessions</h3>
-                <div id="speaker-modal-sessions-list"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Session Modal (opened from speaker modal's session links) -->
-    <div id="session-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()" aria-label="Close session details">&times;</button>
-            <div class="modal-time" id="modal-time"></div>
-            <div class="modal-title-row">
-                <h2 class="modal-title" id="modal-title"></h2>
-                <span id="modal-fav-slot"></span>
-            </div>
-            <div class="modal-description markdown-content" id="modal-description"></div>
-            <div class="modal-actions" id="modal-actions">
-                <!-- Dynamically populated: Watch Recording or Add to Calendar -->
             </div>
         </div>
     </div>

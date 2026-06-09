@@ -121,13 +121,14 @@ The public site is split into focused pages, all hosted by the Static Web App an
 | About | `src/web/about.html` | Markdown content from Content API |
 | Schedule | `src/web/schedule.html` | Sessions + session modal |
 | Speakers | `src/web/speakers.html` | Speaker grid + speaker modal |
+| Code of Conduct | `src/web/code-of-conduct.html` | Markdown content from Content API |
 | Sponsors | `src/web/sponsors.html` | Sponsor grid + sponsor modal |
 | Admin Dashboard | `src/web/admin.html` | All admin entry points |
 | Schedule Admin | `src/web/schedule-admin.html` | CRUD + CSV/YouTube import |
 | Speakers Admin | `src/web/speakers-admin.html` | CRUD + headshot upload |
 | Sponsors Admin | `src/web/sponsors-admin.html` | CRUD + logo upload |
 
-`staticwebapp.config.json` defines clean-URL rewrites so `/watch`, `/about`, `/schedule`, `/speakers`, and `/sponsors` resolve to the corresponding `.html` files.
+`staticwebapp.config.json` defines clean-URL rewrites so `/watch`, `/about`, `/schedule`, `/speakers`, `/code-of-conduct`, and `/sponsors` resolve to the corresponding `.html` files.
 
 ### Shared scripts
 

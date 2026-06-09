@@ -37,7 +37,7 @@ npx playwright install chromium    # download browser (add firefox/webkit as nee
 | File | What it tests |
 |------|---------------|
 | `tests/homepage.spec.js` | Watch page: hero, video section, footer, external scripts, no schedule/speakers/sponsors content |
-| `tests/navigation.spec.js` | Side-rail rendering, active state, cross-page navigation, mobile drawer (≤900px), rail collapse persistence, Code of Conduct + session/speaker/sponsor modals on their dedicated pages |
+| `tests/navigation.spec.js` | Side-rail rendering, active state, cross-page navigation, mobile drawer (≤900px), rail collapse persistence, Code of Conduct dedicated page + session/speaker/sponsor modals on their dedicated pages |
 | `tests/theme.spec.js` | Dark/light toggle, `localStorage` persistence, `prefers-color-scheme` honored, theme applies across pages, `aria-pressed` state |
 | `tests/accessibility.spec.js` | `lang` attribute, `<nav>` landmark on every page, `aria-current="page"` on active rail item, skip-to-content link, alt text, headings, both themes render |
 | `tests/admin.spec.js` | Admin pages require auth; admin pages mount the admin rail (`data-rail="admin"`); legacy `.user-bar` is gone |

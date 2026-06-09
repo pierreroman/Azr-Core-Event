@@ -2,7 +2,7 @@
 
 ## Public Website
 
-The public site is split into six focused pages, each sharing a persistent side-rail navigation. Clean URLs are configured in `staticwebapp.config.json` so `/watch`, `/about`, `/schedule`, `/speakers`, and `/sponsors` rewrite to their respective `.html` files.
+The public site is split into seven focused pages, each sharing a persistent side-rail navigation. Clean URLs are configured in `staticwebapp.config.json` so `/watch`, `/about`, `/schedule`, `/speakers`, `/code-of-conduct`, and `/sponsors` rewrite to their respective `.html` files.
 
 | URL | File | Purpose |
 |-----|------|---------|
@@ -11,6 +11,7 @@ The public site is split into six focused pages, each sharing a persistent side-
 | `/about` | `about.html` | About content (Markdown from Content API) |
 | `/schedule` | `schedule.html` | Full event schedule with session modals |
 | `/speakers` | `speakers.html` | Speaker grid with detail modals |
+| `/code-of-conduct` | `code-of-conduct.html` | Community guidelines (Markdown from Content API) |
 | `/sponsors` | `sponsors.html` | Sponsor grid grouped by tier with detail modals |
 
 ### Side-rail Navigation
@@ -98,7 +99,7 @@ The public site is split into six focused pages, each sharing a persistent side-
 
 ### Shared Across Public Pages
 
-- **Code of Conduct** — Modal with community guidelines loaded from Content API (opened from the side-rail item between Speakers and Sponsors)
+- **Code of Conduct** — Dedicated `/code-of-conduct` page with community guidelines rendered as Markdown from the Content API; navigated to via the side-rail item between Speakers and Sponsors
 - **Footer** — Privacy Policy (links to Microsoft Privacy Statement), Admin link, Powered by Azure
 
 ### Accessibility & UX

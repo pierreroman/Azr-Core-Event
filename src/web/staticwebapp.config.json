@@ -21,6 +21,10 @@
       "rewrite": "/sponsors.html"
     },
     {
+      "route": "/code-of-conduct",
+      "rewrite": "/code-of-conduct.html"
+    },
+    {
       "route": "/admin.html",
       "allowedRoles": ["administrator"]
     },

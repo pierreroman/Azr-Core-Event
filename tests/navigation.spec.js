@@ -7,12 +7,12 @@ const { test, expect } = require('./fixtures');
 
 test.describe('Side Rail — Public', () => {
 
-  test('rail renders on the home page with all 6 nav items', async ({ page, mockAPIs }) => {
+  test('rail renders on the home page with all 7 nav items', async ({ page, mockAPIs }) => {
     await page.goto('/');
     const rail = page.locator('aside.side-rail');
     await expect(rail).toBeVisible();
     await expect(rail).toHaveAttribute('aria-label', 'Primary navigation');
-    await expect(rail.locator('.rail-item[data-rail-id]')).toHaveCount(6);
+    await expect(rail.locator('.rail-item[data-rail-id]')).toHaveCount(7);
   });
 
   test('rail marks the current page with aria-current="page"', async ({ page, mockAPIs }) => {
@@ -29,6 +29,7 @@ test.describe('Side Rail — Public', () => {
       { url: '/about.html', id: 'about' },
       { url: '/schedule.html', id: 'schedule' },
       { url: '/speakers.html', id: 'speakers' },
+      { url: '/code-of-conduct.html', id: 'code-of-conduct' },
       { url: '/sponsors.html', id: 'sponsors' },
     ];
     for (const p of pages) {
@@ -84,21 +85,22 @@ test.describe('Side Rail — Mobile drawer', () => {
   });
 });
 
-test.describe('Code of Conduct modal', () => {
+test.describe('Code of Conduct page', () => {
 
-  test('opens and closes from the side-rail Code of Conduct item', async ({ page, mockAPIs }) => {
+  test('side-rail item navigates to /code-of-conduct.html', async ({ page, mockAPIs }) => {
     await page.goto('/');
     await page.locator('.side-rail .rail-item[data-rail-id="code-of-conduct"]').click();
-    const modal = page.locator('#coc-modal');
-    await expect(modal).toBeVisible();
-    await modal.locator('.modal-close').click();
-    await expect(modal).toBeHidden();
+    await expect(page).toHaveURL(/\/code-of-conduct\.html$/);
+    await expect(page.locator('aside.side-rail .rail-item.is-active'))
+      .toHaveAttribute('data-rail-id', 'code-of-conduct');
   });
 
-  test('is available on the schedule page', async ({ page, mockAPIs }) => {
-    await page.goto('/schedule.html');
-    await page.locator('.side-rail .rail-item[data-rail-id="code-of-conduct"]').click();
-    await expect(page.locator('#coc-modal')).toBeVisible();
+  test('renders the Markdown content from the API', async ({ page, mockAPIs }) => {
+    await page.goto('/code-of-conduct.html');
+    const content = page.locator('#coc-content');
+    await expect(content).toBeVisible();
+    // Mocked fixture returns '# Code of Conduct\nBe nice.' which parses to <h1>
+    await expect(content.locator('h1')).toContainText('Code of Conduct', { timeout: 5_000 });
   });
 });
 

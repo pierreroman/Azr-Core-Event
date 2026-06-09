@@ -801,25 +801,6 @@ function downloadICS(sessionId) {
     URL.revokeObjectURL(a.href);
 }
 
-// ==================== CODE OF CONDUCT ====================
-
-function openCodeOfConduct() {
-    const modal = document.getElementById('coc-modal');
-    if (!modal) return;
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    lastFocusedElement = document.activeElement;
-    trapFocus(modal);
-}
-
-function closeCodeOfConduct() {
-    const modal = document.getElementById('coc-modal');
-    if (!modal) return;
-    releaseFocus(modal);
-    modal.classList.remove('active');
-    document.body.style.overflow = '';
-}
-
 // ==================== REGISTRATION ====================
 
 let registrationConfig = null;
@@ -1572,7 +1553,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Modal overlay click-to-close (guards inside)
     _attachOverlayClose('session-modal', closeModal);
     _attachOverlayClose('speaker-modal', closeSpeakerModal);
-    _attachOverlayClose('coc-modal', closeCodeOfConduct);
     _attachOverlayClose('sponsor-modal', closeSponsorDetailModal);
     _attachOverlayClose('registration-modal', closeRegistrationModal);
 });
@@ -1584,7 +1564,6 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeModal();
         closeSpeakerModal();
-        closeCodeOfConduct();
         closeSponsorDetailModal();
         closeRegistrationModal();
     }
