@@ -97,9 +97,14 @@ The public site is split into seven focused pages, each sharing a persistent sid
 
 - **About** — Event description loaded from Content API (server-side Markdown stored in Blob Storage)
 
+### Code of Conduct Page (code-of-conduct.html)
+
+- Dedicated `/code-of-conduct` page with community guidelines rendered as Markdown from the Content API (server-side Markdown stored in Blob Storage)
+- Reached via the side-rail item between Speakers and Sponsors
+- Editable from the Admin Dashboard via the Code of Conduct Editor
+
 ### Shared Across Public Pages
 
-- **Code of Conduct** — Dedicated `/code-of-conduct` page with community guidelines rendered as Markdown from the Content API; navigated to via the side-rail item between Speakers and Sponsors
 - **Footer** — Privacy Policy (links to Microsoft Privacy Statement), Admin link, Powered by Azure
 
 ### Accessibility & UX
