@@ -104,13 +104,11 @@ After deployment completes:
 ## Redeployment & Other azd Commands
 
 ```bash
-# Redeploy code only (no infra changes)
+# Redeploy code only (no infra changes) — deploys api AND, via postdeploy
+# hook, the Static Web App
 azd deploy
 
-# Deploy just the frontend
-azd deploy web
-
-# Deploy just the API
+# Deploy just the API (the web SWA is still redeployed by postdeploy)
 azd deploy api
 
 # View deployment outputs
@@ -123,7 +121,7 @@ azd down
 azd monitor --logs
 ```
 
-> **Heads-up on the `web` service layout:** `azure.yaml` declares the web service with `project: ./src` and `dist: web` (rather than `project: ./src/web` and `dist: .`). The Static Web Apps backend now rejects deploys with *"Current directory cannot be identical to or contained within artifact folders"* when the swa CLI's cwd matches the output location. Keep `project` one level above `dist`.
+> **Heads-up on the `web` service:** The Static Web App is **not** registered as an azd service. The SWA deploy backend (binary `689a6c1f`, May 2026) rejects azd's hard-coded `--env default` with the misleading error *"The environment name 'default' is invalid"*. Instead, the SWA is deployed by the project-level `postdeploy` hook in [azure.yaml](../azure.yaml), which calls the SWA CLI directly with `--env production`. The SWA resource itself is still provisioned by Bicep (`infra/resources.bicep`, tagged `azd-service-name: web`). To force just the SWA redeploy, run `azd deploy` (or `azd deploy api` — the postdeploy hook runs after either).
 
 ---
 

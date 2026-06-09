@@ -7,16 +7,17 @@ metadata:
   template: community-online-event@0.0.2
 
 services:
-  web:
-    # NOTE: project is the parent (./src) so that swa CLI's cwd does not
-    # equal the outputLocation (./src/web). Recent SWA backend builds reject
-    # `Current directory cannot be identical to or contained within artifact
-    # folders.` when they match. dist is relative to project.
-    project: ./src
-    dist: web
-    language: js
-    host: staticwebapp
-
+  # NOTE: The 'web' Static Web App is intentionally NOT listed as an azd
+  # service. As of the SWA deploy binary released 2026-05 (build 689a6c1f,
+  # current 'stable'), the deploy backend rejects `--env default` with the
+  # misleading error 'The environment name "default" is invalid'. azd's
+  # built-in `host: staticwebapp` deploy hard-codes `--env default`, so it
+  # cannot reach the production slot.
+  #
+  # Workaround: the `postdeploy` hook below invokes the SWA CLI directly
+  # with `--env production`. The SWA resource is still tagged
+  # `azd-service-name: web` in Bicep, so it is provisioned by `azd provision`
+  # / `azd up`; only the deploy step is delegated to the hook.
   api:
     project: ./api
     language: js
@@ -76,7 +77,43 @@ hooks:
   postdeploy:
     shell: pwsh
     run: |
-      # Lock down storage again after deployment completes.
+      # ── 1. Deploy the Static Web App via the SWA CLI ─────────────
+      # azd's built-in `host: staticwebapp` deploy is broken (see comment
+      # above the services block). We invoke the SWA CLI directly here with
+      # `--env production`, which is what the deploy backend currently
+      # requires for the production slot.
+      $swaName = $env:AZURE_STATICWEBAPP_NAME
+      if ([string]::IsNullOrWhiteSpace($swaName)) {
+        Write-Host "  ⚠ AZURE_STATICWEBAPP_NAME not set — skipping SWA deploy" -ForegroundColor Yellow
+      } else {
+        Write-Host "Deploying Static Web App '$swaName' via SWA CLI..."
+        az account set --subscription $env:AZURE_SUBSCRIPTION_ID
+        $token = az staticwebapp secrets list `
+          --name $swaName `
+          --resource-group $env:AZURE_RESOURCE_GROUP `
+          --query "properties.apiKey" -o tsv
+        if ([string]::IsNullOrWhiteSpace($token)) {
+          Write-Host "  ✗ Could not fetch SWA deployment token" -ForegroundColor Red
+          exit 1
+        }
+        $appLocation = (Resolve-Path (Join-Path (Get-Location).Path "src\web")).Path
+        npx -y "@azure/static-web-apps-cli@latest" deploy `
+          --app-name $swaName `
+          --resource-group $env:AZURE_RESOURCE_GROUP `
+          --subscription-id $env:AZURE_SUBSCRIPTION_ID `
+          --env production `
+          --no-use-keychain `
+          --deployment-token $token `
+          --app-location $appLocation `
+          --output-location $appLocation
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "  ✗ SWA deploy failed (exit $LASTEXITCODE)" -ForegroundColor Red
+          exit $LASTEXITCODE
+        }
+        Write-Host "  ✓ SWA deploy succeeded"
+      }
+
+      # ── 2. Lock down storage again after deployment completes ────
       Write-Host "Disabling public network access on storage account..."
       az account set --subscription $env:AZURE_SUBSCRIPTION_ID
       az storage account update `
