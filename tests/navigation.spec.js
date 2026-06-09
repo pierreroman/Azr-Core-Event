@@ -86,9 +86,9 @@ test.describe('Side Rail — Mobile drawer', () => {
 
 test.describe('Code of Conduct modal', () => {
 
-  test('opens and closes from the Watch page footer link', async ({ page, mockAPIs }) => {
+  test('opens and closes from the side-rail Code of Conduct item', async ({ page, mockAPIs }) => {
     await page.goto('/');
-    await page.locator('footer a', { hasText: 'Code of Conduct' }).click();
+    await page.locator('.side-rail .rail-item[data-rail-id="code-of-conduct"]').click();
     const modal = page.locator('#coc-modal');
     await expect(modal).toBeVisible();
     await modal.locator('.modal-close').click();
@@ -97,7 +97,7 @@ test.describe('Code of Conduct modal', () => {
 
   test('is available on the schedule page', async ({ page, mockAPIs }) => {
     await page.goto('/schedule.html');
-    await page.locator('footer a', { hasText: 'Code of Conduct' }).click();
+    await page.locator('.side-rail .rail-item[data-rail-id="code-of-conduct"]').click();
     await expect(page.locator('#coc-modal')).toBeVisible();
   });
 });

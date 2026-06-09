@@ -48,7 +48,7 @@ test.describe('Home page (/)', () => {
     await page.goto('/');
     const footer = page.locator('footer');
     await expect(footer).toBeVisible();
-    await expect(footer.locator('.footer-links a')).toHaveCount(4);
+    await expect(footer.locator('.footer-links a')).toHaveCount(3);
     await expect(footer.locator('.copyright')).toContainText('2026');
   });
 });

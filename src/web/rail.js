@@ -103,7 +103,9 @@
     chevron:
       '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
     menu:
-      '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'
+      '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+    book:
+      '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h10.5A2.5 2.5 0 0 1 17 7v13H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M7.5 8.5h6M7.5 12h6"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H17"/></svg>'
   };
 
   // ---------- Nav definitions ------------------------------------------
@@ -113,6 +115,7 @@
     { id: 'about', label: 'About', href: '/about.html', icon: 'info' },
     { id: 'schedule', label: 'Schedule', href: '/schedule.html', icon: 'calendar' },
     { id: 'speakers', label: 'Speakers', href: '/speakers.html', icon: 'mic' },
+    { id: 'code-of-conduct', label: 'Code of Conduct', icon: 'book', action: 'openCodeOfConduct' },
     { id: 'sponsors', label: 'Sponsors', href: '/sponsors.html', icon: 'handshake' }
   ];
 
@@ -141,6 +144,24 @@
 
   function buildItem(item, activeId) {
     var isActive = item.id === activeId;
+    // Action items (no href) render as <button> and invoke a window function.
+    if (item.action) {
+      var b = el('button', {
+        type: 'button',
+        class: 'rail-item' + (isActive ? ' is-active' : ''),
+        'data-rail-id': item.id,
+        'data-tooltip': item.label
+      });
+      b.innerHTML =
+        ICONS[item.icon] +
+        '<span class="rail-item-label">' + item.label + '</span>' +
+        (item.badge ? '<span class="rail-badge">' + item.badge + '</span>' : '');
+      b.addEventListener('click', function () {
+        var fn = window[item.action];
+        if (typeof fn === 'function') fn();
+      });
+      return b;
+    }
     var a = el('a', {
       class: 'rail-item' + (isActive ? ' is-active' : ''),
       href: item.href,

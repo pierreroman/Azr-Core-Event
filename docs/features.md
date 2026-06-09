@@ -16,7 +16,7 @@ The public site is split into six focused pages, each sharing a persistent side-
 ### Side-rail Navigation
 
 - **Persistent rail** on every public and admin page — mounted by [rail.js](../src/web/rail.js) and configured via `body[data-rail="public|admin"]` and `body[data-rail-active="<id>"]`
-- **Fluent UI inline SVG icons** (no font dependency) for Home, Watch, About, Schedule, Speakers, Sponsors
+- **Fluent UI inline SVG icons** (no font dependency) for Home, Watch, About, Schedule, Speakers, Code of Conduct, Sponsors
 - **Collapse toggle** in the rail header — collapsed state persisted to `localStorage` key `rail.collapsed`
 - **Mobile drawer** below 900px — hamburger toggles off-canvas overlay; Escape or scrim click closes
 - **Register button** in the rail footer — shown when registration is enabled, opens the registration modal
@@ -98,8 +98,8 @@ The public site is split into six focused pages, each sharing a persistent side-
 
 ### Shared Across Public Pages
 
-- **Code of Conduct** — Modal with community guidelines loaded from Content API (link in every page footer)
-- **Footer** — Privacy Policy (links to Microsoft Privacy Statement), Code of Conduct, Admin link, Powered by Azure
+- **Code of Conduct** — Modal with community guidelines loaded from Content API (opened from the side-rail item between Speakers and Sponsors)
+- **Footer** — Privacy Policy (links to Microsoft Privacy Statement), Admin link, Powered by Azure
 
 ### Accessibility & UX
 
