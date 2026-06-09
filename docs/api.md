@@ -77,7 +77,9 @@ Cross-device branding configuration stored in Blob Storage (`sitecontent/brandin
 | GET | `/api/branding` | Anonymous | Get branding config (returns defaults if not yet saved, with `isDefault: true`) |
 | PUT | `/api/branding` | Authenticated | Save branding config to Blob Storage |
 
-**Fields:** `eventName`, `tagLine`, `logo`, `primaryColor`, `secondaryColor`, `accentColor`, `hideSponsors`, `eventStartDate`, `eventEndDate`.
+**Fields:** `eventName`, `tagLine`, `logo`, `primaryColor`, `secondaryColor`, `accentColor`, `hideSponsors`, `eventStartDate`, `eventEndDate`, `onDemandChannelInput`, `onDemandPlaylistId`, `onDemandChannelName`, `onDemandChannelUrl`.
+
+**On-demand YouTube channel.** When the watch page detects that every scheduled session is in the past, it shuffle-plays the configured YouTube channel's uploads playlist (defaults to ITOpsTalk when unset). Admins set this via the **On-Demand YouTube Channel** field in the Branding page; the server-side `resolveYouTubeSource()` accepts a channel URL, `@handle`, channel ID (`UC…`), or uploads playlist ID (`UU…`), fetches the YouTube channel page to resolve the uploads playlist ID + channel name, and persists all four `onDemand*` fields together. SSRF guard: only `www.youtube.com`, `youtube.com`, and `m.youtube.com` are accepted as fetch targets. A bad input returns **HTTP 400** with `{ error, details }` and nothing is written.
 
 ---
 

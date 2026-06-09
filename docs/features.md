@@ -53,6 +53,7 @@ The public site is split into seven focused pages, each sharing a persistent sid
 - **Now Playing Info Box** — Displays current session title, description, and YouTube link
 - **Up Next Box** — Shows the next scheduled session with live countdown timer
 - **Live Chat Button** — Opens YouTube live chat in a popup window during streams
+- **Post-event channel loop** — Once every scheduled session is in the past, the player shuffle-plays an admin-configured YouTube channel's uploads playlist (defaults to ITOpsTalk) instead of showing the static placeholder. The channel is set on the Branding admin page and accepts a channel URL, `@handle`, `UC…` channel ID, or `UU…` uploads playlist ID — see [Branding API](api.md#branding-api-apibranding).
 
 ### Dynamic Schedule
 

@@ -44,6 +44,7 @@ See [Deployment](docs/deployment.md) for full details.
 ## Key Features
 
 - **Live Video & Schedule** — Embedded YouTube player with live stream detection, session schedule grouped by day, ICS calendar downloads
+- **Post-event on-demand loop** — When the event is over, the watch page shuffle-plays an admin-configured YouTube channel's uploads (defaults to ITOpsTalk)
 - **Sign-in & Personal Favorites** — Microsoft Entra ID sign-in via SWA's built-in `aad` provider; star sessions to build a personal "My Schedule"; favorites persist per user in Cosmos DB
 - **Registration** — Configurable registration button with Markdown-rendered modal and external link
 - **Speakers & Sponsors** — Dynamic speaker profiles with session linking, tiered sponsor showcase with Markdown descriptions
