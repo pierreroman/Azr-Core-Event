@@ -17,13 +17,14 @@ This project deploys entirely via Azure Developer CLI (`azd`). No GitHub Actions
 
 | Resource | SKU | Description |
 |----------|-----|-------------|
-| Static Web App | Standard | Frontend hosting with custom domains and built-in CDN |
+| Static Web App | Standard | Frontend hosting with custom domains and built-in CDN; built-in Entra ID `aad` provider |
 | Function App | Flex Consumption (FC1) | API backend with managed identity, scales to 100 instances |
 | Storage Account | Standard_ZRS | Zone-redundant Tables + Blob Storage (no shared keys) |
+| Cosmos DB | Serverless (SQL API) | Per-user favorites — `event` db, `favorites` container, partition key `/userId`; `disableLocalAuth: true` (data-plane RBAC only) |
 | Virtual Network | 10.0.0.0/16 | Network isolation with subnets for Function App and private endpoints |
 | Private Endpoints | — | Blob, Table, and Queue private connectivity |
 | Private DNS Zones | — | DNS resolution for storage private endpoints |
-| User-Assigned Managed Identity | — | RBAC access to storage |
+| User-Assigned Managed Identity | — | RBAC access to Storage (Blob/Table/Queue) and Cosmos DB Built-in Data Contributor |
 | Application Insights | — | Monitoring and logging |
 | Log Analytics Workspace | PerGB2018 | Centralized logs |
 
@@ -121,6 +122,8 @@ azd down
 # View logs
 azd monitor --logs
 ```
+
+> **Heads-up on the `web` service layout:** `azure.yaml` declares the web service with `project: ./src` and `dist: web` (rather than `project: ./src/web` and `dist: .`). The Static Web Apps backend now rejects deploys with *"Current directory cannot be identical to or contained within artifact folders"* when the swa CLI's cwd matches the output location. Keep `project` one level above `dist`.
 
 ---
 

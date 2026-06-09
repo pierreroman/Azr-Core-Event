@@ -1,6 +1,6 @@
 # Community Online Event
 
-A reusable community conference website featuring dynamic schedule management, YouTube video integration, speaker profiles, sponsor management, and event registration — all backed by Azure Functions, Table Storage, and Blob Storage with managed identity, secured with VNet integration and private endpoints.
+A reusable community conference website featuring dynamic schedule management, YouTube video integration, speaker profiles, sponsor management, event registration, and per-user favorites with Microsoft Entra ID sign-in — all backed by Azure Functions, Table Storage, Blob Storage, and Cosmos DB with managed identity, secured with VNet integration and private endpoints.
 
 Deploy your own instance using Azure Developer CLI (`azd up`) or the interactive `deploy.ps1` script.
 
@@ -44,11 +44,12 @@ See [Deployment](docs/deployment.md) for full details.
 ## Key Features
 
 - **Live Video & Schedule** — Embedded YouTube player with live stream detection, session schedule grouped by day, ICS calendar downloads
+- **Sign-in & Personal Favorites** — Microsoft Entra ID sign-in via SWA's built-in `aad` provider; star sessions to build a personal "My Schedule"; favorites persist per user in Cosmos DB
 - **Registration** — Configurable registration button with Markdown-rendered modal and external link
 - **Speakers & Sponsors** — Dynamic speaker profiles with session linking, tiered sponsor showcase with Markdown descriptions
 - **Admin Dashboard** — Full CRUD management for schedule, speakers, sponsors, registration, branding, and content (Entra ID protected)
 - **CSV & YouTube Import** — Bulk import sessions from CSV files or YouTube playlists
-- **Secure by Default** — VNet + private endpoints, managed identity (no keys), storage lockdown, DOMPurify XSS protection
+- **Secure by Default** — VNet + private endpoints, managed identity (no keys, including Cosmos data-plane RBAC), storage lockdown, DOMPurify XSS protection
 
 See [Features](docs/features.md) for complete details.
 
@@ -61,8 +62,10 @@ See [Features](docs/features.md) for complete details.
 | Frontend | Azure Static Web Apps (Standard) — HTML5, CSS3, Vanilla JS |
 | API | Azure Functions (Flex Consumption, Node.js 20) |
 | Data | Azure Table Storage + Blob Storage (Standard_ZRS) |
+| Per-user state | Azure Cosmos DB (Serverless, SQL API) — favorites, partition key `/userId` |
+| Auth | Microsoft Entra ID via Static Web Apps built-in `aad` provider |
 | Networking | VNet, Private Endpoints, Private DNS Zones |
-| Identity | User-Assigned Managed Identity with RBAC |
+| Identity | User-Assigned Managed Identity with RBAC (Storage + Cosmos) |
 | Monitoring | Application Insights + Log Analytics |
 | Infrastructure | Bicep, Azure Developer CLI (azd) |
 
@@ -96,7 +99,9 @@ See [Architecture](docs/architecture.md) for data models, security details, and 
 │       ├── speakers.js        # Speakers CRUD + headshot upload
 │       ├── sponsors.js        # Sponsors CRUD + logo upload
 │       ├── content.js         # About/CoC content (Blob Storage)
-│       └── registration.js    # Registration config (Blob Storage)
+│       ├── registration.js    # Registration config (Blob Storage)
+│       ├── branding.js        # Branding config (Blob Storage)
+│       └── favorites.js       # Per-user favorites (Cosmos DB)
 ├── tests/                     # Playwright E2E tests
 ├── infra/                     # Bicep infrastructure templates
 ├── locustfile.py              # Load test script (10K users)
@@ -109,11 +114,11 @@ See [Architecture](docs/architecture.md) for data models, security details, and 
 
 - **Frontend:** HTML5, CSS3, Vanilla JavaScript
 - **Backend:** Azure Functions (Node.js 20, v4 programming model)
-- **Database:** Azure Table Storage
+- **Database:** Azure Table Storage (events, speakers, sponsors), Azure Cosmos DB Serverless (per-user favorites)
 - **File Storage:** Azure Blob Storage (headshots, logos, site content)
 - **Hosting:** Azure Static Web Apps (Standard tier)
-- **Authentication:** Microsoft Entra ID (Azure AD)
-- **Identity:** User-Assigned Managed Identity with RBAC
+- **Authentication:** Microsoft Entra ID via SWA built-in `aad` provider — no app registration needed for default tenant
+- **Identity:** User-Assigned Managed Identity with RBAC (Storage + Cosmos data-plane)
 - **Networking:** VNet, Private Endpoints, Private DNS Zones
 - **Caching:** In-memory TTL cache with automatic invalidation on writes
 - **Testing:** Playwright (functional/E2E), Locust + Azure Load Testing (performance)

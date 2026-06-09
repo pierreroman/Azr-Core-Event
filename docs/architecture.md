@@ -63,6 +63,28 @@
 
 ---
 
+## Per-user State (Azure Cosmos DB)
+
+Favorites are stored in a separate Cosmos DB account (Serverless, SQL API) so that
+per-user writes scale independently of the read-mostly Table Storage data.
+
+- **Account:** `azcos<resourceToken>` — capacity mode **Serverless**, `disableLocalAuth: true`, `publicNetworkAccess: Enabled` (data-plane RBAC is the access boundary)
+- **Database:** `event`
+- **Container:** `favorites`, partition key `/userId`
+
+### `favorites` document shape
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string | Same as `sessionId` (one doc per favorite) |
+| userId | string | SWA per-provider hashed user ID from `x-ms-client-principal.userId` |
+| sessionId | string | Session ID being favorited |
+| addedAt | string | ISO 8601 timestamp |
+
+Reads are scoped by partition key, so the working set per user stays in a single physical partition. The `/api/favorites/merge` endpoint caps payloads at 500 items and 200 characters per ID to limit Request Unit cost from rogue clients.
+
+---
+
 ## Blob Storage Containers
 
 | Container | Access | Purpose |
@@ -133,19 +155,32 @@ All structural colors in `styles.css` are referenced via CSS custom properties (
 - User override is stored in `localStorage` key `site.theme` (`"dark"` | `"light"`).
 - Brand-specific colors (Microsoft Azure gradients, sponsor tier badges, LIVE indicator red) are intentionally left as literals so they stay on-brand in both themes.
 
+### Sign-in and favorites flow
+
+The public site exposes a single sign-in entry point in the rail footer that routes to `/.auth/login/aad` (Static Web Apps' built-in Entra ID provider). On every page load, `site.js`:
+
+1. Calls `/.auth/me` to learn the current principal (or `null`).
+2. If signed in: renders the user's name in the rail and fetches `GET /api/favorites`. If anonymous `localStorage` favorites exist (`event-favorites` key), they are pushed up via `POST /api/favorites/merge` and then cleared locally.
+3. If signed out: renders the Sign-in link in the rail and reads favorites from `localStorage`.
+
+Session cards on `/schedule` and the session modal on `/speakers` render a star (\u2605) button. Clicking the star calls `toggleFavorite()` which optimistically updates the UI, then issues `PUT` or `DELETE /api/favorites/{sessionId}` (signed in) or rewrites `localStorage` (signed out). On failure the optimistic state is rolled back. The "My Schedule" filter chip on `/schedule` hides all cards that are not in the current favorites set without re-fetching the schedule.
+
+The Favorites API trusts only the `x-ms-client-principal` header injected by SWA \u2014 the `userId` field there is a per-provider hash, never the user's email \u2014 so a malicious client cannot read or write another user's favorites by spoofing a request body.
+
 ---
 
 ## Security
 
-- **User-Assigned Managed Identity** — Function App authenticates to Storage via RBAC (no connection strings or shared keys)
-- **Microsoft Entra ID Authentication** — Admin pages require authenticated users via SWA auth
+- **User-Assigned Managed Identity** — Function App authenticates to Storage and Cosmos DB via RBAC (no connection strings, no Cosmos keys)
+- **Cosmos DB data-plane RBAC** — `disableLocalAuth: true` and the *Cosmos DB Built-in Data Contributor* role (`00000000-0000-0000-0000-000000000002`) bound to the Function App's UAMI; account keys are never issued or stored
+- **Microsoft Entra ID Authentication** — Admin pages and the Favorites API require authenticated users via SWA's built-in `aad` provider; identity flows to the API as the `x-ms-client-principal` header (clients never supply user IDs)
 - **VNet Integration** — Function App runs inside a VNet subnet; all storage traffic flows through private endpoints
 - **Private Endpoints** — Blob, Table, and Queue storage accessible only via private link (no public storage endpoints)
 - **Storage Lockdown** — `publicNetworkAccess` is disabled post-deployment via `postdeploy` hook; temporarily re-enabled during deployments via `predeploy` hook
 - **`allowSharedKeyAccess: false`** — Storage account disables shared key access, enforcing RBAC-only
 - **`allowBlobPublicAccess: false`** — No anonymous blob access; all content served through authenticated API proxies
 - **Network ACLs** — `defaultAction: Deny` with `bypass: AzureServices` during deployment windows
-- **Role Assignments** — Storage Blob Data Owner, Blob Data Contributor, Table Data Contributor, Queue Data Contributor, Storage Account Contributor
+- **Role Assignments** — Storage Blob Data Owner, Blob Data Contributor, Table Data Contributor, Queue Data Contributor, Storage Account Contributor, Cosmos DB Built-in Data Contributor
 - **XSS Protection** — DOMPurify sanitization on all user-generated Markdown/HTML content
 - **Content Security Policy** — `X-Content-Type-Options`, `X-Frame-Options`, CSP headers configured in `staticwebapp.config.json`
 - **CodeQL Analysis** — Automated security scanning via GitHub Actions (weekly + on push/PR)
