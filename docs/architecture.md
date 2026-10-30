@@ -1,17 +1,74 @@
 # Architecture
 
+## Production private API topology
+
+Production migrated on October 29, 2026:
+
+```text
+Browser -> Static Web Apps -> APIM Standard v2 -> Function private endpoint
+                                                    |
+                                               Storage / Cosmos DB
+```
+
+The website remains public at https://azureinfrasummit.com. Its same-origin
+`/api/*` proxy now uses `apim-summit-655zgsp5au6gu`, which validates the linked
+SWA token/subscription and authenticates privately to `azfn655zgsp5au6gu` using
+a dedicated managed identity. Function and Storage public network access are
+explicitly Disabled. Trusted SWA user IDs and roles remain separate from the
+gateway's machine identity, preserving favorites partitions and authorization.
+
+See the [private API migration runbook](private-api-migration.md) for live
+acceptance evidence, private deployment requirements, limitations and rollback.
+The deployment itself does not prove that the S360 scanner has closed its flag.
+
+## Reproducible new-site deployment
+
+The same private topology is the **default for new environments**.
+[deploy.ps1](../deploy.ps1) orchestrates identity setup, `azd provision`, private
+API deployment, static frontend publication, checks and agent teardown. Legacy
+`direct`, `prepare` and `gateway` stages are explicit migration options only.
+
+```text
+Operator -> Azure management / Graph -> Bicep + dedicated backend app
+Operator -> Azure Run Command -> temporary private Linux deployment VM
+                                  -> private Blob + Function SCM / OneDeploy
+Operator -> pinned SWA CLI -> static frontend
+```
+
+The VM has no public IP/password/inbound access and joins the existing private
+endpoint subnet. It uses a system-assigned identity with resource-scoped
+deployment permissions, validates private DNS/TLS and Disabled public access,
+builds the API using its committed lockfile, and verifies the actual SCM result.
+Only allowlisted source is transferred; tokens and keys are not printed.
+Deployment write roles are scoped to the Function and Storage; a resource-group
+Reader assignment supports the agent's network/resource verification.
+Ownership snapshots and ARM operation evidence constrain cleanup to the exact
+VM/NIC/OS disk/NSG/roles. Cleanup resets the private-deployment approval flag.
+
+Fresh infrastructure creates empty `VideoSchedule`, `Speakers`, `Sponsors`,
+content/image/deployment containers and `event/favorites`. Default branding,
+disabled registration and sample About/Code of Conduct are returned by the API
+until an invited administrator saves configuration. No production content,
+favorites, custom domains or role assignments are cloned.
+
+See [Deployment](deployment.md) for permissions, costs, retry/cleanup and manual
+acceptance. The new orchestration is offline-tested; a fresh Azure bootstrap is
+not yet live-verified.
+
 ## Azure Resources
 
 | Resource | Type | Purpose |
 |----------|------|---------|
 | Static Web App | Azure Static Web App (Standard) | Hosts frontend HTML/CSS/JS, manages Entra ID auth |
 | Function App | Azure Function App (Flex Consumption, Node.js 20) | REST API backend |
+| API Management | Standard v2 | Public authenticated SWA gateway with outbound VNet integration |
 | Storage Account | Azure Storage Account (Standard_ZRS) | Table Storage + Blob Storage |
 | Cosmos DB | Azure Cosmos DB (Serverless, SQL API) | Per-user favorites — partition key `/userId` |
 | Virtual Network | Azure VNet (10.0.0.0/16) | Network isolation for Function App and Storage |
-| Private Endpoints | Azure Private Endpoints | Private connectivity to Blob, Table, and Queue storage |
+| Private Endpoints | Azure Private Endpoints | Private connectivity to Function/SCM and Blob, Table, Queue storage |
 | Private DNS Zones | Azure Private DNS | DNS resolution for private endpoints |
 | User-Assigned Managed Identity | Managed Identity | RBAC access from Function App to Storage and Cosmos DB |
+| Gateway Managed Identity | Managed Identity | Dedicated Entra backend authentication; no Storage/Cosmos data roles |
 | Application Insights + Log Analytics | Monitoring | Logging and diagnostics |
 | Resource Group | Resource Group | Contains all resources |
 
@@ -98,13 +155,13 @@ Reads are scoped by partition key, so the working set per user stays in a single
 
 ## Performance & Scalability
 
-- **In-Memory API Caching** — All GET endpoints use a shared cache module ([`api/src/shared/cache.js`](../api/src/shared/cache.js)) with 60-second TTL, reducing Azure Storage calls by ~99% under load
+- **In-Memory API Caching** — Public content/config GET endpoints use a shared cache module ([`api/src/shared/cache.js`](../api/src/shared/cache.js)) with 60-second TTL; actual savings depend on traffic and instance distribution. Per-user favorites are not public-cacheable.
 - **Cache Invalidation** — Write operations (POST/PUT/DELETE) immediately invalidate relevant cache keys so the same instance serves fresh data
 - **HTTP Cache Headers** — All public GET responses include `Cache-Control: public, max-age=60, stale-while-revalidate=300`, enabling browser and CDN-level caching
 - **Elastic Flex Consumption Scaling** — Function App scales to 100 instances automatically under load with 1 always-ready instance
 - **Zone-Redundant Storage (ZRS)** — Storage Account uses Standard_ZRS for cross-zone availability within the region
 - **Static Web App CDN** — All frontend assets served via Azure's built-in global CDN
-- **Designed for 10,000+ concurrent users** — With caching enabled, the architecture comfortably handles large-scale event traffic
+- **10,000-user load-test target** — The repository includes a load profile; this is a design target, not a measured capacity guarantee. APIM adds a gateway bottleneck/cost dimension that needs representative testing.
 
 ---
 
@@ -166,7 +223,12 @@ The public site exposes a single sign-in entry point in the rail footer that rou
 
 Session cards on `/schedule` and the session modal on `/speakers` render a star (\u2605) button. Clicking the star calls `toggleFavorite()` which optimistically updates the UI, then issues `PUT` or `DELETE /api/favorites/{sessionId}` (signed in) or rewrites `localStorage` (signed out). On failure the optimistic state is rolled back. The "My Schedule" filter chip on `/schedule` hides all cards that are not in the current favorites set without re-fetching the schedule.
 
-The Favorites API trusts only the `x-ms-client-principal` header injected by SWA \u2014 the `userId` field there is a per-provider hash, never the user's email \u2014 so a malicious client cannot read or write another user's favorites by spoofing a request body.
+In private mode, APIM strips caller-supplied trusted headers, validates the linked
+SWA token/subscription and forwards the SWA principal in
+`x-summit-client-principal`. EasyAuth identifies APIM's managed identity; the
+shared API authorization hook first verifies that machine identity, then exposes
+the separately validated end-user principal to Favorites. `userId` is the SWA
+provider ID, not an email or client-supplied body field.
 
 ---
 
@@ -174,13 +236,13 @@ The Favorites API trusts only the `x-ms-client-principal` header injected by SWA
 
 - **User-Assigned Managed Identity** — Function App authenticates to Storage and Cosmos DB via RBAC (no connection strings, no Cosmos keys)
 - **Cosmos DB data-plane RBAC** — `disableLocalAuth: true` and the *Cosmos DB Built-in Data Contributor* role (`00000000-0000-0000-0000-000000000002`) bound to the Function App's UAMI; account keys are never issued or stored
-- **Microsoft Entra ID Authentication** — Admin pages and the Favorites API require authenticated users via SWA's built-in `aad` provider; identity flows to the API as the `x-ms-client-principal` header (clients never supply user IDs)
+- **Microsoft Entra ID Authentication** — Admin pages/writes require the SWA `administrator` role; favorites require `authenticated`. APIM's backend identity is verified separately from trusted end-user context.
 - **VNet Integration** — Function App runs inside a VNet subnet; all storage traffic flows through private endpoints
-- **Private Endpoints** — Blob, Table, and Queue storage accessible only via private link (no public storage endpoints)
-- **Storage Lockdown** — `publicNetworkAccess` is disabled post-deployment via `postdeploy` hook; temporarily re-enabled during deployments via `predeploy` hook
+- **Private Endpoints** — Function/SCM and Blob/Table/Queue use private link and private DNS; public network access is Disabled.
+- **Storage Lockdown** — New private deployments never reopen public access. The temporary public-storage hook exists only for explicitly selected legacy migration stages.
 - **`allowSharedKeyAccess: false`** — Storage account disables shared key access, enforcing RBAC-only
-- **`allowBlobPublicAccess: false`** — No anonymous blob access; all content served through authenticated API proxies
-- **Network ACLs** — `defaultAction: Deny` with `bypass: AzureServices` during deployment windows
+- **`allowBlobPublicAccess: false`** — No anonymous blob access; public content is served through the gateway-authenticated API proxy, without requiring an attendee login
+- **Network ACLs** — Storage also has `defaultAction: Deny` and `bypass: AzureServices`; private-mode public access remains Disabled regardless of this bypass setting.
 - **Role Assignments** — Storage Blob Data Owner, Blob Data Contributor, Table Data Contributor, Queue Data Contributor, Storage Account Contributor, Cosmos DB Built-in Data Contributor
 - **XSS Protection** — DOMPurify sanitization on all user-generated Markdown/HTML content
 - **Content Security Policy** — `X-Content-Type-Options`, `X-Frame-Options`, CSP headers configured in `staticwebapp.config.json`

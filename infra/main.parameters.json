@@ -10,6 +10,30 @@
     },
     "resourceGroupName": {
       "value": "rg-${AZURE_ENV_NAME}"
+    },
+    "resiliencyClassification": {
+      "value": "${RESILIENCY_CLASSIFICATION=}"
+    },
+    "apiNetworkStage": {
+      "value": "${API_NETWORK_STAGE=private}"
+    },
+    "apimPublisherName": {
+      "value": "${APIM_PUBLISHER_NAME=}"
+    },
+    "apimPublisherEmail": {
+      "value": "${APIM_PUBLISHER_EMAIL=}"
+    },
+    "backendApplicationId": {
+      "value": "${BACKEND_APPLICATION_ID=}"
+    },
+    "apimLinkedProductId": {
+      "value": "${APIM_LINKED_PRODUCT_ID=unlinked}"
+    },
+    "functionSubnetNsgId": {
+      "value": "${FUNCTION_SUBNET_NSG_ID=}"
+    },
+    "privateEndpointSubnetNsgId": {
+      "value": "${PRIVATE_ENDPOINT_SUBNET_NSG_ID=}"
     }
   }
 }

@@ -12,6 +12,22 @@ param location string
 @description('Name of the resource group')
 param resourceGroupName string = 'rg-${environmentName}'
 
+@description('Optional resource-group resiliency classification. Leave empty unless approved for this environment.')
+param resiliencyClassification string = ''
+
+@allowed(['direct', 'prepare', 'gateway', 'private'])
+@description('New deployments use private connectivity. Other stages are explicit legacy migration options.')
+param apiNetworkStage string = 'private'
+
+param apimPublisherName string = ''
+param apimPublisherEmail string = ''
+@description('Single-tenant backend Entra application client ID; required for gateway/private.')
+param backendApplicationId string = ''
+@description('Generated SWA APIM product ID, persisted after an explicitly approved backend switch.')
+param apimLinkedProductId string = 'unlinked'
+param functionSubnetNsgId string = ''
+param privateEndpointSubnetNsgId string = ''
+
 // Generate unique token for resource naming
 var resourceToken = uniqueString(subscription().id, location, environmentName)
 
@@ -19,9 +35,11 @@ var resourceToken = uniqueString(subscription().id, location, environmentName)
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: resourceGroupName
   location: location
-  tags: {
+  tags: union({
     'azd-env-name': environmentName
-  }
+  }, empty(resiliencyClassification) ? {} : {
+    'ms-resiliency-classification': resiliencyClassification
+  })
 }
 
 // Deploy all resources
@@ -32,6 +50,13 @@ module resources 'resources.bicep' = {
     environmentName: environmentName
     location: location
     resourceToken: resourceToken
+    apiNetworkStage: apiNetworkStage
+    apimPublisherName: apimPublisherName
+    apimPublisherEmail: apimPublisherEmail
+    backendApplicationId: backendApplicationId
+    apimLinkedProductId: apimLinkedProductId
+    functionSubnetNsgId: functionSubnetNsgId
+    privateEndpointSubnetNsgId: privateEndpointSubnetNsgId
   }
 }
 
@@ -47,9 +72,16 @@ output AZURE_STATICWEBAPP_HOSTNAME string = resources.outputs.staticWebAppHostna
 // Function App outputs
 output AZURE_FUNCTION_APP_NAME string = resources.outputs.functionAppName
 output AZURE_FUNCTION_APP_ID string = resources.outputs.functionAppId
+output AZURE_API_NETWORK_STAGE string = apiNetworkStage
+output AZURE_APIM_NAME string = resources.outputs.apimName
+output AZURE_APIM_ID string = resources.outputs.apimId
+output AZURE_APIM_PRINCIPAL_ID string = resources.outputs.apimPrincipalId
 
 // Storage outputs
 output AZURE_STORAGE_ACCOUNT_NAME string = resources.outputs.storageAccountName
+output AZURE_STORAGE_ACCOUNT_ID string = resources.outputs.storageAccountId
+output AZURE_PRIVATE_ENDPOINT_SUBNET_ID string = resources.outputs.privateEndpointSubnetId
+output AZURE_VIRTUAL_NETWORK_NAME string = resources.outputs.vnetName
 
 // Cosmos DB outputs
 output AZURE_COSMOS_ACCOUNT_NAME string = resources.outputs.cosmosAccountName

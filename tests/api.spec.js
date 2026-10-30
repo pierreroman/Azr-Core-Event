@@ -59,22 +59,24 @@ test.describe('API Endpoints', () => {
   test('POST /api/schedule without auth should not succeed with changes', async ({ request }) => {
     const response = await request.post('/api/schedule', {
       data: { title: 'Unauthorized Test' },
+      maxRedirects: 0,
     });
-    // SWA may return 200 (redirect to login page), 401, or 403
-    expect([200, 401, 403]).toContain(response.status());
+    expect([302, 401, 403]).toContain(response.status());
   });
 
   test('POST /api/speakers without auth should not succeed with changes', async ({ request }) => {
     const response = await request.post('/api/speakers', {
       data: { name: 'Unauthorized Test' },
+      maxRedirects: 0,
     });
-    expect([200, 401, 403]).toContain(response.status());
+    expect([302, 401, 403]).toContain(response.status());
   });
 
   test('POST /api/sponsors without auth should not succeed with changes', async ({ request }) => {
     const response = await request.post('/api/sponsors', {
       data: { name: 'Unauthorized Test' },
+      maxRedirects: 0,
     });
-    expect([200, 401, 403]).toContain(response.status());
+    expect([302, 401, 403]).toContain(response.status());
   });
 });

@@ -2,9 +2,8 @@
  * favorites.js — per-user favorite sessions stored in Cosmos DB.
  *
  * Auth model: this API runs behind Azure Static Web Apps' managed
- * authentication. SWA injects the signed-in user's claims into the
- * `x-ms-client-principal` header (base64-encoded JSON). We never trust
- * a client-supplied userId — the identity comes only from that header.
+ * authentication. The shared authorization helper preserves SWA's user
+ * identity on both the direct and authenticated APIM paths.
  *
  * Routes (all require an authenticated user; enforced by
  * staticwebapp.config.json):
@@ -25,6 +24,7 @@
 const { app } = require("@azure/functions");
 const { CosmosClient } = require("@azure/cosmos");
 const { ManagedIdentityCredential, DefaultAzureCredential } = require("@azure/identity");
+const { getClientPrincipal } = require("../shared/authorization");
 
 const cosmosEndpoint = process.env.COSMOS_ENDPOINT;
 const cosmosDatabase = process.env.COSMOS_DATABASE || "event";
@@ -47,33 +47,13 @@ function getContainer() {
     return _container;
 }
 
-/**
- * Pull the SWA-issued client principal out of the request. Returns null
- * for anonymous requests. The header is base64-encoded JSON shaped like:
- *   { userId, userRoles, identityProvider, userDetails, claims }
- */
-function getClientPrincipal(request) {
-    const header = request.headers.get("x-ms-client-principal");
-    if (!header) return null;
-    try {
-        const decoded = Buffer.from(header, "base64").toString("utf8");
-        const principal = JSON.parse(decoded);
-        // SWA's userId is a stable per-provider hash; good enough as a
-        // partition key. We never expose it to other users.
-        if (!principal || !principal.userId) return null;
-        return principal;
-    } catch (e) {
-        return null;
-    }
-}
-
 function unauthorized() {
     return { status: 401, jsonBody: { error: "Authentication required" } };
 }
 
 // GET /api/favorites — list current user's favorite session IDs
 async function listFavorites(request, context) {
-    const principal = getClientPrincipal(request);
+    const principal = getClientPrincipal(request, context);
     if (!principal) return unauthorized();
 
     try {
@@ -97,7 +77,7 @@ async function listFavorites(request, context) {
 
 // PUT /api/favorites/{sessionId} — add a favorite
 async function addFavorite(request, context) {
-    const principal = getClientPrincipal(request);
+    const principal = getClientPrincipal(request, context);
     if (!principal) return unauthorized();
 
     const sessionId = request.params.sessionId;
@@ -122,7 +102,7 @@ async function addFavorite(request, context) {
 
 // DELETE /api/favorites/{sessionId} — remove a favorite
 async function removeFavorite(request, context) {
-    const principal = getClientPrincipal(request);
+    const principal = getClientPrincipal(request, context);
     if (!principal) return unauthorized();
 
     const sessionId = request.params.sessionId;
@@ -146,7 +126,7 @@ async function removeFavorite(request, context) {
 
 // POST /api/favorites/merge — bulk upsert (for anon -> signed-in handoff)
 async function mergeFavorites(request, context) {
-    const principal = getClientPrincipal(request);
+    const principal = getClientPrincipal(request, context);
     if (!principal) return unauthorized();
 
     let body;

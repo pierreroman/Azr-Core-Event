@@ -1,186 +1,53 @@
-# Azure Developer CLI (azd) project configuration
-# Run 'azd up' to provision infrastructure and deploy
-
+# Fresh private deployments: ./deploy.ps1. Do not bootstrap with bare azd up.
 name: community-online-event
-
 metadata:
-  template: community-online-event@0.0.2
-
+  template: community-online-event@0.0.3
 services:
-  # NOTE: The 'web' Static Web App is intentionally NOT listed as an azd
-  # service. As of the SWA deploy binary released 2026-05 (build 689a6c1f,
-  # current 'stable'), the deploy backend rejects `--env default` with the
-  # misleading error 'The environment name "default" is invalid'. azd's
-  # built-in `host: staticwebapp` deploy hard-codes `--env default`, so it
-  # cannot reach the production slot.
-  #
-  # Workaround: the `postdeploy` hook below invokes the SWA CLI directly
-  # with `--env production`. The SWA resource is still tagged
-  # `azd-service-name: web` in Bicep, so it is provisioned by `azd provision`
-  # / `azd up`; only the deploy step is delegated to the hook.
+  # Frontend uses the pinned SWA CLI with --env production; azd's built-in
+  # staticwebapp deploy uses an unsupported default-slot name.
   api:
     project: ./api
     language: js
     host: function
-
 hooks:
   preprovision:
     shell: pwsh
     run: |
-      # Register all required resource providers before provisioning.
-      # This covers users running 'azd up' directly (without deploy.ps1).
-      $providers = @(
-        'Microsoft.App',
-        'Microsoft.Insights',
-        'Microsoft.ManagedIdentity',
-        'Microsoft.Network',
-        'Microsoft.OperationalInsights',
-        'Microsoft.Storage',
-        'Microsoft.Web'
-      )
-      $registered = az provider list --query "[?registrationState=='Registered'].namespace" -o tsv 2>$null
-      $toRegister = @($providers | Where-Object { $_ -notin $registered })
-      if ($toRegister.Count -gt 0) {
-        Write-Host "Registering $($toRegister.Count) resource provider(s)..."
-        foreach ($ns in $toRegister) {
-          az provider register --namespace $ns --subscription $env:AZURE_SUBSCRIPTION_ID 2>$null
-        }
-        foreach ($ns in $toRegister) {
-          $retries = 0
-          do { Start-Sleep -Seconds 5; $state = az provider show --namespace $ns --query registrationState -o tsv 2>$null; $retries++ } while ($state -ne 'Registered' -and $retries -lt 60)
-          Write-Host "  ✓ $ns"
-        }
-      } else {
-        Write-Host "All required resource providers already registered."
-      }
-
-  predeploy:
-    shell: pwsh
-    run: |
-      # Re-enable public network access so the Flex Consumption deployment
-      # infrastructure can upload the zip package to blob storage.
-      # The networkAcls (defaultAction: Deny, bypass: AzureServices) still
-      # block all external traffic — only trusted Azure services are allowed.
-      Write-Host "Enabling public network access on storage for deployment..."
-      az account set --subscription $env:AZURE_SUBSCRIPTION_ID
-      az storage account update `
-        --name $env:AZURE_STORAGE_ACCOUNT_NAME `
-        --resource-group $env:AZURE_RESOURCE_GROUP `
-        --public-network-access Enabled `
-        --output none
-      if ($LASTEXITCODE -eq 0) {
-        Write-Host "  ✓ Public network access enabled (still protected by networkAcls)"
-      } else {
-        Write-Host "  ⚠ Could not enable public access — deployment may fail" -ForegroundColor Yellow
-      }
-
-  postdeploy:
-    shell: pwsh
-    run: |
-      # ── 1. Deploy the Static Web App via the SWA CLI ─────────────
-      # azd's built-in `host: staticwebapp` deploy is broken (see comment
-      # above the services block). We invoke the SWA CLI directly here with
-      # `--env production`, which is what the deploy backend currently
-      # requires for the production slot.
-      $swaName = $env:AZURE_STATICWEBAPP_NAME
-      if ([string]::IsNullOrWhiteSpace($swaName)) {
-        Write-Host "  ⚠ AZURE_STATICWEBAPP_NAME not set — skipping SWA deploy" -ForegroundColor Yellow
-      } else {
-        Write-Host "Deploying Static Web App '$swaName' via SWA CLI..."
-        az account set --subscription $env:AZURE_SUBSCRIPTION_ID
-        $token = az staticwebapp secrets list `
-          --name $swaName `
-          --resource-group $env:AZURE_RESOURCE_GROUP `
-          --query "properties.apiKey" -o tsv
-        if ([string]::IsNullOrWhiteSpace($token)) {
-          Write-Host "  ✗ Could not fetch SWA deployment token" -ForegroundColor Red
-          exit 1
-        }
-        $appLocation = (Resolve-Path (Join-Path (Get-Location).Path "src\web")).Path
-        npx -y "@azure/static-web-apps-cli@latest" deploy `
-          --app-name $swaName `
-          --resource-group $env:AZURE_RESOURCE_GROUP `
-          --subscription-id $env:AZURE_SUBSCRIPTION_ID `
-          --env production `
-          --no-use-keychain `
-          --deployment-token $token `
-          --app-location $appLocation `
-          --output-location $appLocation
-        if ($LASTEXITCODE -ne 0) {
-          Write-Host "  ✗ SWA deploy failed (exit $LASTEXITCODE)" -ForegroundColor Red
-          exit $LASTEXITCODE
-        }
-        Write-Host "  ✓ SWA deploy succeeded"
-      }
-
-      # ── 2. Lock down storage again after deployment completes ────
-      Write-Host "Disabling public network access on storage account..."
-      az account set --subscription $env:AZURE_SUBSCRIPTION_ID
-      az storage account update `
-        --name $env:AZURE_STORAGE_ACCOUNT_NAME `
-        --resource-group $env:AZURE_RESOURCE_GROUP `
-        --public-network-access Disabled `
-        --output none
-      if ($LASTEXITCODE -eq 0) {
-        Write-Host "  ✓ Public network access disabled on $env:AZURE_STORAGE_ACCOUNT_NAME"
-      } else {
-        Write-Host "  ⚠ Failed to disable public network access — please disable manually" -ForegroundColor Yellow
-      }
-
+      & ./scripts/Test-ApiMigrationPrerequisites.ps1
+      if (-not $?) { throw 'API migration prerequisite checks failed.' }
+      & ./scripts/Register-Providers.ps1
+      if (-not $?) { throw 'Resource provider registration failed.' }
   postprovision:
     shell: pwsh
     run: |
-      # Ensure az CLI targets the same subscription azd provisioned into
-      az account set --subscription $env:AZURE_SUBSCRIPTION_ID
-
-      # Link Function App backend to Static Web App
-      Write-Host "Linking Function App to Static Web App..."
-      az staticwebapp backends link `
-        --name $env:AZURE_STATICWEBAPP_NAME `
-        --resource-group $env:AZURE_RESOURCE_GROUP `
-        --backend-resource-id $env:AZURE_FUNCTION_APP_ID `
-        --backend-region $env:AZURE_LOCATION
-
-      # Ensure sitecontent blob container exists
-      Write-Host "Verifying sitecontent blob container..."
-      az storage container create `
-        --name sitecontent `
-        --account-name $env:AZURE_STORAGE_ACCOUNT_NAME `
-        --auth-mode login `
-        --public-access off 2>$null
-
-      # Note: Storage lockdown (publicNetworkAccess: Disabled) is handled by
-      # the postdeploy hook, which runs after every deployment including azd up.
-
-      # ── Invite administrators to the Static Web App ──────────────
-      # Add or remove email addresses in the list below to manage
-      # who has access to the admin pages and write APIs.
-      # Each admin gets the 'administrator' role via SWA invitation.
-      $admins = @(
-        "pierrer@microsoft.com"
-        # Add more admins here, one per line:
-        # "admin2@contoso.com"
-        # "admin3@contoso.com"
-      )
-
-      Write-Host "Inviting administrators to Static Web App..."
-      foreach ($admin in $admins) {
-        Write-Host "  Inviting $admin..."
-        az staticwebapp users invite `
-          --name $env:AZURE_STATICWEBAPP_NAME `
-          --resource-group $env:AZURE_RESOURCE_GROUP `
-          --authentication-provider aad `
-          --user-details $admin `
-          --role administrator `
-          --domain $env:AZURE_STATICWEBAPP_HOSTNAME `
-          --invitation-expiration-in-hours 168 2>$null
-        if ($LASTEXITCODE -eq 0) {
-          Write-Host "    ✓ Invitation sent to $admin"
-          Write-Host "    → Accept at: https://$env:AZURE_STATICWEBAPP_HOSTNAME/.auth/invitations"
-        } else {
-          Write-Host "    ⚠ Could not invite $admin (may already be invited)"
-        }
+      & ./scripts/Sync-ApiBackend.ps1
+      if (-not $?) { throw 'API backend synchronization failed.' }
+      # Administrator invitations are explicit, not regenerated on every provision.
+  predeploy:
+    shell: pwsh
+    run: |
+      & ./scripts/Test-ApiMigrationPrerequisites.ps1
+      if (-not $?) { throw 'API migration prerequisite checks failed.' }
+      if ($env:API_NETWORK_STAGE -eq 'private' -or -not $env:API_NETWORK_STAGE) {
+        & ./scripts/Test-PrivateDeploymentNetwork.ps1
+        if (-not $?) { throw 'Private deployment network checks failed.' }
+      } else {
+        # Legacy migration stages only; new private bootstrap never uses this.
+        az storage account update --subscription $env:AZURE_SUBSCRIPTION_ID `
+          --name $env:AZURE_STORAGE_ACCOUNT_NAME --resource-group $env:AZURE_RESOURCE_GROUP `
+          --public-network-access Enabled --output none
+        if ($LASTEXITCODE -ne 0) { throw 'Could not enable legacy deployment storage access.' }
       }
-
-      Write-Host "Post-provision complete."
-      exit 0
+  postdeploy:
+    shell: pwsh
+    run: |
+      # Always restore/verify lockdown even if frontend deployment fails.
+      try {
+        & ./scripts/Deploy-Web.ps1
+        if (-not $?) { throw 'Frontend deployment failed.' }
+      } finally {
+        az storage account update --subscription $env:AZURE_SUBSCRIPTION_ID `
+          --name $env:AZURE_STORAGE_ACCOUNT_NAME --resource-group $env:AZURE_RESOURCE_GROUP `
+          --public-network-access Disabled --output none
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to disable storage public network access.' }
+      }

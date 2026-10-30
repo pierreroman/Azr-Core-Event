@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Migration files (not needed in deployment)
 migrate-schedule.js
@@ -23,6 +22,7 @@ infra/*.json
 # AZD environment files
 .azure/**/
 !.azure/plan.md
+.azure/private-agent-*.json
 
 # OS files
 .DS_Store

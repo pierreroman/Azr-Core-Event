@@ -1,5 +1,18 @@
 # Features
 
+## Fresh-site behavior
+
+The [from-scratch deployment](deployment.md) creates a reusable site with empty
+schedule, speaker, sponsor and favorites collections. It does not import Summit
+production content or users. Branding defaults to "Community Online Event";
+registration is disabled until configured. About/Code of Conduct and the bundled
+logo are sample defaults; review them before publishing your own event.
+
+An invited administrator must accept the returned invitation URL, sign out/in,
+then configure branding, registration, content, sessions and images. A regular
+signed-in attendee cannot edit event content. Custom domains require separate
+DNS ownership validation.
+
 ## Public Website
 
 The public site is split into seven focused pages, each sharing a persistent side-rail navigation. Clean URLs are configured in `staticwebapp.config.json` so `/watch`, `/about`, `/schedule`, `/speakers`, `/code-of-conduct`, and `/sponsors` rewrite to their respective `.html` files.
@@ -32,7 +45,7 @@ The public site is split into seven focused pages, each sharing a persistent sid
 
 ### Sign-in & Personal Favorites
 
-- **Sign in with Microsoft (Entra ID)** — uses Azure Static Web Apps' built-in `aad` provider, no app registration needed
+- **Sign in with Microsoft (Entra ID)** — uses SWA's built-in `aad` provider for user sign-in; a separate secretless backend app secures APIM-to-Function access
 - **Sign-in button** in the rail footer for anonymous visitors; swaps to user name + Sign out once authenticated
 - **Star (★) on every session card** — toggles a session as a favorite; one click adds, another removes
 - **"My Schedule" filter chip** on `/schedule` — hides everything except starred sessions

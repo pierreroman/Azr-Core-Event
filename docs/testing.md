@@ -1,5 +1,92 @@
 # Testing
 
+## Reproducible deployment checks (offline)
+
+From the repository root with Node.js/npm and PowerShell 7+:
+
+```powershell
+npm ci
+npm run test:authorization
+npm run test:migration
+npm run test:deployment
+npm run test:private-deployment
+node --test tests/timezone-utils.test.js
+```
+
+The PowerShell suites mock Azure/Graph commands; they do not create resources.
+They cover bootstrap refusal/resume gates, dedicated secretless identity,
+environment isolation, private-default stages, invitations, failure cleanup,
+source ZIP contents/SHA256, Run Command output integrity, deployment evidence and
+exact-owned-resource cleanup. Private-agent Bash syntax validation needs Bash
+(the test supports the Windows Git Bash installation).
+
+Compile the infrastructure without deploying:
+
+```powershell
+az bicep build --file .\infra\main.bicep --stdout
+az bicep build --file .\infra\existing-api-gateway.bicep --stdout
+az bicep build --file .\infra\deployment-agent.bicep --stdout
+```
+
+`npm run package:site -- -OutputPath C:\releases\site.zip` creates an allowlisted
+source ZIP and per-file manifest. The offline suite opens it, validates every
+file's hash/length, and checks that environment/settings/dependency state is absent.
+It is not a prebuilt Function package.
+
+### New environment live acceptance
+
+The new bootstrap orchestration is **not yet fresh-Azure-tested**. Local passing
+tests do not establish tenant policy, region/SKU quota, role propagation, APIM
+activation, download access or SWA identity propagation.
+
+After separate target/cost approval, follow [Deployment](deployment.md), then run:
+
+```powershell
+.\scripts\Test-SiteDeployment.ps1 -EnvironmentName my-event
+```
+
+This checks real Disabled network settings, exact SWA/APIM linkage and seven
+public API JSON shapes, allowing empty event collections. Independently confirm
+private redeployment completed and the temporary VM/roles were removed.
+Browser acceptance is mandatory: accept the invitation, verify admin/non-admin
+roles, exercise reversible content CRUD/uploads in the test site, verify favorites
+after refresh and isolation between two users, inspect images and custom domains.
+Record failures; do not treat redirects, login HTML or a CLI exit alone as success.
+Production's earlier private migration evidence is not proof of this new bootstrap.
+
+### Dependency and runtime release gates
+
+The newly committed API lock was checked with `npm audit --omit=dev`. Compatible
+updates removed the reported `fast-xml-parser` critical advisories and old `uuid`
+finding, but the refreshed tree still reports **two high-severity audit entries**
+for `@azure/msal-node` and its `@azure/identity` parent
+([GHSA-xcx6-jx8p-x3h5](https://github.com/advisories/GHSA-xcx6-jx8p-x3h5)).
+These entries describe one transitive advisory chain, not two proven exploitable
+application paths. No clean security audit is claimed. Review/remediate with
+supported SDK versions before a new production rollout; do not force a breaking
+transitive override without compatibility tests.
+
+The public npm audit endpoint failed TLS in the operator environment; the
+configured registry returned the findings. Lockfiles themselves reference public
+npm tarballs and preserve integrity hashes. Root CLI dependencies also emit
+deprecation warnings; they are deployment tooling, not bundled API runtime.
+Node.js 20.20.2 is retained from the existing private deployment; runtime lifecycle
+and organizational support policy are separate outstanding release checks.
+
+## Private API migration checks
+
+```powershell
+npm run test:authorization
+npm run test:migration
+```
+
+These are local, non-Azure-mutating tests for the shared HTTP operation manifest,
+gateway caller/role checks, favorites isolation, and deployment-stage safeguards.
+The opt-in [private API acceptance suite](../tests/private-api.spec.js) requires
+an approved deployed test environment. See the [migration runbook](private-api-migration.md#11-implemented-rollout-controls-and-operator-commands)
+for configuration and the full live acceptance matrix; local tests alone do not
+establish that SWA-to-APIM user identity propagation works.
+
 ## Local Development
 
 ### Prerequisites
@@ -11,15 +98,19 @@
 ### Running the API Locally
 
 ```bash
-cd api
-npm install
+Set-Location .\api
+npm ci
 
-# Set your storage account in local.settings.json
-# Then start the Functions host
+# Configure untracked local settings and approved private network/data RBAC
 func start
 ```
 
 ---
+
+See the [API development notes](../api/README.md): private data endpoints require
+private connectivity, and managed-identity-only handlers are not automatically
+usable with workstation CLI credentials. Local mocked tests cannot establish the
+real Entra/SWA/APIM trust boundary. Never reopen production endpoints for testing.
 
 ## Playwright — Functional & E2E Tests
 
@@ -28,7 +119,7 @@ The project includes [Playwright](https://playwright.dev/) tests that verify the
 ### Setup
 
 ```bash
-npm install                        # install @playwright/test
+npm ci                             # install pinned dependency tree
 npx playwright install chromium    # download browser (add firefox/webkit as needed)
 ```
 
@@ -51,7 +142,7 @@ npx playwright install chromium    # download browser (add firefox/webkit as nee
 npm test
 
 # Against a live/staging site
-$env:BASE_URL="https://www.azureinfrasummit.com"; npm test
+$env:BASE_URL="https://<approved-test-site>.azurestaticapps.net"; npm test
 
 # Useful variations
 npm run test:chromium       # Chromium only (fastest)
@@ -103,7 +194,7 @@ The Locust script (`locustfile.py`) models realistic attendee traffic with weigh
 
 ```bash
 pip install locust requests
-locust -f locustfile.py --host https://www.azureinfrasummit.com -u 50 -r 5 --run-time 2m --headless
+locust -f locustfile.py --host https://<approved-test-site>.azurestaticapps.net -u 50 -r 5 --run-time 2m --headless
 ```
 
 **Azure Load Testing** (full 10K users with geo-distribution):
@@ -120,6 +211,10 @@ az load test create \
 ```
 
 Or upload `locustfile.py` + `load-test-config.yaml` through the **Azure Portal → Load Testing** blade.
+
+Do not aim load tests at Summit production without explicit service-owner
+approval. The 10K profile is a target configuration, not measured capacity or an
+SLO guarantee for a newly deployed APIM-backed site.
 
 ### Failure Criteria (auto-configured)
 

@@ -9,6 +9,11 @@
     "test:headed": "npx playwright test --headed",
     "test:chromium": "npx playwright test --project=chromium",
     "test:api": "npx playwright test tests/api.spec.js",
+    "test:authorization": "node --test api/test/authorization.test.js",
+    "test:migration": "pwsh -NoProfile -File tests/migration-scripts.test.ps1",
+    "test:deployment": "pwsh -NoProfile -File tests/deployment-scripts.test.ps1",
+    "test:private-deployment": "pwsh -NoProfile -File tests/private-deployment.test.ps1",
+    "package:site": "pwsh -NoProfile -File scripts/New-SitePackage.ps1",
     "test:report": "npx playwright show-report"
   },
   "repository": {
@@ -24,6 +29,7 @@
   },
   "homepage": "https://github.com/pierreroman/Azr-Core-Event#readme",
   "devDependencies": {
+    "@azure/static-web-apps-cli": "2.1.0",
     "@playwright/test": "^1.58.2"
   }
 }

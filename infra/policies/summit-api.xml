@@ -1,0 +1,35 @@
+<policies>
+  <inbound>
+    <base />
+    <choose>
+      <when condition='@(context.Product == null || context.Product.Id != "{{summit-linked-product}}" || "{{summit-linked-product}}" == "unlinked")'>
+        <return-response>
+          <set-status code="403" reason="Linked Static Web App required" />
+          <set-header name="Content-Type" exists-action="override">
+            <value>application/json</value>
+          </set-header>
+          <set-body>{"error":"Linked Static Web App required"}</set-body>
+        </return-response>
+      </when>
+    </choose>
+    <!-- Preserve SWA context before Easy Auth replaces its own principal headers. -->
+    <set-header name="x-summit-client-principal" exists-action="override">
+      <value>@(context.Request.Headers.GetValueOrDefault("x-ms-client-principal", ""))</value>
+    </set-header>
+    <set-header name="x-ms-client-principal" exists-action="delete" />
+    <set-header name="x-ms-client-principal-id" exists-action="delete" />
+    <set-header name="x-ms-client-principal-name" exists-action="delete" />
+    <set-header name="x-ms-client-principal-idp" exists-action="delete" />
+    <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
+    <authentication-managed-identity resource="__BACKEND_AUDIENCE__" client-id="__GATEWAY_CLIENT_ID__" ignore-error="false" />
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

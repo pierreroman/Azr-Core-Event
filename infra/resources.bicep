@@ -2,8 +2,49 @@ param environmentName string
 param location string
 param resourceToken string
 
+@allowed(['direct', 'prepare', 'gateway', 'private'])
+param apiNetworkStage string = 'private'
+param apimPublisherName string = ''
+param apimPublisherEmail string = ''
+param backendApplicationId string = ''
+param apimLinkedProductId string = 'unlinked'
+param functionSubnetNsgId string = ''
+param privateEndpointSubnetNsgId string = ''
+
+var gatewayEnabled = apiNetworkStage != 'direct'
+var gatewayActive = contains(['gateway', 'private'], apiNetworkStage)
+
 var commonTags = {
   environment: environmentName
+}
+
+resource gatewayIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = if (gatewayEnabled) {
+  name: 'id-apim-${resourceToken}'
+  location: location
+  tags: commonTags
+}
+
+resource gatewayNsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = if (gatewayEnabled) {
+  name: 'nsg-apim-${resourceToken}'
+  location: location
+  tags: commonTags
+  properties: {
+    securityRules: [
+      {
+        name: 'AllowKeyVault'
+        properties: {
+          priority: 100
+          direction: 'Outbound'
+          access: 'Allow'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '443'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: 'AzureKeyVault'
+        }
+      }
+    ]
+  }
 }
 
 resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
@@ -16,11 +57,15 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
         '10.0.0.0/16'
       ]
     }
-    subnets: [
+    subnets: concat([
       {
         name: 'functionapp'
         properties: {
           addressPrefix: '10.0.1.0/24'
+          privateEndpointNetworkPolicies: 'Disabled'
+          networkSecurityGroup: empty(functionSubnetNsgId) ? null : {
+            id: functionSubnetNsgId
+          }
           delegations: [
             {
               name: 'Microsoft.App.environments'
@@ -35,9 +80,31 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
         name: 'private-endpoints'
         properties: {
           addressPrefix: '10.0.2.0/24'
+          privateEndpointNetworkPolicies: 'Disabled'
+          networkSecurityGroup: empty(privateEndpointSubnetNsgId) ? null : {
+            id: privateEndpointSubnetNsgId
+          }
         }
       }
-    ]
+    ], gatewayEnabled ? [
+      {
+        name: 'apim-integration'
+        properties: {
+          addressPrefix: '10.0.3.0/24'
+          networkSecurityGroup: {
+            id: gatewayNsg!.id
+          }
+          delegations: [
+            {
+              name: 'apim'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
+        }
+      }
+    ] : [])
   }
 }
 
@@ -138,7 +205,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     allowSharedKeyAccess: false
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: apiNetworkStage == 'private' ? 'Disabled' : 'Enabled'
     networkAcls: {
       defaultAction: 'Deny'
       bypass: 'AzureServices'
@@ -393,6 +460,7 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
+    publicNetworkAccess: apiNetworkStage == 'private' ? 'Disabled' : 'Enabled'
     virtualNetworkSubnetId: vnet.properties.subnets[0].id
     vnetContentShareEnabled: true
     functionAppConfig: {
@@ -423,6 +491,14 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
     }
     siteConfig: {
       appSettings: [
+        {
+          name: 'API_AUTH_MODE'
+          value: gatewayActive ? 'apim' : 'direct'
+        }
+        {
+          name: 'APIM_PRINCIPAL_ID'
+          value: gatewayActive ? gatewayIdentity!.properties.principalId : ''
+        }
         {
           name: 'AZURE_STORAGE_ACCOUNT'
           value: storageAccount.name
@@ -482,6 +558,67 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
     storageTableDnsGroup
     storageQueueDnsGroup
   ]
+}
+
+resource functionAuthentication 'Microsoft.Web/sites/config@2024-04-01' = if (gatewayActive) {
+  parent: functionApp
+  name: 'authsettingsV2'
+  properties: {
+    platform: {
+      enabled: true
+      runtimeVersion: '~1'
+    }
+    globalValidation: {
+      requireAuthentication: true
+      unauthenticatedClientAction: 'Return401'
+    }
+    httpSettings: {
+      requireHttps: true
+    }
+    identityProviders: {
+      azureActiveDirectory: {
+        enabled: true
+        registration: {
+          clientId: backendApplicationId
+          openIdIssuer: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0'
+        }
+        validation: {
+          allowedAudiences: [
+            backendApplicationId
+            'api://${backendApplicationId}'
+          ]
+          defaultAuthorizationPolicy: {
+            allowedApplications: [
+              gatewayIdentity!.properties.clientId
+            ]
+            allowedPrincipals: {
+              identities: [
+                gatewayIdentity!.properties.principalId
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+module privateApi 'modules/private-api.bicep' = if (gatewayEnabled) {
+  name: 'private-api'
+  params: {
+    name: 'apim-summit-${resourceToken}'
+    location: location
+    tags: commonTags
+    publisherName: apimPublisherName
+    publisherEmail: apimPublisherEmail
+    functionName: functionApp.name
+    vnetName: vnet.name
+    gatewayIdentityId: gatewayIdentity!.id
+    gatewayIdentityClientId: gatewayIdentity!.properties.clientId
+    backendApplicationId: backendApplicationId
+    linkedProductId: apimLinkedProductId
+    workspaceId: logAnalytics.id
+  }
 }
 
 resource functionAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
@@ -631,6 +768,8 @@ output functionAppHostname string = functionApp.properties.defaultHostName
 
 output storageAccountName string = storageAccount.name
 output storageAccountId string = storageAccount.id
+output privateEndpointSubnetId string = '${vnet.id}/subnets/private-endpoints'
+output vnetName string = vnet.name
 
 output userAssignedIdentityId string = userAssignedIdentity.id
 output userAssignedIdentityClientId string = userAssignedIdentity.properties.clientId
@@ -640,3 +779,6 @@ output cosmosEndpoint string = cosmosAccount.properties.documentEndpoint
 
 output appInsightsName string = appInsights.name
 output logAnalyticsWorkspaceId string = logAnalytics.id
+output apimName string = gatewayEnabled ? privateApi!.outputs.apimName : ''
+output apimId string = gatewayEnabled ? privateApi!.outputs.id : ''
+output apimPrincipalId string = gatewayEnabled ? gatewayIdentity!.properties.principalId : ''
